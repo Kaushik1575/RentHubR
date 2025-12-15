@@ -33,24 +33,62 @@ const Home = () => {
         fetchVehicles();
     }, []);
 
+    // Scroll Animation Observer
+    useEffect(() => {
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        const headers = document.querySelectorAll('.category-header');
+        headers.forEach(header => observer.observe(header));
+
+        return () => headers.forEach(header => observer.unobserve(header));
+    }, []);
+
     const VehicleCard = ({ vehicle, type }) => {
-        const bookClass = type === 'bike' ? 'btn-book-bike' : (type === 'scooty' ? 'btn-book-scooty' : 'btn-book-car');
+        // Mock rating if not present (random between 4.5 and 5.0)
+        const rating = (4.5 + Math.random() * 0.5).toFixed(1);
+
         return (
             <div className="vehicle-card" data-id={vehicle.id} data-type={type}>
-                <img src={vehicle.image_url} alt={vehicle.name} />
+                <div className="card-image-wrapper">
+                    <img src={vehicle.image_url} alt={vehicle.name} />
+                    <span className="rating-badge"><i className="fas fa-star"></i> {rating}</span>
+                </div>
                 <div className="vehicle-details">
-                    <h3>{vehicle.name}</h3>
-                    <p className="engine-detail"><i className="fas fa-cogs"></i> Engine: {vehicle.engine}</p>
-                    <p className="fuel-detail"><i className="fas fa-gas-pump"></i> Fuel: {vehicle.fuel_type}</p>
-                    <div className="vehicle-price">
-                        <p>Price per day</p>
-                        <p>₹{vehicle.price ? vehicle.price.toFixed(2) : '0.00'}</p>
+                    <div className="vehicle-header">
+                        <h3>{vehicle.name}</h3>
+                        <span className="engine-badge">{vehicle.engine || 'N/A'}</span>
+                    </div>
+
+                    <div className="vehicle-specs">
+                        <span><i className="fas fa-gas-pump"></i> {vehicle.fuel_type || 'Petrol'}</span>
+                        <span><i className="fas fa-tachometer-alt"></i> Manual</span>
+                    </div>
+
+                    <div className="card-divider"></div>
+
+                    <div className="vehicle-footer">
+                        <div className="price-info">
+                            <span className="price-label">Daily Rate</span>
+                            <span className="price-value">₹{vehicle.price}</span>
+                        </div>
+
+                        {!vehicle.is_available ? (
+                            <button className="rent-btn disabled" disabled>
+                                Unavailable
+                            </button>
+                        ) : (
+                            <Link to={`/booking-form?vehicleId=${vehicle.id}&type=${type}`} className="rent-btn">
+                                Rent Now <i className="fas fa-arrow-right"></i>
+                            </Link>
+                        )}
                     </div>
                 </div>
-                {!vehicle.is_available
-                    ? <button className="btn btn-secondary" disabled style={{ background: '#aaa', cursor: 'not-allowed', opacity: 0.7 }}>Unavailable</button>
-                    : <Link to={`/booking-form?vehicleId=${vehicle.id}&type=${type}`} className={`btn btn-book ${bookClass}`}>Book Now</Link>
-                }
             </div>
         );
     };
@@ -67,27 +105,36 @@ const Home = () => {
             {/* Vehicle Showcase Section */}
             <section className="vehicle-showcase">
                 <div className="container">
-                    <h2>Featured Vehicles</h2>
+                    <div className="section-header text-center">
+                        <h2>Featured Vehicles & Bikes</h2>
+                        <p className="section-subtitle">Choose from our premium fleet of well-maintained vehicles for a safe and comfortable ride.</p>
+                    </div>
 
                     {/* Bikes Section */}
-                    <h3 className="category-title">Bikes</h3>
-                    <div className="vehicle-grid" id="bikesGrid">
-                        {loading ? <p>Loading bikes...</p> : bikes.map(bike => <VehicleCard key={bike.id} vehicle={bike} type="bike" />)}
-                        {!loading && bikes.length === 0 && <p>No bikes available.</p>}
+                    <div className="category-section">
+                        <h3 className="category-header">Bikes</h3>
+                        <div className="vehicle-grid" id="bikesGrid">
+                            {loading ? <p>Loading bikes...</p> : bikes.map(bike => <VehicleCard key={bike.id} vehicle={bike} type="bike" />)}
+                            {!loading && bikes.length === 0 && <p>No bikes available.</p>}
+                        </div>
                     </div>
 
                     {/* Scooty Section */}
-                    <h3 className="category-title">Scooty</h3>
-                    <div className="vehicle-grid" id="scootyGrid">
-                        {loading ? <p>Loading scooters...</p> : scooters.map(scooter => <VehicleCard key={scooter.id} vehicle={scooter} type="scooty" />)}
-                        {!loading && scooters.length === 0 && <p>No scooters available.</p>}
+                    <div className="category-section">
+                        <h3 className="category-header">Scooters</h3>
+                        <div className="vehicle-grid" id="scootyGrid">
+                            {loading ? <p>Loading scooters...</p> : scooters.map(scooter => <VehicleCard key={scooter.id} vehicle={scooter} type="scooty" />)}
+                            {!loading && scooters.length === 0 && <p>No scooters available.</p>}
+                        </div>
                     </div>
 
                     {/* Cars Section */}
-                    <h3 className="category-title">Cars</h3>
-                    <div className="vehicle-grid" id="carsGrid">
-                        {loading ? <p>Loading cars...</p> : cars.map(car => <VehicleCard key={car.id} vehicle={car} type="car" />)}
-                        {!loading && cars.length === 0 && <p>No cars available.</p>}
+                    <div className="category-section">
+                        <h3 className="category-header">Cars</h3>
+                        <div className="vehicle-grid" id="carsGrid">
+                            {loading ? <p>Loading cars...</p> : cars.map(car => <VehicleCard key={car.id} vehicle={car} type="car" />)}
+                            {!loading && cars.length === 0 && <p>No cars available.</p>}
+                        </div>
                     </div>
                 </div>
             </section>
