@@ -20,9 +20,9 @@ const Home = () => {
                 const scootersData = await scootersRes.json();
                 const carsData = await carsRes.json();
 
-                setBikes(bikesData.filter(v => v.is_available) || []);
-                setScooters(scootersData.filter(v => v.is_available) || []);
-                setCars(carsData.filter(v => v.is_available) || []);
+                setBikes(bikesData || []);
+                setScooters(scootersData || []);
+                setCars(carsData || []);
             } catch (error) {
                 console.error('Error loading vehicles:', error);
             } finally {
@@ -78,15 +78,9 @@ const Home = () => {
                             <span className="price-value">₹{vehicle.price}</span>
                         </div>
 
-                        {!vehicle.is_available ? (
-                            <button className="rent-btn disabled" disabled>
-                                Unavailable
-                            </button>
-                        ) : (
-                            <Link to={`/booking-form?vehicleId=${vehicle.id}&type=${type}`} className="rent-btn">
-                                Rent Now <i className="fas fa-arrow-right"></i>
-                            </Link>
-                        )}
+                        <Link to={`/booking-form?vehicleId=${vehicle.id}&type=${type}`} className="rent-btn">
+                            Rent Now <i className="fas fa-arrow-right"></i>
+                        </Link>
                     </div>
                 </div>
             </div>

@@ -65,6 +65,9 @@ const BookingForm = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
+    const [showErrorModal, setShowErrorModal] = useState(false);
+    const [errorMessage, setErrorMessage] = useState('');
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -82,7 +85,7 @@ const BookingForm = () => {
 
         const bookingPayload = {
             vehicleId,
-            vehicleType: apiType, // Ensure consistency with Backend expectation
+            vehicleType: apiType,
             ...formData
         };
 
@@ -101,10 +104,13 @@ const BookingForm = () => {
                 navigate('/my-bookings');
             } else {
                 const data = await response.json();
-                alert(data.error || "Vehicle is already Booked! Please choose another vehicle or time.");
+                // Prefer 'message' from conflict object, fallback to 'error'
+                setErrorMessage(data.message || data.error || "Vehicle is already Booked! Please choose another vehicle or time.");
+                setShowErrorModal(true);
             }
         } catch (error) {
-            alert('An error occurred while trying to book. Please try again.');
+            setErrorMessage('An error occurred while trying to book. Please try again.');
+            setShowErrorModal(true);
         }
     };
 
@@ -287,6 +293,24 @@ const BookingForm = () => {
                             <button onClick={() => setShowTermsModal(false)} style={{ padding: '12px 24px', background: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Decline</button>
                             <button onClick={() => { setTermsAccepted(true); setShowTermsModal(false); }} style={{ padding: '12px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Accept</button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Error/Conflict Modal */}
+            {showErrorModal && (
+                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', zIndex: 10001, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                    <div style={{ background: 'white', borderRadius: '12px', width: '90%', maxWidth: '400px', padding: '2rem', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
+                        <div style={{ width: '60px', height: '60px', background: '#ffebee', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
+                            <i className="fas fa-exclamation-triangle" style={{ color: '#f44336', fontSize: '1.8rem' }}></i>
+                        </div>
+                        <h2 style={{ color: '#333', marginBottom: '1rem', fontSize: '1.5rem' }}>Booking Failed</h2>
+                        <p style={{ color: '#666', marginBottom: '2rem', lineHeight: '1.5' }}>
+                            {errorMessage}
+                        </p>
+                        <button onClick={() => setShowErrorModal(false)} style={{ background: '#f44336', color: 'white', border: 'none', padding: '0.8rem 2rem', borderRadius: '30px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.3s' }}>
+                            Okay, Got it
+                        </button>
                     </div>
                 </div>
             )}
