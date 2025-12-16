@@ -860,7 +860,7 @@ app.post('/api/admin/bookings/:id/reject', verifyAdminToken, async (req, res) =>
                 status: 'rejected',
                 rejection_reason: reason,
                 refund_status: 'completed',
-                refund_amount: booking.advance_payment,
+                refund_amount: booking.advance_payment || 100,
                 refund_details: { method: 'auto_reversal', original_tx: booking.transaction_id },
                 rejection_timestamp: localTimestamp,
                 refund_timestamp: localTimestamp,
@@ -1227,12 +1227,18 @@ async function checkTimeConflict(vehicleId, startDate, startTime, duration) {
             const existingStartTimeMinutes = existingHour * 60 + existingMinute;
             const existingEndTimeMinutes = existingStartTimeMinutes + (booking.duration * 60);
 
+            // Calculate existing end time for the message
+            const existingEndTotalMinutes = existingStartTimeMinutes + (booking.duration * 60);
+            const existingEndHour = Math.floor(existingEndTotalMinutes / 60) % 24;
+            const existingEndMinute = existingEndTotalMinutes % 60;
+            const formattedEndTime = `${existingEndHour.toString().padStart(2, '0')}:${existingEndMinute.toString().padStart(2, '0')}`;
+
             // Check for overlap (including 1 hour buffer)
             if (existingStartTimeMinutes < bufferEndTime && existingEndTimeMinutes > bufferStartTime) {
                 return {
                     conflict: true,
                     existingBooking: booking,
-                    message: `Vehicle is already booked from ${booking.start_time} for ${booking.duration} hours. Please choose a different time slot with at least 1 hour gap.`
+                    message: `This vehicle is unavailable. It is booked from ${booking.start_time} to ${formattedEndTime}. Please ensure a 1-hour gap before and after bookings.`
                 };
             }
         }
@@ -1607,12 +1613,13 @@ app.post('/api/bookings', verifyToken, async (req, res) => {
 
         console.log('Booking created:', data);
         // Update vehicle availability
-        try {
-            await SupabaseDB.updateVehicleAvailability(vehicleType, vehicleId, false);
-        } catch (vehicleError) {
-            console.error('Error updating vehicle availability:', vehicleError);
-            // Optionally, you can add a warning to the response here
-        }
+        // Update vehicle availability
+        // try {
+        //     await SupabaseDB.updateVehicleAvailability(vehicleType, vehicleId, false);
+        // } catch (vehicleError) {
+        //     console.error('Error updating vehicle availability:', vehicleError);
+        //     // Optionally, you can add a warning to the response here
+        // }
         res.status(201).json(data);
     } catch (error) {
         console.error('Error creating booking:', error);
