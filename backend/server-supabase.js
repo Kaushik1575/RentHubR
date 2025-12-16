@@ -1593,6 +1593,10 @@ app.post('/api/bookings', verifyToken, async (req, res) => {
 
         if (error) {
             console.error('Error creating booking:', error);
+            // Check for unique constraint violation (Postgres error 23505)
+            if (error.code === '23505' && (error.details?.includes('transaction_id') || error.message?.includes('transaction_id'))) {
+                return res.status(409).json({ error: 'This Transaction ID has already been used. Please provide a valid, unique Transaction ID.' });
+            }
             return res.status(500).json({ error: 'Error creating booking', details: error.message || error });
         }
 
