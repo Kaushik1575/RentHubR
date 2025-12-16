@@ -17,10 +17,11 @@ import SOSActivate from './pages/SOSActivate';
 function Layout() {
   const location = useLocation();
   const isAdmin = location.pathname === '/admin';
+  const isSOS = location.pathname === '/sos-activate';
 
   return (
     <div className="App">
-      {!isAdmin && <Navbar />}
+      {!isAdmin && !isSOS && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
@@ -35,15 +36,17 @@ function Layout() {
         <Route path="/track-booking" element={<TrackBooking />} />
         <Route path="/sos-activate" element={<SOSActivate />} />
       </Routes>
-      {/* WhatsApp Floating Button */}
-      <a href="https://wa.me/917077733320?text=Hello%20%F0%9F%91%8B%2C%20I%20have%20a%20query%20regarding%20my%20bike%20booking%20%2F%20other%20services."
-        className="whatsapp-floating-btn pulse"
-        target="_blank"
-        rel="noopener noreferrer"
-        title="Chat with us on WhatsApp">
-        <i className="fab fa-whatsapp"></i>
-      </a>
-      <Footer />
+      {/* WhatsApp Floating Button - Hide on SOS */}
+      {!isSOS && (
+        <a href="https://wa.me/917077733320?text=Hello%20%F0%9F%91%8B%2C%20I%20have%20a%20query%20regarding%20my%20bike%20booking%20%2F%20other%20services."
+          className="whatsapp-floating-btn pulse"
+          target="_blank"
+          rel="noopener noreferrer"
+          title="Chat with us on WhatsApp">
+          <i className="fab fa-whatsapp"></i>
+        </a>
+      )}
+      {!isSOS && <Footer />}
     </div>
   );
 }
