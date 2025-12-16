@@ -2607,3 +2607,96 @@ main.booking-page-main {
         font-size: 1.5rem;
     }
 }
+
+/* Enhanced Recent Activity Styles */
+.activity-log {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.activity-item {
+    display: flex;
+    align-items: center;
+    padding: 16px;
+    background: #fff;
+    border-radius: 12px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    transition: all 0.3s ease;
+    border-left: 4px solid transparent;
+}
+
+.activity-item:hover {
+    transform: translateX(5px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+}
+
+.activity-icon-wrapper {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    margin-right: 16px;
+    font-size: 1.2rem;
+    flex-shrink: 0;
+}
+
+.activity-content {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+
+.activity-desc {
+    font-weight: 600;
+    color: #2c3e50;
+    margin-bottom: 4px;
+    font-size: 0.95rem;
+}
+
+.activity-time {
+    font-size: 0.8rem;
+    color: #95a5a6;
+}
+
+/* Status Specific Styles */
+.activity-item.confirmed {
+    border-left-color: #2ecc71;
+}
+.activity-item.confirmed .activity-icon-wrapper {
+    background-color: rgba(46, 204, 113, 0.1);
+    color: #2ecc71;
+}
+
+.activity-item.cancelled {
+    border-left-color: #e74c3c;
+}
+.activity-item.cancelled .activity-icon-wrapper {
+    background-color: rgba(231, 76, 60, 0.1);
+    color: #e74c3c;
+}
+
+.activity-item.rejected {
+    border-left-color: #f39c12;
+}
+.activity-item.rejected .activity-icon-wrapper {
+    background-color: rgba(243, 156, 18, 0.1);
+    color: #f39c12;
+}
+
+.activity-item.created {
+    border-left-color: #3f99ff;
+}
+.activity-item.created .activity-icon-wrapper {
+    background-color: rgba(52, 152, 219, 0.1);
+    color: #3498db;
+}
+
+.no-activity {
+    text-align: center;
+    padding: 20px;
+    color: #95a5a6;
+    font-style: italic;
+}

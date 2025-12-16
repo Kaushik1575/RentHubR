@@ -318,14 +318,19 @@ const AdminPanel = () => {
                                 <h3>Recent Activity</h3>
                                 <div className="activity-log">
                                     {stats.recentActivity && stats.recentActivity.length > 0 ? stats.recentActivity.map((act, i) => (
-                                        <div key={i} className="activity-item">
-                                            {act.type === 'confirmed' ? <i className="fas fa-check-circle" style={{ color: 'green' }}></i> :
-                                                act.type === 'cancelled' ? <i className="fas fa-times-circle" style={{ color: 'red' }}></i> :
-                                                    <i className="fas fa-plus-circle" style={{ color: '#007bff' }}></i>}
-                                            <span className="activity-desc">{act.description}</span>
-                                            <span className="activity-time">{formatDate(act.timestamp)}</span>
+                                        <div key={i} className={`activity-item ${act.type}`}>
+                                            <div className="activity-icon-wrapper">
+                                                {act.type === 'confirmed' ? <i className="fas fa-check-circle"></i> :
+                                                    act.type === 'cancelled' ? <i className="fas fa-times-circle"></i> :
+                                                        act.type === 'rejected' ? <i className="fas fa-ban"></i> :
+                                                            <i className="fas fa-plus-circle"></i>}
+                                            </div>
+                                            <div className="activity-content">
+                                                <span className="activity-desc">{act.description}</span>
+                                                <span className="activity-time">{formatDate(act.timestamp)}</span>
+                                            </div>
                                         </div>
-                                    )) : <p>No recent activity.</p>}
+                                    )) : <div className="no-activity">No recent activity</div>}
                                 </div>
                             </div>
                         </div>

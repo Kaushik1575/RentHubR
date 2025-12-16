@@ -314,8 +314,9 @@ app.get('/', (req, res) => {
 });
 
 // Serve SOS activation page
+// Serve SOS activation page - Handle via React Router (SPA)
 app.get('/sos-activate', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist', 'sos-activate.html'));
+    res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
 });
 
 // Middleware to verify user token
@@ -1690,7 +1691,10 @@ app.get('/api/dashboard-stats', async (req, res) => {
         const recentActivity = (recentBookings || []).map(b => {
             let description = '';
             const userName = b.users?.full_name || 'User';
-            const type = b.status === 'confirmed' ? 'confirmed' : (b.status === 'cancelled' ? 'cancelled' : 'created');
+            let type = 'created';
+            if (b.status === 'confirmed') type = 'confirmed';
+            else if (b.status === 'cancelled') type = 'cancelled';
+            else if (b.status === 'rejected') type = 'rejected';
 
             if (b.status === 'confirmed') description = `Booking #${b.id} confirmed for ${userName}`;
             else if (b.status === 'cancelled') description = `Booking #${b.id} cancelled by ${userName}`;
