@@ -73,7 +73,7 @@ function validatePassword(password) {
 app.use(cors());
 app.use(compression()); // Enable gzip compression
 app.use(express.json());
-app.use(express.static(path.join(__dirname, '../frontend')));
+app.use(express.static(path.join(__dirname, '../frontend/dist')));
 
 // Booking confirmation + invoice routes (PDF, QR, Email)
 try {
@@ -310,12 +310,12 @@ const generateInvoiceBuffer = async (bookingId, userName, userEmail, vehicleName
 
 // Root route - serve index.html
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend', 'index.html'));
+    res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
 });
 
 // Serve SOS activation page
 app.get('/sos-activate', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend', 'sos-activate.html'));
+    res.sendFile(path.join(__dirname, '../frontend/dist', 'sos-activate.html'));
 });
 
 // Middleware to verify user token
@@ -1674,6 +1674,36 @@ app.get('/api/dashboard-stats', async (req, res) => {
             .gte('created_at', today + 'T00:00:00')
             .lt('created_at', today + 'T23:59:59');
 
+        // Recent Activity (Last 5 bookings)
+        const { data: recentBookings } = await supabase
+            .from('bookings')
+            .select(`
+                id,
+                status,
+                created_at,
+                users (full_name),
+                vehicle_type
+            `)
+            .order('created_at', { ascending: false })
+            .limit(5);
+
+        const recentActivity = (recentBookings || []).map(b => {
+            let description = '';
+            const userName = b.users?.full_name || 'User';
+            const type = b.status === 'confirmed' ? 'confirmed' : (b.status === 'cancelled' ? 'cancelled' : 'created');
+
+            if (b.status === 'confirmed') description = `Booking #${b.id} confirmed for ${userName}`;
+            else if (b.status === 'cancelled') description = `Booking #${b.id} cancelled by ${userName}`;
+            else if (b.status === 'rejected') description = `Booking #${b.id} rejected`;
+            else description = `New booking #${b.id} from ${userName}`;
+
+            return {
+                type,
+                description,
+                timestamp: b.created_at
+            };
+        });
+
         res.json({
             totalVehicles,
             totalBookingsMonth,
@@ -1682,7 +1712,8 @@ app.get('/api/dashboard-stats', async (req, res) => {
             confirmedBookings,
             cancelledBookings,
             pendingRefunds,
-            todaysBookings
+            todaysBookings,
+            recentActivity
         });
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
