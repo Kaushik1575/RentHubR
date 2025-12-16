@@ -1253,10 +1253,18 @@ async function checkTimeConflict(vehicleId, startDate, startTime, duration) {
 
             // Check for overlap (including 1 hour buffer)
             if (existingStartTimeMinutes < bufferEndTime && existingEndTimeMinutes > bufferStartTime) {
+                // Format the date in a readable format
+                const bookingDate = new Date(booking.start_date);
+                const formattedDate = bookingDate.toLocaleDateString('en-IN', {
+                    year: 'numeric',
+                    month: 'long',
+                    day: 'numeric'
+                });
+
                 return {
                     conflict: true,
                     existingBooking: booking,
-                    message: `This vehicle is unavailable. It is booked from ${booking.start_time} to ${formattedEndTime}. Please ensure a 1-hour gap before and after bookings.`
+                    message: `This vehicle is already booked on ${formattedDate} from ${booking.start_time} to ${formattedEndTime}. Please try another vehicle or choose a different time slot. (Note: A 1-hour gap is required before and after each booking)`
                 };
             }
         }
@@ -1516,16 +1524,51 @@ app.post('/api/login', async (req, res) => {
 // Admin Login
 app.post('/api/login/admin', async (req, res) => {
     try {
+        console.log('🔐 Admin login attempt started');
         const { email, password, adminId } = req.body;
+
+        console.log('📧 Email:', email);
+        console.log('🆔 Admin ID:', adminId);
+
+        if (!email || !password || !adminId) {
+            console.log('❌ Missing required fields');
+            return res.status(400).json({ error: 'Email, password, and admin ID are required' });
+        }
+
         // Find the admin by email
+        console.log('🔍 Fetching admin from database...');
         const admin = await SupabaseDB.getUserByEmail(email);
-        if (!admin || !admin.is_admin || admin.admin_id !== adminId) {
+        console.log('📊 Admin data retrieved:', admin ? 'Found' : 'Not found');
+
+        if (!admin) {
+            console.log('❌ No user found with email:', email);
             return res.status(401).json({ error: 'Invalid admin credentials' });
         }
+
+        console.log('👤 User found - is_admin:', admin.is_admin);
+        console.log('🆔 Stored admin_id:', admin.admin_id);
+
+        if (!admin.is_admin) {
+            console.log('❌ User is not an admin');
+            return res.status(401).json({ error: 'Invalid admin credentials' });
+        }
+
+        if (admin.admin_id !== adminId) {
+            console.log('❌ Admin ID mismatch. Expected:', admin.admin_id, 'Got:', adminId);
+            return res.status(401).json({ error: 'Invalid admin credentials' });
+        }
+
+        console.log('🔑 Verifying password...');
         const validPassword = await bcrypt.compare(password, admin.password);
+
         if (!validPassword) {
+            console.log('❌ Invalid password');
             return res.status(401).json({ error: 'Invalid admin credentials' });
         }
+
+        console.log('✅ Password verified');
+        console.log('🎫 Generating JWT token...');
+
         const token = jwt.sign(
             { id: admin.id, email: admin.email, isAdmin: admin.is_admin },
             JWT_SECRET
@@ -1542,10 +1585,15 @@ app.post('/api/login/admin', async (req, res) => {
             isAdmin: admin.is_admin || false
         };
 
+        console.log('✅ Admin login successful for:', admin.email);
         res.json({ token, admin: adminResponse });
     } catch (error) {
-        console.error('Error during admin login:', error);
-        res.status(500).json({ error: 'Error during admin login' });
+        console.error('❌ Error during admin login:', error);
+        console.error('Error stack:', error.stack);
+        res.status(500).json({
+            error: 'Error during admin login',
+            details: process.env.NODE_ENV === 'development' ? error.message : undefined
+        });
     }
 });
 
