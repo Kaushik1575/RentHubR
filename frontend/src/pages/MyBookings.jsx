@@ -215,7 +215,7 @@ const MyBookings = () => {
 
                             {booking.status === 'confirmed' && (
                                 <button className="btn-cancel-booking" onClick={() => handleCancelClick(booking.id)} style={{
-                                    backgroundColor: '#2ecc71', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer', marginTop: '1rem', width: 'fit-content'
+                                    backgroundColor: '#f44336', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer', marginTop: '1rem', width: 'fit-content'
                                 }}>
                                     <i className="fas fa-times"></i> Cancel Booking
                                 </button>

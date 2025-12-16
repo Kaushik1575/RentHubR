@@ -1220,14 +1220,19 @@ async function checkTimeConflict(vehicleId, startDate, startTime, duration) {
         const bufferStartTime = startTimeMinutes - 60;
         const bufferEndTime = endTimeMinutes + 60;
         for (const booking of existingBookings) {
-            const [existingHour, existingMinute] = booking.startTime.split(':').map(Number);
+            // Check if start_time exists
+            if (!booking.start_time) continue;
+
+            const [existingHour, existingMinute] = booking.start_time.split(':').map(Number);
             const existingStartTimeMinutes = existingHour * 60 + existingMinute;
             const existingEndTimeMinutes = existingStartTimeMinutes + (booking.duration * 60);
+
+            // Check for overlap (including 1 hour buffer)
             if (existingStartTimeMinutes < bufferEndTime && existingEndTimeMinutes > bufferStartTime) {
                 return {
                     conflict: true,
                     existingBooking: booking,
-                    message: `Vehicle is already booked from ${booking.startTime} for ${booking.duration} hours. Please choose a different time slot with at least 1 hour gap.`
+                    message: `Vehicle is already booked from ${booking.start_time} for ${booking.duration} hours. Please choose a different time slot with at least 1 hour gap.`
                 };
             }
         }

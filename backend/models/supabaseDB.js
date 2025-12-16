@@ -8,7 +8,7 @@ class SupabaseDB {
             .insert([userData])
             .select()
             .single();
-        
+
         if (error) throw error;
         return data;
     }
@@ -19,7 +19,7 @@ class SupabaseDB {
             .select('*')
             .eq('email', email)
             .single();
-        
+
         if (error && error.code !== 'PGRST116') throw error;
         return data;
     }
@@ -31,7 +31,7 @@ class SupabaseDB {
             .eq('id', id)
             .select()
             .single();
-        
+
         if (error) throw error;
         return data;
     }
@@ -43,7 +43,7 @@ class SupabaseDB {
             .insert([bookingData])
             .select()
             .single();
-        
+
         if (error) throw error;
         return data;
     }
@@ -52,10 +52,30 @@ class SupabaseDB {
         const { data, error } = await supabase
             .from('bookings')
             .select('*')
-            .eq('user_id', userId);
-        
+            .eq('user_id', userId)
+            .order('id', { ascending: true }); // Sort by ID ascending (serial order)
+
         if (error) throw error;
-        return data;
+
+        // Update status for past bookings
+        const now = new Date();
+        const updatedData = data.map(booking => {
+            if (booking.status === 'confirmed' && booking.start_date && booking.start_time) {
+                // Parse start date and time
+                const [year, month, day] = booking.start_date.split('-').map(Number);
+                const [hours, minutes] = booking.start_time.split(':').map(Number);
+
+                // Create date object (months are 0-indexed in JS Date)
+                const bookingStart = new Date(year, month - 1, day, hours, minutes);
+
+                if (now > bookingStart) {
+                    return { ...booking, status: 'completed' };
+                }
+            }
+            return booking;
+        });
+
+        return updatedData;
     }
 
     // Vehicle operations (bikes, cars, scooty)
@@ -63,7 +83,7 @@ class SupabaseDB {
         const { data, error } = await supabase
             .from(type) // 'bikes', 'cars', or 'scooty'
             .select('*');
-        
+
         if (error) throw error;
         return data;
     }
@@ -74,7 +94,7 @@ class SupabaseDB {
             .select('*')
             .eq('id', id)
             .single();
-        
+
         if (error && error.code !== 'PGRST116') throw error;
         return data;
     }
@@ -86,7 +106,7 @@ class SupabaseDB {
             .eq('id', id)
             .select()
             .single();
-        
+
         if (error) throw error;
         return data;
     }
