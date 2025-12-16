@@ -1064,7 +1064,7 @@ app.post('/api/admin/send-sos', verifyAdminToken, async (req, res) => {
 
         // Generate unique SOS token
         const sosToken = crypto.randomBytes(32).toString('hex');
-        const sosActivationLink = `https://smartreach.qzz.io/sos-activate?token=${sosToken}&bookingId=${bookingId}`;
+        const sosActivationLink = `https://rentahub-service.vercel.app/sos-activate?token=${sosToken}&bookingId=${bookingId}`;
 
         // Store SOS token in a simple variable/cache (since DB columns don't exist)
         // In production, you'd want to store this in a separate SOS_tokens table or cache like Redis
