@@ -308,15 +308,32 @@ const generateInvoiceBuffer = async (bookingId, userName, userEmail, vehicleName
     }
 };
 
-// Root route - serve index.html
+// Serve Static Files (Frontend)
+const frontendPath = path.join(__dirname, '../frontend/dist');
+const indexPath = path.join(frontendPath, 'index.html');
+
+// Check if frontend build exists
+const fs = require('fs');
+if (fs.existsSync(frontendPath)) {
+    app.use(express.static(frontendPath));
+}
+
+// Root route - serve index.html or API status
 app.get('/', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.send('RentHub API is running. (Frontend not found - this is normal if using Vercel for frontend)');
+    }
 });
 
-// Serve SOS activation page
 // Serve SOS activation page - Handle via React Router (SPA)
 app.get('/sos-activate', (req, res) => {
-    res.sendFile(path.join(__dirname, '../frontend/dist', 'index.html'));
+    if (fs.existsSync(indexPath)) {
+        res.sendFile(indexPath);
+    } else {
+        res.send('SOS Activation API is active. Please use the Frontend App.');
+    }
 });
 
 // Middleware to verify user token
