@@ -23,30 +23,56 @@ const SOSActivate = () => {
         setStatus('activating');
         setMessage('Accessing location...');
 
-        // 1. Try to get GPS
-        let gpsLocation = null;
+        // 1. Try to get GPS with aggressive timeout (4 seconds)
         try {
             if (navigator.geolocation) {
-                const position = await new Promise((resolve, reject) => {
+                // Race condition: Browser Geo API vs Manual Timeout
+                // Some mobile browsers hang indefinitely if GPS is off, so we force a fail after 4s
+                const getPosition = new Promise((resolve, reject) => {
                     navigator.geolocation.getCurrentPosition(resolve, reject, {
                         enableHighAccuracy: true,
-                        timeout: 10000,
+                        timeout: 3500, // Browser timeout
                         maximumAge: 0
                     });
                 });
-                gpsLocation = {
+
+                const timeoutParams = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error("Location request timed out completely")), 4000)
+                );
+
+                const position = await Promise.race([getPosition, timeoutParams]);
+
+                const gpsLocation = {
                     latitude: position.coords.latitude,
                     longitude: position.coords.longitude,
                     accuracy: position.coords.accuracy
                 };
                 setLocationStats(`Location acquired (Accuracy: ${Math.round(position.coords.accuracy)}m)`);
+                // Got location, proceed to send
+                sendSOS(gpsLocation);
+
+            } else {
+                throw new Error("Geolocation not supported");
             }
         } catch (e) {
             console.warn("GPS failed", e);
-            setLocationStats("GPS unavailable, sending activation without precise location.");
-        }
+            // Handle specific errors
+            let errorMsg = "Could not access location.";
+            if (e.code === 1) errorMsg = "Location permission denied.";
+            if (e.code === 2) errorMsg = "Location unavailable (GPS off?).";
+            if (e.code === 3 || e.message.includes('time')) errorMsg = "Location request slow or timed out.";
 
+            setMessage(errorMsg);
+            setStatus('location_error');
+        }
+    };
+
+    const sendSOS = async (gpsLocation) => {
+        setStatus('activating');
         setMessage('Sending SOS alert...');
+        if (!gpsLocation) {
+            setLocationStats("User skipped location check.");
+        }
 
         try {
             const res = await fetch('/api/sos-activate', {
@@ -92,6 +118,37 @@ const SOSActivate = () => {
                     <div style={{ background: '#f8d7da', color: '#721c24', padding: '15px', borderRadius: '8px', borderLeft: '4px solid #dc143c' }}>
                         <strong>Error</strong>
                         <p>{message}</p>
+                    </div>
+                )}
+
+                {status === 'location_error' && (
+                    <div style={{ background: '#fff3cd', color: '#856404', padding: '20px', borderRadius: '8px', borderLeft: '4px solid #ffc107', textAlign: 'left' }}>
+                        <h3 style={{ marginTop: 0 }}>Location Needed</h3>
+                        <p>{message}</p>
+                        <br />
+                        <p>For faster help, please enable location services.</p>
+
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
+                            <button
+                                onClick={activateSOS}
+                                style={{
+                                    padding: '12px', background: '#0b5cff', color: 'white',
+                                    border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold'
+                                }}
+                            >
+                                ⟳ Retry Location Permission
+                            </button>
+
+                            <button
+                                onClick={() => sendSOS(null)}
+                                style={{
+                                    padding: '12px', background: '#6c757d', color: 'white',
+                                    border: 'none', borderRadius: '6px', cursor: 'pointer'
+                                }}
+                            >
+                                Send SOS Without Location &rarr;
+                            </button>
+                        </div>
                     </div>
                 )}
 
