@@ -134,10 +134,21 @@ const BookingForm = () => {
         }
     };
 
-    // Step 2: Handle Payment
-    const handlePayment = async () => {
-        const token = localStorage.getItem('token');
-        setProcessing(true);
+// Step 2: Handle Payment
+const handlePayment = async () => {
+    const token = localStorage.getItem('token');
+    setProcessing(true);
+
+    const bookingPayload = {
+        vehicleId,
+        vehicleType: apiType,
+        vehicleName: vehicle?.name,
+        ...formData
+    };
+
+    // Razorpay / booking logic continues here
+};
+
 
         try {
             // 1. Create Order
