@@ -9,8 +9,11 @@ const { sendEmail } = require('../config/emailService');
 const supabase = require('../config/supabase');
 
 // Helper: create invoices folder
-const INVOICE_DIR = path.join(__dirname, '..', '..', 'frontend', 'invoices');
-fs.mkdirSync(INVOICE_DIR, { recursive: true });
+const os = require('os');
+const INVOICE_DIR = path.join(os.tmpdir(), 'invoices');
+if (!fs.existsSync(INVOICE_DIR)) {
+    fs.mkdirSync(INVOICE_DIR, { recursive: true });
+}
 
 // POST /api/confirmBooking
 // Expected body: { bookingId, userName, userEmail, vehicleName, duration, startDateTime, totalAmount, advancePayment, remainingAmount, terms }
