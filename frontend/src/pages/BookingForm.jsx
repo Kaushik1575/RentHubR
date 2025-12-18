@@ -9,7 +9,7 @@ const BookingForm = () => {
     const vehicleId = searchParams.get('vehicleId');
     const vehicleType = searchParams.get('type'); // 'cars', 'bikes', 'scooty'
 
-    // Determine the API endpoint type based on query param (which might be 'car', 'bike' etc from cards)
+    // Determine the API endpoint type based on query param
     const getApiType = (type) => {
         if (!type) return 'bikes';
         if (type === 'car' || type === 'cars') return 'cars';
@@ -19,18 +19,26 @@ const BookingForm = () => {
     };
 
     const [vehicle, setVehicle] = useState(null);
+    const [step, setStep] = useState(1);
     const [formData, setFormData] = useState({
         startDate: '',
         startTime: '',
         duration: 2,
-        transactionId: ''
     });
-    const [termsAccepted, setTermsAccepted] = useState(false);
-    const [showTermsModal, setShowTermsModal] = useState(false);
     const [loading, setLoading] = useState(true);
+    const [processing, setProcessing] = useState(false); // For API calls
+
+    // Popup State
+    const [popup, setPopup] = useState({
+        isOpen: false,
+        type: 'error',
+        title: '',
+        message: ''
+    });
 
     const apiType = getApiType(vehicleType);
 
+    // Initial Load
     useEffect(() => {
         if (vehicleId && apiType) {
             fetch(`/api/vehicles/${apiType}/${vehicleId}`)
@@ -56,35 +64,22 @@ const BookingForm = () => {
     const today = new Date().toISOString().split('T')[0];
 
     // Calculations
-    const hourlyRate = vehicle ? (vehicle.price || 0) : 0;
+    const hourlyRate = vehicle ? (parseFloat(vehicle.price) || 0) : 0;
     const duration = parseInt(formData.duration) || 0;
     const totalAmount = hourlyRate * duration;
-    const advancePayment = 100;
+
+    // 30% Advance Payment
+    const advancePercentage = 30;
+    const advancePayment = Math.ceil((totalAmount * advancePercentage) / 100);
     const remainingAmount = totalAmount - advancePayment;
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const [popup, setPopup] = useState({
-        isOpen: false,
-        type: 'error',
-        title: '',
-        message: ''
-    });
-
-    const handleSubmit = async (e) => {
+    // Step 1: Check Availability
+    const handleCheckAvailability = async (e) => {
         e.preventDefault();
-
-        if (!termsAccepted) {
-            setPopup({
-                isOpen: true,
-                type: 'error',
-                title: 'Terms Required',
-                message: 'Please accept the Terms and Conditions to proceed.'
-            });
-            return;
-        }
 
         const token = localStorage.getItem('token');
         if (!token) {
@@ -98,13 +93,132 @@ const BookingForm = () => {
             return;
         }
 
-        const bookingPayload = {
-            vehicleId,
-            vehicleType: apiType,
-            ...formData
-        };
+        setProcessing(true);
+        try {
+            const response = await fetch('/api/bookings/check-availability', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    vehicleId,
+                    startDate: formData.startDate,
+                    startTime: formData.startTime,
+                    duration: formData.duration
+                })
+            });
+
+            const data = await response.json();
+
+            if (response.ok) {
+                setStep(2); // Move to Payment Step
+            } else {
+                setPopup({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Not Available',
+                    message: data.message || data.error || 'Vehicle is not available for the selected time.'
+                });
+            }
+        } catch (error) {
+            console.error(error);
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Error',
+                message: 'Failed to check availability. Please try again.'
+            });
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    // Step 2: Handle Payment
+    const handlePayment = async () => {
+        const token = localStorage.getItem('token');
+        setProcessing(true);
 
         try {
+            // 1. Create Order
+            const orderRes = await fetch('/api/payment/create-order', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    amount: advancePayment,
+                    currency: 'INR',
+                    receipt: `receipt_${Date.now()}`
+                })
+            });
+
+            if (!orderRes.ok) throw new Error('Failed to create payment order');
+            const orderData = await orderRes.json();
+
+            // 2. Open Razorpay
+            const options = {
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_Rt1Yi4MzcnFzwi", // Use env var in real app
+                amount: orderData.amount,
+                currency: orderData.currency,
+                name: "RentHub",
+                description: `Advance for ${vehicle.name}`,
+                image: "/photo/logo.png", // Add your logo path
+                order_id: orderData.id,
+                handler: async function (response) {
+                    await confirmBooking(response, token);
+                },
+                prefill: {
+                    name: "User Name", // You could fetch this from user context
+                    email: "user@example.com",
+                    contact: "9999999999"
+                },
+                theme: {
+                    color: "#3399cc"
+                }
+            };
+
+            const rzp1 = new window.Razorpay(options);
+            rzp1.on('payment.failed', function (response) {
+                setPopup({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Payment Failed',
+                    message: response.error.description
+                });
+            });
+            rzp1.open();
+
+        } catch (error) {
+            console.error(error);
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Error',
+                message: 'Payment initiation failed.'
+            });
+        } finally {
+            setProcessing(false);
+        }
+    };
+
+    // Step 3: Confirm Booking (Backend)
+    const confirmBooking = async (paymentResponse, token) => {
+        setProcessing(true);
+        try {
+            const bookingPayload = {
+                vehicleId,
+                vehicleType: apiType,
+                ...formData,
+                razorpayPaymentId: paymentResponse.razorpay_payment_id,
+                razorpayOrderId: paymentResponse.razorpay_order_id,
+                razorpaySignature: paymentResponse.razorpay_signature,
+                advancePayment,
+                remainingAmount,
+                totalAmount
+            };
+
             const response = await fetch('/api/bookings', {
                 method: 'POST',
                 headers: {
@@ -114,32 +228,30 @@ const BookingForm = () => {
                 body: JSON.stringify(bookingPayload)
             });
 
+            const data = await response.json();
+
             if (response.ok) {
+                setStep(3); // Move to Success Step
                 setPopup({
                     isOpen: true,
                     type: 'success',
-                    title: 'Booking Accepted!',
-                    message: 'Please wait and check your Registered email for confirmation and further details.'
+                    title: 'Booking Confirmed!',
+                    message: `Booking #${data.id} successful. Check your email for details.`
                 });
-                // Navigate after user sees popup
-                // We'll handle this in onClose or just let them close it then nav?
-                // Better UX: Close popup then nav. But let's keep it simple.
             } else {
-                const data = await response.json();
-                setPopup({
-                    isOpen: true,
-                    type: 'error',
-                    title: 'Booking Failed',
-                    message: data.message || data.error || "Vehicle is already Booked! Please choose another vehicle or time."
-                });
+                // Show detailed error if available
+                const errorMessage = data.details ? `${data.error}: ${data.details}` : (data.error || 'Booking confirmation failed');
+                throw new Error(errorMessage);
             }
         } catch (error) {
             setPopup({
                 isOpen: true,
                 type: 'error',
-                title: 'Error',
-                message: 'An error occurred while trying to book. Please try again.'
+                title: 'Finalization Error',
+                message: error.message
             });
+        } finally {
+            setProcessing(false);
         }
     };
 
@@ -151,190 +263,206 @@ const BookingForm = () => {
                 maxWidth: '800px', margin: '0 auto', background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}>
                 <div className="booking-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #eee' }}>
-                    <h1 style={{ margin: 0, color: '#333', fontSize: '1.8rem' }}>Book Vehicle</h1>
+                    <h1 style={{ margin: 0, color: '#333', fontSize: '1.8rem' }}>
+                        {step === 1 ? 'Book Vehicle' : step === 2 ? 'Complete Payment' : 'Booking Confirmed'}
+                    </h1>
                     <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: '#666', cursor: 'pointer' }}>&times;</button>
                 </div>
 
-                <div className="vehicle-info" style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '4px', marginBottom: '2rem' }}>
-                    <h2 style={{ margin: '0 0 1rem 0', color: '#333' }}>Vehicle Details</h2>
-                    <div className="vehicle-details" style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: '1rem' }}>
-                        <p><strong>Name:</strong> {vehicle.name}</p>
-                        <p><strong>Engine:</strong> {vehicle.engine || 'Standard'}</p>
-                        <p><strong>Fuel Type:</strong> {vehicle.fuel_type || 'Standard'}</p>
-                        <p><strong>Price per hour:</strong> ₹{vehicle.price}</p>
-                    </div>
-                </div>
-
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#555', fontWeight: '500' }}>Start Date</label>
-                        <input type="date" name="startDate" min={today} value={formData.startDate} onChange={handleChange} required style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px' }} />
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#555', fontWeight: '500' }}>Start Time</label>
-                        <input type="time" name="startTime" value={formData.startTime} onChange={handleChange} required style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px' }} />
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#555', fontWeight: '500' }}>Duration (hours)</label>
-                        <input type="number" name="duration" min="1" max="672" value={formData.duration} onChange={handleChange} required style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px' }} />
-                    </div>
-
-                    <div className="price-details" style={{ background: '#f8f9fa', padding: '1rem', borderRadius: '4px', margin: '1.5rem 0' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                            <span>Duration:</span>
-                            <span>{duration} hours</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                            <span>Total Amount:</span>
-                            <span>₹{totalAmount}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                            <span>Advance Payment:</span>
-                            <span>₹{advancePayment}</span>
-                        </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', paddingTop: '0.5rem', marginTop: '0.5rem', borderTop: '1px solid #ddd', fontWeight: 'bold' }}>
-                            <span>Remaining Amount:</span>
-                            <span>₹{remainingAmount > 0 ? remainingAmount : 0}</span>
-                        </div>
-                    </div>
-
-                    {/* Payment Section */}
-                    <div className="form-group">
-                        <h2 style={{ color: '#1976d2', textAlign: 'center', marginBottom: '1rem' }}>
-                            💰 Payment Options - Advance: <span style={{ color: '#009688' }}>₹100</span>
-                        </h2>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '16px', justifyContent: 'center' }}>
-                            <div style={{ flex: '1 1 200px', minWidth: '200px', background: '#f5fff5', borderRadius: '8px', padding: '16px', border: '1px solid #b2dfdb', textAlign: 'center' }}>
-                                <h3 style={{ color: '#388e3c', marginBottom: '8px' }}>QR Code Payment</h3>
-                                <img src="/photo/QR.jpeg" alt="QR Code" style={{ maxWidth: '120px', margin: '8px auto', display: 'block', border: '1px solid #ccc', borderRadius: '8px' }} />
-                                <div style={{ color: '#388e3c', fontWeight: '500', marginTop: '8px' }}>Quick & Easy</div>
-                            </div>
-                            <div style={{ flex: '1 1 200px', minWidth: '200px', background: '#fff8f5', borderRadius: '8px', padding: '16px', border: '1px solid #ffcdd2', textAlign: 'center' }}>
-                                <h3 style={{ color: '#d84315', marginBottom: '8px' }}>UPI Payment</h3>
-                                <div style={{ fontSize: '1.1em', color: '#d84315', background: '#fff3e0', padding: '8px 0', borderRadius: '4px', fontWeight: '600' }}>UPI ID: 90407576830@ibl</div>
-                                <div style={{ color: '#d84315', fontWeight: '500', marginTop: '8px' }}>Instant Transfer</div>
-                            </div>
-                        </div>
-                        <div style={{ marginTop: '20px', background: '#f3f7fa', borderRadius: '8px', padding: '16px', border: '1px solid #90caf9' }}>
-                            <h3 style={{ color: '#1565c0', marginBottom: '8px', textAlign: 'center' }}>🏦 Bank Transfer</h3>
-                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px' }}>
-                                <div><strong>Account Holder:</strong> Kaushik Das</div>
-                                <div><strong>Account Number:</strong> 5350101111111384</div>
-                                <div><strong>IFSC Code:</strong> SBIN50004500</div>
-                                <div><strong>Bank:</strong> State Bank of India</div>
-                            </div>
-                        </div>
-                        <div style={{ marginTop: '16px', textAlign: 'center', color: '#1976d2' }}>
-                            <b>Choose any payment method above. After payment, enter Transaction ID below.</b>
-                        </div>
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                        <label style={{ display: 'block', marginBottom: '0.5rem', color: '#555', fontWeight: '500' }}>Transaction ID</label>
-                        <input type="text" name="transactionId" placeholder="Enter UPI transaction ID" value={formData.transactionId} onChange={handleChange} required style={{ width: '100%', padding: '0.75rem', border: '1px solid #ddd', borderRadius: '4px' }} />
-                    </div>
-
-                    <div className="terms-wrapper" style={{ background: '#ffffff', border: '1px solid #e1e5e9', borderRadius: '8px', padding: '20px', margin: '20px 0', transition: 'all 0.3s ease' }}>
-                        <div className="checkbox-wrapper" style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer' }} onClick={() => setShowTermsModal(true)}>
+                {/* Progress Bar */}
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', position: 'relative' }}>
+                    {['Details', 'Payment', 'Done'].map((label, idx) => (
+                        <div key={idx} style={{ textAlign: 'center', zIndex: 1, flex: 1 }}>
                             <div style={{
-                                width: '20px', height: '20px', border: '2px solid #d1d5db', borderRadius: '4px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                background: termsAccepted ? '#007bff' : 'white', borderColor: termsAccepted ? '#007bff' : '#d1d5db'
+                                width: '30px', height: '30px', borderRadius: '50%',
+                                background: step > idx + 1 ? '#28a745' : step === idx + 1 ? '#007bff' : '#dee2e6',
+                                color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 5px'
                             }}>
-                                {termsAccepted && <i className="fas fa-check" style={{ color: 'white', fontSize: '12px' }}></i>}
+                                {step > idx + 1 ? '✓' : idx + 1}
                             </div>
-                            <span style={{ color: '#374151', fontSize: '14px' }}>I agree to the <span style={{ color: '#007bff', fontWeight: '600' }}>Terms and Conditions</span></span>
+                            <span style={{ fontSize: '0.9rem', color: step === idx + 1 ? '#007bff' : '#6c757d' }}>{label}</span>
                         </div>
-                    </div>
-
-                    <button type="submit" className="submit-btn" style={{ width: '100%', padding: '1rem', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', fontSize: '1rem', fontWeight: '600', cursor: 'pointer' }}>Confirm Booking</button>
-                </form>
-            </div>
-
-            {/* Terms Modal */}
-            {showTermsModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.5)', zIndex: 10000, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <div style={{ background: 'white', borderRadius: '12px', width: '90%', maxWidth: '800px', maxHeight: '90vh', overflow: 'hidden', display: 'flex', flexDirection: 'column' }}>
-                        <div style={{ padding: '24px 32px', borderBottom: '1px solid #e5e7eb', display: 'flex', justifyContent: 'space-between' }}>
-                            <h2>Terms and Conditions</h2>
-                            <button onClick={() => setShowTermsModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', cursor: 'pointer' }}>&times;</button>
-                        </div>
-                        <div style={{ padding: '32px', overflowY: 'auto' }}>
-                            <div style={{ marginBottom: '20px', padding: '15px', background: '#eff6ff', borderRadius: '8px', borderLeft: '4px solid #3b82f6' }}>
-                                <h3 style={{ marginTop: 0, color: '#1e40af' }}>1. 📋 Booking Confirmation</h3>
-                                <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                                    <li>Advance booking is confirmed only after successful payment of the advance amount.</li>
-                                    <li>A confirmation message/email will be sent once the booking is verified.</li>
-                                </ul>
-                            </div>
-                            <div style={{ marginBottom: '20px', padding: '15px', background: '#ecfdf5', borderRadius: '8px', borderLeft: '4px solid #10b981' }}>
-                                <h3 style={{ marginTop: 0, color: '#047857' }}>2. 💰 Advance Payment</h3>
-                                <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                                    <li>A minimum of ₹100/- of the total rental amount must be paid in advance to secure your booking.</li>
-                                    <li>The remaining amount must be paid at the time of pickup.</li>
-                                </ul>
-                            </div>
-                            <div style={{ marginBottom: '20px', padding: '15px', background: '#fffbeb', borderRadius: '8px', borderLeft: '4px solid #f59e0b' }}>
-                                <h3 style={{ marginTop: 0, color: '#92400e' }}>3. ⏰ Cancellation Policy</h3>
-                                <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                                    <li>Cancellation 2 hours before the booking time → Full refund of advance.</li>
-                                    <li>Cancellation within 2 hours of/after booking time → 50% of the advance will be deducted.</li>
-                                    <li>No show without cancellation → No refund.</li>
-                                </ul>
-                            </div>
-                            <div style={{ marginBottom: '20px', padding: '15px', background: '#ecfeff', borderRadius: '8px', borderLeft: '4px solid #06b6d4' }}>
-                                <h3 style={{ marginTop: 0, color: '#0e7490' }}>4. 📄 Required Documents</h3>
-                                <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                                    <li>Valid Aadhar Card proof must be shown at the time of pickup.</li>
-                                    <li>The booking will be cancelled if valid documents are not presented.</li>
-                                </ul>
-                            </div>
-                            <div style={{ marginBottom: '20px', padding: '15px', background: '#fef2f2', borderRadius: '8px', borderLeft: '4px solid #ef4444' }}>
-                                <h3 style={{ marginTop: 0, color: '#b91c1c' }}>5. 🚲 Vehicle Usage</h3>
-                                <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                                    <li>The vehicle should be used only by the registered renter.</li>
-                                    <li>Sub-renting or transfer of booking is strictly prohibited.</li>
-                                    <li>Any damage or traffic violation fines during the rental period are the renter's responsibility.</li>
-                                </ul>
-                            </div>
-                            <div style={{ marginBottom: '20px', padding: '15px', background: '#fff7ed', borderRadius: '8px', borderLeft: '4px solid #f97316' }}>
-                                <h3 style={{ marginTop: 0, color: '#c2410c' }}>6. ⏱️ Late Return</h3>
-                                <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                                    <li>Delay beyond the scheduled return time will incur late fees per hour.</li>
-                                </ul>
-                            </div>
-                            <div style={{ marginBottom: '20px', padding: '15px', background: '#ecfdf5', borderRadius: '8px', borderLeft: '4px solid #10b981' }}>
-                                <h3 style={{ marginTop: 0, color: '#047857' }}>7. 💳 Refund Policy</h3>
-                                <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                                    <li>Refunds (if applicable) will be processed within 3–5 working days after cancellation.</li>
-                                </ul>
-                            </div>
-                            <div style={{ marginBottom: '20px', padding: '15px', background: '#f9fafb', borderRadius: '8px', borderLeft: '4px solid #6b7280' }}>
-                                <h3 style={{ marginTop: 0, color: '#374151' }}>8. 🏢 Company Rights</h3>
-                                <ul style={{ margin: 0, paddingLeft: '20px' }}>
-                                    <li>The company reserves the right to cancel any booking due to unforeseen issues (vehicle unavailability, technical problems, or policy violations).</li>
-                                    <li>In such cases, a full refund of the advance will be provided.</li>
-                                </ul>
-                            </div>
-                        </div>
-                        <div style={{ padding: '24px 32px', borderTop: '1px solid #e5e7eb', background: '#f9fafb', display: 'flex', justifyContent: 'flex-end', gap: '1rem' }}>
-                            <button onClick={() => setShowTermsModal(false)} style={{ padding: '12px 24px', background: '#6b7280', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Decline</button>
-                            <button onClick={() => { setTermsAccepted(true); setShowTermsModal(false); }} style={{ padding: '12px 24px', background: '#10b981', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>Accept</button>
-                        </div>
+                    ))}
+                    <div style={{ position: 'absolute', top: '15px', left: '16%', right: '16%', height: '2px', background: '#dee2e6', zIndex: 0 }}>
+                        <div style={{ width: `${(step - 1) * 50}%`, height: '100%', background: '#28a745', transition: 'width 0.3s' }}></div>
                     </div>
                 </div>
-            )}
+
+                {/* Vehicle Summary (Small) */}
+                <div className="vehicle-info" style={{ display: 'flex', gap: '1rem', background: '#f8f9fa', padding: '1rem', borderRadius: '4px', marginBottom: '2rem' }}>
+                    <img src={vehicle.image_url} alt={vehicle.name} style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <div>
+                        <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{vehicle.name}</h3>
+                        <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>₹{vehicle.price}/hour • {vehicle.fuel_type}</p>
+                    </div>
+                </div>
+
+                {/* STEP 1: Details */}
+                {step === 1 && (
+                    <form onSubmit={handleCheckAvailability}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
+                            <div className="form-group">
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
+                                    <i className="far fa-calendar-alt" style={{ marginRight: '8px', color: '#007bff' }}></i> Start Date
+                                </label>
+                                <input
+                                    type="date"
+                                    name="startDate"
+                                    min={today}
+                                    value={formData.startDate}
+                                    onChange={handleChange}
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.8rem 1rem',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '8px',
+                                        fontSize: '1rem',
+                                        backgroundColor: '#f9fafb',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                        outline: 'none',
+                                        transition: 'all 0.2s ease',
+                                        color: '#1f2937'
+                                    }}
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = '#007bff';
+                                        e.target.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
+                                        e.target.style.backgroundColor = '#ffffff';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = '#e5e7eb';
+                                        e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                                        e.target.style.backgroundColor = '#f9fafb';
+                                    }}
+                                />
+                            </div>
+                            <div className="form-group">
+                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
+                                    <i className="far fa-clock" style={{ marginRight: '8px', color: '#007bff' }}></i> Start Time
+                                </label>
+                                <input
+                                    type="time"
+                                    name="startTime"
+                                    value={formData.startTime}
+                                    onChange={handleChange}
+                                    required
+                                    style={{
+                                        width: '100%',
+                                        padding: '0.8rem 1rem',
+                                        border: '1px solid #e5e7eb',
+                                        borderRadius: '8px',
+                                        fontSize: '1rem',
+                                        backgroundColor: '#f9fafb',
+                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                        outline: 'none',
+                                        transition: 'all 0.2s ease',
+                                        color: '#1f2937'
+                                    }}
+                                    onFocus={(e) => {
+                                        e.target.style.borderColor = '#007bff';
+                                        e.target.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
+                                        e.target.style.backgroundColor = '#ffffff';
+                                    }}
+                                    onBlur={(e) => {
+                                        e.target.style.borderColor = '#e5e7eb';
+                                        e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                                        e.target.style.backgroundColor = '#f9fafb';
+                                    }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
+                                <i className="fas fa-hourglass-half" style={{ marginRight: '8px', color: '#007bff' }}></i> Duration (hours)
+                            </label>
+                            <input
+                                type="number"
+                                name="duration"
+                                min="1"
+                                max="672"
+                                value={formData.duration}
+                                onChange={handleChange}
+                                required
+                                style={{
+                                    width: '100%',
+                                    padding: '0.8rem 1rem',
+                                    border: '1px solid #e5e7eb',
+                                    borderRadius: '8px',
+                                    fontSize: '1rem',
+                                    backgroundColor: '#f9fafb',
+                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
+                                    outline: 'none',
+                                    transition: 'all 0.2s ease',
+                                    color: '#1f2937'
+                                }}
+                                onFocus={(e) => {
+                                    e.target.style.borderColor = '#007bff';
+                                    e.target.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
+                                    e.target.style.backgroundColor = '#ffffff';
+                                }}
+                                onBlur={(e) => {
+                                    e.target.style.borderColor = '#e5e7eb';
+                                    e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
+                                    e.target.style.backgroundColor = '#f9fafb';
+                                }}
+                            />
+                        </div>
+
+                        <div className="price-details" style={{ background: '#e3f2fd', padding: '1rem', borderRadius: '4px', margin: '1.5rem 0' }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><span>Total Amount:</span><strong>₹{totalAmount}</strong></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#007bff' }}><span>Advance Pay (30%):</span><strong>₹{advancePayment}</strong></div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #bbdefb', paddingTop: '0.5rem' }}><span>Remaining:</span><strong>₹{remainingAmount}</strong></div>
+                        </div>
+
+                        <button type="submit" disabled={processing} className="submit-btn" style={{ width: '100%', padding: '1rem', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', fontSize: '1rem', fontWeight: '600', cursor: processing ? 'not-allowed' : 'pointer' }}>
+                            {processing ? 'Checking...' : 'Continue to Pay'}
+                        </button>
+                    </form>
+                )}
+
+                {/* STEP 2: Payment */}
+                {step === 2 && (
+                    <div>
+                        <div style={{ padding: '1.5rem', background: '#fef3c7', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid #fcd34d' }}>
+                            <h3 style={{ margin: '0 0 1rem 0', color: '#92400e' }}>Booking Summary</h3>
+                            <p><strong>Date:</strong> {formData.startDate}</p>
+                            <p><strong>Time:</strong> {formData.startTime}</p>
+                            <p><strong>Duration:</strong> {formData.duration} hours</p>
+                            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #fde68a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <span style={{ color: '#92400e' }}>Advance Amount to Pay:</span>
+                                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#d97706' }}>₹{advancePayment}</span>
+                            </div>
+                        </div>
+
+                        <button onClick={handlePayment} disabled={processing} style={{ width: '100%', padding: '1rem', background: '#d97706', color: 'white', border: 'none', borderRadius: '4px', fontSize: '1rem', fontWeight: 'bold', cursor: processing ? 'not-allowed' : 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
+                            {processing ? 'Processing...' : <><i className="fas fa-lock"></i> Pay ₹{advancePayment} Now</>}
+                        </button>
+                        <button onClick={() => setStep(1)} style={{ width: '100%', marginTop: '1rem', padding: '0.8rem', background: 'none', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}>Back to Details</button>
+                    </div>
+                )}
+
+                {/* STEP 3: Success */}
+                {step === 3 && (
+                    <div style={{ textAlign: 'center', padding: '2rem 0' }}>
+                        <div style={{ width: '80px', height: '80px', background: '#d1e7dd', color: '#0f5132', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '2.5rem' }}>
+                            <i className="fas fa-check"></i>
+                        </div>
+                        <h2 style={{ color: '#0f5132' }}>Booking Confirmed!</h2>
+                        <p style={{ color: '#666', marginBottom: '2rem' }}>We've sent a confirmation email to you. Your vehicle is reserved.</p>
+
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                            <button onClick={() => navigate('/my-bookings')} style={{ padding: '0.8rem 1.5rem', background: '#0f5132', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>My Bookings</button>
+                            <button onClick={() => navigate('/')} style={{ padding: '0.8rem 1.5rem', background: 'none', border: '1px solid #0f5132', color: '#0f5132', borderRadius: '4px', cursor: 'pointer' }}>Home</button>
+                        </div>
+                    </div>
+                )}
+            </div>
 
             {/* Status Popup */}
             <StatusPopup
                 isOpen={popup.isOpen}
-                onClose={() => {
-                    setPopup({ ...popup, isOpen: false });
-                    if (popup.type === 'success') {
-                        navigate('/my-bookings');
-                    }
-                }}
+                onClose={() => setPopup({ ...popup, isOpen: false })}
                 type={popup.type}
                 title={popup.title}
                 message={popup.message}
