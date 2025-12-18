@@ -12,6 +12,12 @@ const SupabaseDB = require('./models/supabaseDB');
 const supabase = require('./config/supabase');
 const { sendBookingConfirmationEmail, sendPasswordResetOTP, sendRegistrationOTP, generateOTP, sendSOSLinkEmail, sendSOSAlertEmail } = require('./config/emailService');
 const { makeBookingConfirmationCall } = require('./config/retellCallService');
+const Razorpay = require('razorpay');
+
+const razorpay = new Razorpay({
+    key_id: process.env.RAZORPAY_KEY_ID,
+    key_secret: process.env.RAZORPAY_KEY_SECRET
+});
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -1630,6 +1636,52 @@ app.get('/api/vehicles/:type/:id', async (req, res) => {
     }
 });
 
+// Check availability endpoint
+app.post('/api/bookings/check-availability', verifyToken, async (req, res) => {
+    try {
+        const { vehicleId, startDate, startTime, duration } = req.body;
+
+        // Validate time format (HH:mm)
+        const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
+        if (!timeRegex.test(startTime)) {
+            return res.status(400).json({ error: 'Invalid time format. Please use HH:mm format (24-hour)' });
+        }
+
+        // Convert startTime to 24-hour format if needed
+        const [hours, minutes] = startTime.split(':').map(Number);
+        const formattedStartTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+
+        const conflict = await checkTimeConflict(vehicleId, startDate, formattedStartTime, duration);
+        if (conflict.conflict) {
+            return res.status(409).json(conflict);
+        }
+
+        res.status(200).json({ available: true, message: 'Vehicle is available' });
+    } catch (error) {
+        console.error('Error checking availability:', error);
+        res.status(500).json({ error: 'Error checking availability' });
+    }
+});
+
+// Create Razorpay Order
+app.post('/api/payment/create-order', verifyToken, async (req, res) => {
+    try {
+        const { amount, currency = 'INR', receipt } = req.body;
+
+        const options = {
+            amount: amount * 100, // amount in smallest currency unit (paise)
+            currency,
+            receipt,
+        };
+
+        const order = await razorpay.orders.create(options);
+        res.json(order);
+    } catch (error) {
+        console.error('Error creating Razorpay order:', error);
+        res.status(500).json({ error: 'Error creating payment order', details: error });
+    }
+});
+
 // Create booking
 // Create new booking
 app.post('/api/bookings', verifyToken, async (req, res) => {
@@ -1637,7 +1689,19 @@ app.post('/api/bookings', verifyToken, async (req, res) => {
         console.log('--- Booking Request Received ---');
         console.log('User:', req.user);
         console.log('Body:', req.body);
-        const { vehicleId, startDate, startTime, duration, vehicleType, transactionId } = req.body;
+        const { vehicleId, startDate, startTime, duration, vehicleType, transactionId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+
+        // Verify Razorpay Payment if present
+        if (razorpayPaymentId && razorpayOrderId && razorpaySignature) {
+            const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
+            shasum.update(`${razorpayOrderId}|${razorpayPaymentId}`);
+            const digest = shasum.digest('hex');
+
+            if (digest !== razorpaySignature) {
+                return res.status(400).json({ error: 'Payment verification failed! Invalid signature.' });
+            }
+            console.log('✅ Payment verified successfully');
+        }
         // Validate time format (HH:mm)
         const timeRegex = /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/;
         if (!timeRegex.test(startTime)) {
@@ -1657,9 +1721,9 @@ app.post('/api/bookings', verifyToken, async (req, res) => {
             start_date: startDate,
             start_time: formattedStartTime, // Use formatted time
             duration,
-            status: 'pending',
+            status: 'confirmed', // Confirmed since payment is verified
             vehicle_type: vehicleType,
-            transaction_id: transactionId
+            transaction_id: req.body.razorpayPaymentId || 'PENDING'
         };
         console.log('Booking data to insert:', bookingData);
         const { data, error } = await supabase
@@ -1670,22 +1734,83 @@ app.post('/api/bookings', verifyToken, async (req, res) => {
 
         if (error) {
             console.error('Error creating booking:', error);
-            // Check for unique constraint violation (Postgres error 23505)
+            // Check for unique constraint violation
             if (error.code === '23505' && (error.details?.includes('transaction_id') || error.message?.includes('transaction_id'))) {
-                return res.status(409).json({ error: 'This Transaction ID has already been used. Please provide a valid, unique Transaction ID.' });
+                return res.status(409).json({ error: 'Transaction ID already exists.' });
             }
-            return res.status(500).json({ error: 'Error creating booking', details: error.message || error });
+            // Return actual DB error for debugging (remove in production if needed, but useful now)
+            return res.status(500).json({ error: 'Error creating booking', details: error.message, code: error.code, hint: error.hint });
         }
 
         console.log('Booking created:', data);
-        // Update vehicle availability
-        // Update vehicle availability
-        // try {
-        //     await SupabaseDB.updateVehicleAvailability(vehicleType, vehicleId, false);
-        // } catch (vehicleError) {
-        //     console.error('Error updating vehicle availability:', vehicleError);
-        //     // Optionally, you can add a warning to the response here
-        // }
+
+        // Async Background Notification: Email & Call
+        (async () => {
+            try {
+                // 1. Fetch User Details
+                const { data: userDetails } = await supabase
+                    .from('users')
+                    .select('*')
+                    .eq('id', req.user.id)
+                    .single();
+
+                if (!userDetails) {
+                    console.error('User not found for notification.');
+                    return;
+                }
+
+                // 2. Fetch Vehicle Details (Name, etc.)
+                let vehicleName = `Vehicle ${vehicleId}`;
+                try {
+                    const { data: vehicleData } = await supabase
+                        .from(vehicleType) // 'bikes', 'cars', etc.
+                        .select('name')
+                        .eq('id', vehicleId)
+                        .single();
+                    if (vehicleData) vehicleName = vehicleData.name;
+                } catch (vError) {
+                    console.log('Could not fetch vehicle name:', vError);
+                }
+
+                // 3. Prepare Booking Details object
+                const detailsForEmail = {
+                    vehicleName: vehicleName,
+                    vehicleType: vehicleType,
+                    startDate: startDate,
+                    startTime: formattedStartTime,
+                    duration: duration,
+                    totalAmount: req.body.totalAmount || 0,
+                    advancePayment: req.body.advancePayment || 0,
+                    remainingAmount: req.body.remainingAmount || 0,
+                    confirmationTime: new Date().toLocaleString()
+                };
+
+                // 4. Send Email
+                const { sendBookingConfirmationEmail } = require('./config/emailService');
+                await sendBookingConfirmationEmail(userDetails.email, userDetails.full_name, detailsForEmail);
+                console.log(`📧 Confirmation email sent to ${userDetails.email}`);
+
+                // 5. Trigger Retell AI Call
+                if (userDetails.phone_number) {
+                    const { makeBookingConfirmationCall } = require('./config/retellCallService');
+                    const detailsForCall = {
+                        bookingId: data.id,
+                        vehicleName: vehicleName,
+                        vehicleType: vehicleType,
+                        startDate: startDate,
+                        startTime: formattedStartTime,
+                        duration: duration,
+                        userName: userDetails.full_name
+                    };
+                    await makeBookingConfirmationCall(userDetails.phone_number, detailsForCall);
+                    console.log(`📞 Confirmation call triggered for ${userDetails.phone_number}`);
+                }
+
+            } catch (notifyError) {
+                console.error('❌ Error in background notification task:', notifyError);
+            }
+        })();
+
         res.status(201).json(data);
     } catch (error) {
         console.error('Error creating booking:', error);
