@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import StatusPopup from '../components/StatusPopup';
 
 const RegisterUser = () => {
     const navigate = useNavigate();
@@ -11,6 +12,12 @@ const RegisterUser = () => {
         confirmPassword: '',
         otp: ''
     });
+    const [popup, setPopup] = useState({
+        isOpen: false,
+        type: 'error',
+        title: '',
+        message: ''
+    });
     const [showOtpInput, setShowOtpInput] = useState(false);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -21,7 +28,7 @@ const RegisterUser = () => {
     };
 
     const handleSendOtp = async () => {
-        if (!formData.email) return alert('Please enter your email first');
+        if (!formData.email) return setPopup({ isOpen: true, type: 'error', title: 'Email Required', message: 'Please enter your email first' });
         setIsSendingOtp(true);
         try {
             const r = await fetch('/api/register/send-otp', {
@@ -32,12 +39,12 @@ const RegisterUser = () => {
             const j = await r.json();
             if (r.ok) {
                 setShowOtpInput(true);
-                alert(j.message || 'OTP sent to your email');
+                setPopup({ isOpen: true, type: 'success', title: 'OTP Sent', message: j.message || 'OTP sent to your email' });
             } else {
-                alert(j.error || 'Failed to send OTP');
+                setPopup({ isOpen: true, type: 'error', title: 'Error', message: j.error || 'Failed to send OTP' });
             }
         } catch (err) {
-            alert('Could not send OTP, please try again later');
+            setPopup({ isOpen: true, type: 'error', title: 'Network Error', message: 'Could not send OTP, please try again later' });
         } finally {
             setIsSendingOtp(false);
         }
@@ -60,18 +67,18 @@ const RegisterUser = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (formData.password !== formData.confirmPassword) {
-            alert('Passwords do not match');
+            setPopup({ isOpen: true, type: 'error', title: 'Password Mismatch', message: 'Passwords do not match' });
             return;
         }
 
         const failed = Object.entries(passwordChecks).filter(([k, v]) => !v).map(x => x[0]);
         if (failed.length > 0) {
-            alert('Password does not meet complexity requirements.');
+            setPopup({ isOpen: true, type: 'error', title: 'Weak Password', message: 'Password does not meet complexity requirements.' });
             return;
         }
 
         if (!formData.otp) {
-            alert('Please verify your email with OTP before submitting.');
+            setPopup({ isOpen: true, type: 'error', title: 'OTP Required', message: 'Please verify your email with OTP before submitting.' });
             return;
         }
 
@@ -83,17 +90,21 @@ const RegisterUser = () => {
             });
             const data = await response.json();
             if (response.ok) {
-                alert('User registration successful! Redirecting to login...');
-                setTimeout(() => navigate('/login'), 1500);
+                setPopup({
+                    isOpen: true,
+                    type: 'success',
+                    title: 'Registration Successful',
+                    message: 'User registration successful! Redirecting to login...'
+                });
             } else {
                 if (data && data.error && data.details && Array.isArray(data.details)) {
-                    alert(data.error + '\n' + data.details.join('\n'));
+                    setPopup({ isOpen: true, type: 'error', title: 'Registration Failed', message: data.error + '\n' + data.details.join('\n') });
                 } else {
-                    alert(data.error || 'Registration failed');
+                    setPopup({ isOpen: true, type: 'error', title: 'Registration Failed', message: data.error || 'Registration failed' });
                 }
             }
         } catch (error) {
-            alert('An error occurred during registration.');
+            setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'An error occurred during registration.' });
         }
     };
 
@@ -179,7 +190,20 @@ const RegisterUser = () => {
                     <p style={{ textAlign: 'center', marginTop: '0.5rem', color: '#6c757d' }}>Register as <Link to="/register-admin" style={{ color: '#2ecc71', fontWeight: 'bold' }}>Admin</Link></p>
                 </div>
             </div>
-        </div>
+
+            <StatusPopup
+                isOpen={popup.isOpen}
+                onClose={() => {
+                    setPopup({ ...popup, isOpen: false });
+                    if (popup.type === 'success' && popup.title === 'Registration Successful') {
+                        navigate('/login');
+                    }
+                }}
+                type={popup.type}
+                title={popup.title}
+                message={popup.message}
+            />
+        </div >
     );
 };
 
