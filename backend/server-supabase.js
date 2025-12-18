@@ -12,6 +12,7 @@ const SupabaseDB = require('./models/supabaseDB');
 const supabase = require('./config/supabase');
 const { sendBookingConfirmationEmail, sendPasswordResetOTP, sendRegistrationOTP, generateOTP, sendSOSLinkEmail, sendSOSAlertEmail } = require('./config/emailService');
 const { makeBookingConfirmationCall } = require('./config/retellCallService');
+const { checkAndSendReminders, sendImmediateReminderIfNeeded } = require('./services/reminderService');
 const Razorpay = require('razorpay');
 
 const razorpay = new Razorpay({
@@ -822,6 +823,14 @@ app.post('/api/admin/bookings/:id/confirm', verifyAdminToken, async (req, res) =
         } else {
             console.log('⚠️ No phone number available for booking confirmation call');
             console.log('Booking user data:', booking.users);
+        }
+
+        // Check if immediate reminder needed (for bookings within 2 hours)
+        try {
+            await sendImmediateReminderIfNeeded(bookingId);
+        } catch (reminderError) {
+            console.error('❌ Error sending immediate reminder:', reminderError);
+            // Don't fail the booking confirmation if reminder fails
         }
 
         res.json(updatedBooking);
@@ -1723,7 +1732,9 @@ app.post('/api/bookings', verifyToken, async (req, res) => {
             duration,
             status: 'confirmed', // Confirmed since payment is verified
             vehicle_type: vehicleType,
-            transaction_id: req.body.razorpayPaymentId || 'PENDING'
+            transaction_id: req.body.razorpayPaymentId || 'PENDING',
+            confirmation_timestamp: getISTTimestamp(), // Add confirmation timestamp in IST
+            advance_payment: req.body.advancePayment || 100 // Add advance payment
         };
         console.log('Booking data to insert:', bookingData);
         const { data, error } = await supabase
@@ -1877,6 +1888,17 @@ app.post('/api/bookings', verifyToken, async (req, res) => {
                     };
                     await makeBookingConfirmationCall(userDetails.phone_number, detailsForCall);
                     console.log(`📞 Confirmation call triggered for ${userDetails.phone_number}`);
+                }
+
+                // 6. Check if immediate reminder needed (for bookings within 2 hours)
+                // Add delay to avoid rate limiting when both emails sent together
+                try {
+                    // Wait 2 seconds to ensure confirmation email is sent first
+                    await new Promise(resolve => setTimeout(resolve, 2000));
+                    await sendImmediateReminderIfNeeded(data.id);
+                } catch (reminderError) {
+                    console.error('❌ Error sending immediate reminder:', reminderError);
+                    // Don't fail the booking if reminder fails
                 }
 
             } catch (notifyError) {
@@ -2769,8 +2791,49 @@ app.post('/api/sos-activate', async (req, res) => {
     }
 });
 
+// ============================================
+// REMINDER EMAIL SYSTEM
+// ============================================
+
+// Manual endpoint to trigger reminder check (for testing)
+app.post('/api/admin/check-reminders', verifyAdminToken, async (req, res) => {
+    try {
+        console.log('📧 Manual reminder check triggered by admin');
+        const result = await checkAndSendReminders();
+        res.json(result);
+    } catch (error) {
+        console.error('Error in manual reminder check:', error);
+        res.status(500).json({ error: 'Error checking reminders', details: error.message });
+    }
+});
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
     console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+
+    // Reminder scheduler - Optional (use only if not using external cron)
+    const USE_INTERNAL_CRON = process.env.USE_INTERNAL_CRON === 'true';
+
+    if (USE_INTERNAL_CRON) {
+        console.log('🔔 Starting internal reminder email scheduler...');
+
+        // Run immediately on startup
+        checkAndSendReminders().catch(err => {
+            console.error('Error in initial reminder check:', err);
+        });
+
+        // Then run every 15 minutes
+        const REMINDER_CHECK_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
+        setInterval(() => {
+            console.log('⏰ Running scheduled reminder check...');
+            checkAndSendReminders().catch(err => {
+                console.error('Error in scheduled reminder check:', err);
+            });
+        }, REMINDER_CHECK_INTERVAL);
+
+        console.log(`✅ Internal reminder scheduler active (checking every 15 minutes)`);
+    } else {
+        console.log('ℹ️  Internal cron disabled. Use external cron job to call /api/admin/check-reminders');
+    }
 });

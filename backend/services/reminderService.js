@@ -1,0 +1,368 @@
+const supabase = require('../config/supabase');
+const { sendEmail } = require('../config/emailService');
+const dayjs = require('dayjs');
+
+/**
+ * Send pickup reminder email
+ * @param {string} userEmail - User's email address
+ * @param {string} userName - User's full name
+ * @param {object} bookingDetails - Booking information
+ */
+async function sendPickupReminderEmail(userEmail, userName, bookingDetails) {
+    const { bookingId, vehicleName, vehicleType, startDate, startTime, duration, pickupLocation, hoursUntilPickup } = bookingDetails;
+
+    // Determine message based on how soon the pickup is
+    let urgencyMessage = '';
+    if (hoursUntilPickup < 1) {
+        urgencyMessage = '<p style="background:#fff3cd;padding:12px;border-left:4px solid #ffc107;margin:16px 0;"><strong>⚠️ Your booking starts very soon!</strong> Please be ready for pickup.</p>';
+    } else if (hoursUntilPickup < 2) {
+        urgencyMessage = '<p style="background:#d1ecf1;padding:12px;border-left:4px solid #0dcaf0;margin:16px 0;"><strong>📢 Reminder:</strong> Your booking starts in less than 2 hours.</p>';
+    } else {
+        urgencyMessage = '<p style="background:#d1ecf1;padding:12px;border-left:4px solid #0dcaf0;margin:16px 0;"><strong>📢 Reminder:</strong> Your booking starts in 2 hours.</p>';
+    }
+
+    const html = `
+        <div style="font-family: Arial, sans-serif; color: #222; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <h1 style="color: white; margin: 0; font-size: 28px;">🔔 Pickup Reminder</h1>
+          </div>
+          
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+            <h2 style="color: #1f2937; margin-top: 0;">Hello ${userName}!</h2>
+            
+            ${urgencyMessage}
+            
+            <p style="font-size: 16px; line-height: 1.6; color: #374151;">
+              This is a friendly reminder about your upcoming vehicle pickup:
+            </p>
+
+            <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
+              <table style="width: 100%; border-collapse: collapse;">
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Booking ID:</td>
+                  <td style="padding: 8px 0; color: #1f2937; font-weight: bold;">#${bookingId}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Vehicle:</td>
+                  <td style="padding: 8px 0; color: #1f2937;">${vehicleName} (${vehicleType})</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Pickup Date:</td>
+                  <td style="padding: 8px 0; color: #1f2937;">${startDate}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Pickup Time:</td>
+                  <td style="padding: 8px 0; color: #1f2937; font-size: 18px; font-weight: bold;">${startTime}</td>
+                </tr>
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Duration:</td>
+                  <td style="padding: 8px 0; color: #1f2937;">${duration} hours</td>
+                </tr>
+                ${pickupLocation ? `
+                <tr>
+                  <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Pickup Location:</td>
+                  <td style="padding: 8px 0; color: #1f2937;">${pickupLocation}</td>
+                </tr>
+                ` : ''}
+              </table>
+            </div>
+
+            <div style="background: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0;">
+              <h3 style="margin: 0 0 10px 0; color: #92400e; font-size: 16px;">📋 Important Reminders:</h3>
+              <ul style="margin: 0; padding-left: 20px; color: #78350f;">
+                <li style="margin: 6px 0;">Bring a valid government-issued ID (Aadhar Card/Driving License)</li>
+                <li style="margin: 6px 0;">Carry a printed or digital copy of your booking confirmation</li>
+                <li style="margin: 6px 0;">Arrive 10-15 minutes early for vehicle inspection</li>
+                <li style="margin: 6px 0;">Ensure you have the remaining payment amount ready</li>
+              </ul>
+            </div>
+
+            <p style="font-size: 14px; color: #6b7280; margin-top: 24px;">
+              If you have any questions or need to make changes to your booking, please contact us immediately.
+            </p>
+
+            <div style="text-align: center; margin-top: 30px; padding-top: 20px; border-top: 1px solid #e5e7eb;">
+              <p style="color: #9ca3af; font-size: 12px; margin: 5px 0;">
+                RentHub — Premium Bike & Vehicle Rentals
+              </p>
+              <p style="color: #9ca3af; font-size: 12px; margin: 5px 0;">
+                support@renthub.in | +91 98765 43210
+              </p>
+            </div>
+          </div>
+        </div>
+    `;
+
+    return sendEmail({
+        to: userEmail,
+        subject: `🔔 Reminder: Your ${vehicleName} pickup is ${hoursUntilPickup < 1 ? 'very soon' : hoursUntilPickup < 2 ? 'in less than 2 hours' : 'in 2 hours'}!`,
+        html: html
+    });
+}
+
+/**
+ * Check and send reminder emails for bookings
+ * This function should be called periodically (e.g., every 15 minutes)
+ */
+async function checkAndSendReminders() {
+    try {
+        console.log('🔍 Checking for bookings that need reminder emails...');
+
+        // Get current time in IST
+        const now = dayjs();
+
+        // Fetch all confirmed bookings that haven't received a reminder yet
+        const { data: bookings, error } = await supabase
+            .from('bookings')
+            .select(`
+                *,
+                users:user_id (
+                    email,
+                    full_name,
+                    phone_number
+                )
+            `)
+            .eq('status', 'confirmed')
+            .or('reminder_sent.is.null,reminder_sent.eq.false');
+
+        if (error) {
+            console.error('❌ Error fetching bookings:', error);
+            return { success: false, error: error.message };
+        }
+
+        if (!bookings || bookings.length === 0) {
+            console.log('✅ No bookings need reminders at this time.');
+            return { success: true, remindersSent: 0 };
+        }
+
+        console.log(`📋 Found ${bookings.length} bookings to check`);
+
+        let remindersSent = 0;
+        const errors = [];
+
+        for (const booking of bookings) {
+            try {
+                // Parse booking start time
+                const bookingDateTime = dayjs(`${booking.start_date} ${booking.start_time}`);
+
+                // Calculate hours until pickup
+                const hoursUntilPickup = bookingDateTime.diff(now, 'hour', true);
+
+                console.log(`📅 Booking #${booking.id}: ${hoursUntilPickup.toFixed(2)} hours until pickup`);
+
+                // Skip if booking is in the past
+                if (hoursUntilPickup < 0) {
+                    console.log(`⏭️  Skipping booking #${booking.id} - already passed`);
+                    continue;
+                }
+
+                // Skip if booking is more than 2.5 hours away (to avoid sending too early)
+                if (hoursUntilPickup > 2.5) {
+                    console.log(`⏭️  Skipping booking #${booking.id} - too far in future (${hoursUntilPickup.toFixed(2)} hours)`);
+                    continue;
+                }
+
+                // Determine if we should send reminder
+                let shouldSendReminder = false;
+
+                if (hoursUntilPickup <= 2 && hoursUntilPickup >= 0) {
+                    shouldSendReminder = true;
+                }
+
+                if (!shouldSendReminder) {
+                    continue;
+                }
+
+                // Fetch vehicle details
+                let vehicleName = 'Vehicle';
+                let vehicleType = booking.vehicle_type || 'bike';
+
+                try {
+                    const { data: vehicle } = await supabase
+                        .from(vehicleType === 'scooty' ? 'scooty' : vehicleType === 'car' ? 'cars' : 'bikes')
+                        .select('name, type')
+                        .eq('id', booking.vehicle_id)
+                        .single();
+
+                    if (vehicle) {
+                        vehicleName = vehicle.name;
+                        vehicleType = vehicle.type || vehicleType;
+                    }
+                } catch (vError) {
+                    console.log(`⚠️  Could not fetch vehicle details for booking #${booking.id}`);
+                }
+
+                // Send reminder email
+                if (booking.users && booking.users.email) {
+                    const bookingDetails = {
+                        bookingId: booking.id,
+                        vehicleName: vehicleName,
+                        vehicleType: vehicleType,
+                        startDate: booking.start_date,
+                        startTime: booking.start_time,
+                        duration: booking.duration,
+                        pickupLocation: booking.pickup_location || 'GITA Autonomous College BBSR',
+                        hoursUntilPickup: hoursUntilPickup
+                    };
+
+                    const emailResult = await sendPickupReminderEmail(
+                        booking.users.email,
+                        booking.users.full_name || 'Customer',
+                        bookingDetails
+                    );
+
+                    if (emailResult.success) {
+                        // Mark reminder as sent
+                        const { error: updateError } = await supabase
+                            .from('bookings')
+                            .update({
+                                reminder_sent: true,
+                                reminder_sent_at: now.toISOString()
+                            })
+                            .eq('id', booking.id);
+
+                        if (updateError) {
+                            console.error(`❌ Error updating booking #${booking.id}:`, updateError);
+                            errors.push({ bookingId: booking.id, error: updateError.message });
+                        } else {
+                            console.log(`✅ Reminder sent for booking #${booking.id} to ${booking.users.email}`);
+                            remindersSent++;
+                        }
+                    } else {
+                        console.error(`❌ Failed to send email for booking #${booking.id}:`, emailResult.error);
+                        errors.push({ bookingId: booking.id, error: emailResult.error });
+                    }
+                } else {
+                    console.log(`⚠️  No email found for booking #${booking.id}`);
+                }
+
+            } catch (bookingError) {
+                console.error(`❌ Error processing booking #${booking.id}:`, bookingError);
+                errors.push({ bookingId: booking.id, error: bookingError.message });
+            }
+        }
+
+        console.log(`✅ Reminder check complete. Sent ${remindersSent} reminders.`);
+
+        return {
+            success: true,
+            remindersSent: remindersSent,
+            errors: errors.length > 0 ? errors : null
+        };
+
+    } catch (error) {
+        console.error('❌ Error in checkAndSendReminders:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+/**
+ * Send immediate reminder for bookings made close to pickup time
+ * Called when admin confirms a booking
+ */
+async function sendImmediateReminderIfNeeded(bookingId) {
+    try {
+        // Fetch booking details
+        const { data: booking, error } = await supabase
+            .from('bookings')
+            .select(`
+                *,
+                users:user_id (
+                    email,
+                    full_name
+                )
+            `)
+            .eq('id', bookingId)
+            .single();
+
+        if (error || !booking) {
+            console.error('Error fetching booking for immediate reminder:', error);
+            return { success: false, error: error?.message || 'Booking not found' };
+        }
+
+        // Check if reminder already sent
+        if (booking.reminder_sent) {
+            console.log(`Reminder already sent for booking #${bookingId}`);
+            return { success: true, alreadySent: true };
+        }
+
+        // Calculate hours until pickup
+        const now = dayjs();
+        const bookingDateTime = dayjs(`${booking.start_date} ${booking.start_time}`);
+        const hoursUntilPickup = bookingDateTime.diff(now, 'hour', true);
+
+        // Only send if booking is within 2 hours
+        if (hoursUntilPickup > 2 || hoursUntilPickup < 0) {
+            console.log(`Booking #${bookingId} is ${hoursUntilPickup.toFixed(2)} hours away - no immediate reminder needed`);
+            return { success: true, notNeeded: true };
+        }
+
+        // Fetch vehicle details
+        let vehicleName = 'Vehicle';
+        let vehicleType = booking.vehicle_type || 'bike';
+
+        try {
+            const { data: vehicle } = await supabase
+                .from(vehicleType === 'scooty' ? 'scooty' : vehicleType === 'car' ? 'cars' : 'bikes')
+                .select('name, type')
+                .eq('id', booking.vehicle_id)
+                .single();
+
+            if (vehicle) {
+                vehicleName = vehicle.name;
+                vehicleType = vehicle.type || vehicleType;
+            }
+        } catch (vError) {
+            console.log('Could not fetch vehicle details');
+        }
+
+        // Send reminder email
+        if (booking.users && booking.users.email) {
+            const bookingDetails = {
+                bookingId: booking.id,
+                vehicleName: vehicleName,
+                vehicleType: vehicleType,
+                startDate: booking.start_date,
+                startTime: booking.start_time,
+                duration: booking.duration,
+                pickupLocation: booking.pickup_location || 'GITA Autonomous College BBSR',
+                hoursUntilPickup: hoursUntilPickup
+            };
+
+            const emailResult = await sendPickupReminderEmail(
+                booking.users.email,
+                booking.users.full_name || 'Customer',
+                bookingDetails
+            );
+
+            if (emailResult.success) {
+                // Mark reminder as sent
+                await supabase
+                    .from('bookings')
+                    .update({
+                        reminder_sent: true,
+                        reminder_sent_at: now.toISOString()
+                    })
+                    .eq('id', bookingId);
+
+                console.log(`✅ Immediate reminder sent for booking #${bookingId}`);
+                return { success: true, reminderSent: true };
+            } else {
+                console.error(`Failed to send immediate reminder for booking #${bookingId}:`, emailResult.error);
+                return { success: false, error: emailResult.error };
+            }
+        }
+
+        return { success: false, error: 'No user email found' };
+
+    } catch (error) {
+        console.error('Error in sendImmediateReminderIfNeeded:', error);
+        return { success: false, error: error.message };
+    }
+}
+
+module.exports = {
+    sendPickupReminderEmail,
+    checkAndSendReminders,
+    sendImmediateReminderIfNeeded
+};
