@@ -134,19 +134,19 @@ const BookingForm = () => {
         }
     };
 
-// Step 2: Handle Payment
-const handlePayment = async () => {
-    const token = localStorage.getItem('token');
-    setProcessing(true);
+    // Step 2: Handle Payment
+    const handlePayment = async () => {
+        const token = localStorage.getItem('token');
+        setProcessing(true);
 
-    const bookingPayload = {
-        vehicleId,
-        vehicleType: apiType,
-        vehicleName: vehicle?.name,
-        ...formData
-    };
+        const bookingPayload = {
+            vehicleId,
+            vehicleType: apiType,
+            vehicleName: vehicle?.name,
+            ...formData
+        };
 
-    // Razorpay / booking logic continues here
+        // Razorpay / booking logic continues here
         try {
             // 1. Create Order
             const orderRes = await fetch('/api/payment/create-order', {
@@ -162,7 +162,10 @@ const handlePayment = async () => {
                 })
             });
 
-            if (!orderRes.ok) throw new Error('Failed to create payment order');
+            if (!orderRes.ok) {
+                const errorData = await orderRes.json().catch(() => ({}));
+                throw new Error(errorData.error || errorData.details || errorData.message || `Server Error: ${orderRes.status}`);
+            }
             const orderData = await orderRes.json();
 
             // 2. Open Razorpay
@@ -203,8 +206,8 @@ const handlePayment = async () => {
             setPopup({
                 isOpen: true,
                 type: 'error',
-                title: 'Error',
-                message: 'Payment initiation failed.'
+                title: 'Payment Error',
+                message: `Payment initiation failed: ${error.message}`
             });
         } finally {
             setProcessing(false);
