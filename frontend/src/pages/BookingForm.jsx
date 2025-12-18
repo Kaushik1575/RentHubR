@@ -147,9 +147,6 @@ const handlePayment = async () => {
     };
 
     // Razorpay / booking logic continues here
-};
-
-
         try {
             // 1. Create Order
             const orderRes = await fetch('/api/payment/create-order', {

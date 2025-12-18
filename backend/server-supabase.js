@@ -1786,9 +1786,82 @@ app.post('/api/bookings', verifyToken, async (req, res) => {
                 };
 
                 // 4. Send Email
-                const { sendBookingConfirmationEmail } = require('./config/emailService');
-                await sendBookingConfirmationEmail(userDetails.email, userDetails.full_name, detailsForEmail);
-                console.log(`📧 Confirmation email sent to ${userDetails.email}`);
+                // 4. Send Rich Email with Invoice
+                try {
+                    // Generate PDF invoice buffer
+                    const pdfBuffer = await generateInvoiceBuffer(
+                        data.id, // bookingId
+                        userDetails.full_name, // userName
+                        userDetails.email, // userEmail
+                        vehicleName,
+                        duration,
+                        `${startDate} ${formattedStartTime}`,
+                        req.body.totalAmount || 0,
+                        req.body.advancePayment || 0
+                    );
+
+                    // Build Google Calendar link
+                    const dayjs = require('dayjs');
+                    const start = dayjs(`${startDate}T${formattedStartTime}`);
+                    const end = start.add(duration, 'hour');
+                    const formatForCal = (d) => {
+                        const iso = (new Date(d)).toISOString();
+                        return iso.replace(/[-:]/g, '').split('.')[0] + 'Z';
+                    };
+                    const gcalDates = `${formatForCal(start)}/${formatForCal(end)}`;
+                    const gcalBase = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
+                    const gcalText = encodeURIComponent(`RentHub booking ${data.id} — ${vehicleName}`);
+                    const gcalDetails = encodeURIComponent(`Booking ID: ${data.id}\nVehicle: ${vehicleName}\nPickup: ${startDate} ${formattedStartTime}`);
+                    const gcalUrl = `${gcalBase}&text=${gcalText}&dates=${gcalDates}&details=${gcalDetails}`;
+
+                    // Construct Rich HTML Email
+                    const mailHtml = `
+                        <div style="font-family: Arial, sans-serif; color: #222;">
+                          <h2 style="color:#0b5cff;">Hello ${userDetails.full_name},</h2>
+                          <p>We are excited to let you know that your booking has been <b>confirmed</b> by the RentHub team. Please find your invoice attached.</p>
+                          <h3>Booking Details</h3>
+                          <table style="width:100%; border-collapse: collapse;">
+                            <tr><td style="padding:6px; border:1px solid #eee;"><b>Booking ID</b></td><td style="padding:6px; border:1px solid #eee;">${data.id}</td></tr>
+                            <tr><td style="padding:6px; border:1px solid #eee;"><b>Vehicle</b></td><td style="padding:6px; border:1px solid #eee;">${vehicleName}</td></tr>
+                            <tr><td style="padding:6px; border:1px solid #eee;"><b>Pickup Date & Time</b></td><td style="padding:6px; border:1px solid #eee;">${startDate} ${formattedStartTime}</td></tr>
+                            <tr><td style="padding:6px; border:1px solid #eee;"><b>Duration</b></td><td style="padding:6px; border:1px solid #eee;">${duration} hours</td></tr>
+                            <tr><td style="padding:6px; border:1px solid #eee;"><b>Total Amount</b></td><td style="padding:6px; border:1px solid #eee;">₹${req.body.totalAmount || 0}</td></tr>
+                            <tr><td style="padding:6px; border:1px solid #eee;"><b>Advance Paid</b></td><td style="padding:6px; border:1px solid #eee;">₹${req.body.advancePayment || 0}</td></tr>
+                            <tr><td style="padding:6px; border:1px solid #eee;"><b>Remaining Amount</b></td><td style="padding:6px; border:1px solid #eee;">₹${req.body.remainingAmount || 0}</td></tr>
+                            <tr><td style="padding:6px; border:1px solid #eee;"><b>Confirmation Time</b></td><td style="padding:6px; border:1px solid #eee;">${new Date().toLocaleString()}</td></tr>
+                          </table>
+                          <p style="margin-top:12px;">
+                            <a href="${gcalUrl}" style="display:inline-block;padding:10px 14px;background:#0b5cff;color:#fff;border-radius:4px;text-decoration:none;">Add to Google Calendar</a>
+                          </p>
+                          <hr style="margin-top:18px;" />
+                          <p style="font-size:12px;color:#666;"><b>Pickup Instructions:</b> Please bring a valid ID and a printed or digital copy of this invoice. If you have any questions, call us.</p>
+                          <p style="font-size:12px;color:#666;">If you find this email in spam, please mark as <b>Not Spam</b> to ensure future delivery.</p>
+                          <footer style="margin-top:18px;padding-top:8px;border-top:1px solid #eee;color:#999;font-size:12px;">
+                            <div>RentHub — Bike & Vehicle Rentals</div>
+                            <div>support@renthub.example | +91 90000 00000</div>
+                            <div>123 RentHub Street, City, Country</div>
+                          </footer>
+                        </div>
+                    `;
+
+                    const mailOptions = {
+                        to: userDetails.email,
+                        subject: 'Booking Confirmed – RentHub',
+                        html: mailHtml,
+                        attachments: [
+                            { filename: 'booking_invoice.pdf', content: pdfBuffer }
+                        ]
+                    };
+
+                    const { sendEmail } = require('./config/emailService');
+                    await sendEmail(mailOptions);
+                    console.log(`📧 Rich confirmation email with PDF sent to ${userDetails.email}`);
+
+                } catch (emailError) {
+                    console.error('❌ Error generating invoice or sending email:', emailError);
+                    // Fallback to simple email if PDF generation fails? Or just log it. 
+                    // For now, we log it, so we don't block the call.
+                }
 
                 // 5. Trigger Retell AI Call
                 if (userDetails.phone_number) {
