@@ -8,7 +8,7 @@ A comprehensive, full-stack vehicle rental system built with Node.js, Express, a
 ![Supabase](https://img.shields.io/badge/Supabase-2.x-green)
 
 ## 📋 Table of Contents
-
+by jitu
 - [Features](#-features)
 - [Tech Stack](#-tech-stack)
 - [Prerequisites](#-prerequisites)
