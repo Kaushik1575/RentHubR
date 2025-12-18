@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate } from 'react-router-dom';
+import StatusPopup from '../components/StatusPopup';
 
 const BookingForm = () => {
     const [searchParams] = useSearchParams();
@@ -65,21 +66,35 @@ const BookingForm = () => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
     };
 
-    const [showErrorModal, setShowErrorModal] = useState(false);
-    const [errorMessage, setErrorMessage] = useState('');
+    const [popup, setPopup] = useState({
+        isOpen: false,
+        type: 'error',
+        title: '',
+        message: ''
+    });
 
     const handleSubmit = async (e) => {
         e.preventDefault();
 
         if (!termsAccepted) {
-            alert('Please accept the Terms and Conditions to proceed.');
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Terms Required',
+                message: 'Please accept the Terms and Conditions to proceed.'
+            });
             return;
         }
 
         const token = localStorage.getItem('token');
         if (!token) {
-            alert('You must be logged in to book a vehicle.');
-            navigate('/login');
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Login Required',
+                message: 'You must be logged in to book a vehicle.'
+            });
+            setTimeout(() => navigate('/login'), 2000);
             return;
         }
 
@@ -100,17 +115,31 @@ const BookingForm = () => {
             });
 
             if (response.ok) {
-                alert('Booking Accepted! Please wait and check your Registered email for confirmation and further details.');
-                navigate('/my-bookings');
+                setPopup({
+                    isOpen: true,
+                    type: 'success',
+                    title: 'Booking Accepted!',
+                    message: 'Please wait and check your Registered email for confirmation and further details.'
+                });
+                // Navigate after user sees popup
+                // We'll handle this in onClose or just let them close it then nav?
+                // Better UX: Close popup then nav. But let's keep it simple.
             } else {
                 const data = await response.json();
-                // Prefer 'message' from conflict object, fallback to 'error'
-                setErrorMessage(data.message || data.error || "Vehicle is already Booked! Please choose another vehicle or time.");
-                setShowErrorModal(true);
+                setPopup({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Booking Failed',
+                    message: data.message || data.error || "Vehicle is already Booked! Please choose another vehicle or time."
+                });
             }
         } catch (error) {
-            setErrorMessage('An error occurred while trying to book. Please try again.');
-            setShowErrorModal(true);
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Error',
+                message: 'An error occurred while trying to book. Please try again.'
+            });
         }
     };
 
@@ -297,23 +326,19 @@ const BookingForm = () => {
                 </div>
             )}
 
-            {/* Error/Conflict Modal */}
-            {showErrorModal && (
-                <div style={{ position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', zIndex: 10001, display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                    <div style={{ background: 'white', borderRadius: '12px', width: '90%', maxWidth: '400px', padding: '2rem', textAlign: 'center', boxShadow: '0 4px 20px rgba(0,0,0,0.2)' }}>
-                        <div style={{ width: '60px', height: '60px', background: '#ffebee', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem auto' }}>
-                            <i className="fas fa-exclamation-triangle" style={{ color: '#f44336', fontSize: '1.8rem' }}></i>
-                        </div>
-                        <h2 style={{ color: '#333', marginBottom: '1rem', fontSize: '1.5rem' }}>Booking Failed</h2>
-                        <p style={{ color: '#666', marginBottom: '2rem', lineHeight: '1.5' }}>
-                            {errorMessage}
-                        </p>
-                        <button onClick={() => setShowErrorModal(false)} style={{ background: '#f44336', color: 'white', border: 'none', padding: '0.8rem 2rem', borderRadius: '30px', fontSize: '1rem', fontWeight: 'bold', cursor: 'pointer', transition: 'background 0.3s' }}>
-                            Okay, Got it
-                        </button>
-                    </div>
-                </div>
-            )}
+            {/* Status Popup */}
+            <StatusPopup
+                isOpen={popup.isOpen}
+                onClose={() => {
+                    setPopup({ ...popup, isOpen: false });
+                    if (popup.type === 'success') {
+                        navigate('/my-bookings');
+                    }
+                }}
+                type={popup.type}
+                title={popup.title}
+                message={popup.message}
+            />
         </div>
     );
 };

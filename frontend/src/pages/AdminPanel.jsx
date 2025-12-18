@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StatusPopup from '../components/StatusPopup';
 
 
 const AdminPanel = () => {
@@ -36,6 +37,12 @@ const AdminPanel = () => {
     const [editUserData, setEditUserData] = useState({});
     const [vehicleFormData, setVehicleFormData] = useState({});
     const [rejectionReason, setRejectionReason] = useState('');
+    const [popup, setPopup] = useState({
+        isOpen: false,
+        type: 'error',
+        title: '',
+        message: ''
+    });
 
     useEffect(() => {
         if (!token || !adminUser || !adminUser.adminId) {
@@ -118,8 +125,8 @@ const AdminPanel = () => {
                 body: JSON.stringify({ isBlocked: !isBlocked })
             });
             if (res.ok) loadUsers();
-            else alert('Failed to update status');
-        } catch (e) { alert('Error updating status'); }
+            else setPopup({ isOpen: true, type: 'error', title: 'Action Failed', message: 'Failed to update status' });
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error updating status' }); }
     };
 
     const handleUpdateUser = async (e) => {
@@ -133,11 +140,12 @@ const AdminPanel = () => {
             if (res.ok) {
                 setModal({ type: null });
                 loadUsers();
+                setPopup({ isOpen: true, type: 'success', title: 'User Updated', message: 'User details updated successfully' });
             } else {
                 const d = await res.json();
-                alert(d.error || 'Failed update');
+                setPopup({ isOpen: true, type: 'error', title: 'Update Failed', message: d.error || 'Failed update' });
             }
-        } catch (e) { alert('Error updating'); }
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error updating' }); }
     };
 
     // Booking Actions
@@ -145,11 +153,12 @@ const AdminPanel = () => {
         try {
             await fetch(`/api/admin/bookings/${id}/confirm`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
             loadBookings();
-        } catch (e) { alert('Error confirming'); }
+            setPopup({ isOpen: true, type: 'success', title: 'Confirmed', message: 'Booking confirmed successfully' });
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error confirming' }); }
     };
 
     const handleRejectBooking = async () => {
-        if (!rejectionReason) return alert('Please provide a reason');
+        if (!rejectionReason) return setPopup({ isOpen: true, type: 'error', title: 'Reason Required', message: 'Please provide a reason' });
         try {
             await fetch(`/api/admin/bookings/${modal.data.id}/reject`, {
                 method: 'POST',
@@ -158,7 +167,8 @@ const AdminPanel = () => {
             });
             setModal({ type: null });
             loadBookings();
-        } catch (e) { alert('Error rejecting'); }
+            setPopup({ isOpen: true, type: 'success', title: 'Rejected', message: 'Booking rejected successfully' });
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error rejecting' }); }
     };
 
     const handleDeleteBooking = async (id) => {
@@ -166,7 +176,8 @@ const AdminPanel = () => {
             await fetch(`/api/admin/bookings/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             setModal({ type: null });
             loadBookings();
-        } catch (e) { alert('Error deleting'); }
+            setPopup({ isOpen: true, type: 'success', title: 'Deleted', message: 'Booking deleted successfully' });
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error deleting' }); }
     };
 
     const handleUpdateBooking = async (e) => {
@@ -179,7 +190,8 @@ const AdminPanel = () => {
             });
             setModal({ type: null });
             loadBookings();
-        } catch (e) { alert('Error updating'); }
+            setPopup({ isOpen: true, type: 'success', title: 'Updated', message: 'Booking updated successfully' });
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error updating' }); }
     };
 
     const handleRefundComplete = async (id) => {
@@ -187,7 +199,8 @@ const AdminPanel = () => {
         try {
             await fetch(`/api/admin/bookings/${id}/refund-complete`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
             loadBookings();
-        } catch (e) { alert('Error processing refund'); }
+            setPopup({ isOpen: true, type: 'success', title: 'Refunded', message: 'Refund marked as complete' });
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error processing refund' }); }
     };
 
     const handleSendSOS = async (id) => {
@@ -199,8 +212,12 @@ const AdminPanel = () => {
                 body: JSON.stringify({ bookingId: id })
             });
             const d = await res.json();
-            alert(res.ok ? d.message : d.error);
-        } catch (e) { alert('Error sending SOS'); }
+            if (res.ok) {
+                setPopup({ isOpen: true, type: 'success', title: 'SOS Sent', message: d.message });
+            } else {
+                setPopup({ isOpen: true, type: 'error', title: 'SOS Failed', message: d.error });
+            }
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error sending SOS' }); }
     };
 
     // Vehicle Actions
@@ -209,7 +226,8 @@ const AdminPanel = () => {
         try {
             await fetch(`/api/admin/vehicles/${type}/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             loadVehicles();
-        } catch (e) { alert('Error deleting vehicle'); }
+            setPopup({ isOpen: true, type: 'success', title: 'Deleted', message: 'Vehicle deleted successfully' });
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error deleting vehicle' }); }
     };
 
     const handleVehicleSubmit = async (e) => {
@@ -229,10 +247,11 @@ const AdminPanel = () => {
             if (res.ok) {
                 setModal({ type: null });
                 loadVehicles();
+                setPopup({ isOpen: true, type: 'success', title: isEdit ? 'Updated' : 'Added', message: `Vehicle ${isEdit ? 'updated' : 'added'} successfully` });
             } else {
-                alert('Operation failed');
+                setPopup({ isOpen: true, type: 'error', title: 'Action Failed', message: 'Operation failed' });
             }
-        } catch (e) { alert('Error saving vehicle'); }
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error saving vehicle' }); }
     };
 
     // --- Filtering ---
@@ -628,6 +647,13 @@ const AdminPanel = () => {
                 </div>
             )}
 
+            <StatusPopup
+                isOpen={popup.isOpen}
+                onClose={() => setPopup({ ...popup, isOpen: false })}
+                type={popup.type}
+                title={popup.title}
+                message={popup.message}
+            />
         </div>
     );
 };

@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import StatusPopup from '../components/StatusPopup';
 
 const RegisterAdmin = () => {
     const navigate = useNavigate();
@@ -12,6 +13,12 @@ const RegisterAdmin = () => {
         confirmPassword: '',
         otp: ''
     });
+    const [popup, setPopup] = useState({
+        isOpen: false,
+        type: 'error',
+        title: '',
+        message: ''
+    });
     const [showOtpInput, setShowOtpInput] = useState(false);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
@@ -22,7 +29,7 @@ const RegisterAdmin = () => {
     };
 
     const handleSendOtp = async () => {
-        if (!formData.email) return alert('Please enter your email first');
+        if (!formData.email) return setPopup({ isOpen: true, type: 'error', title: 'Email Required', message: 'Please enter your email first' });
         setIsSendingOtp(true);
         try {
             const r = await fetch('/api/register/send-otp', {
@@ -33,12 +40,12 @@ const RegisterAdmin = () => {
             const j = await r.json();
             if (r.ok) {
                 setShowOtpInput(true);
-                alert(j.message || 'OTP sent to your email');
+                setPopup({ isOpen: true, type: 'success', title: 'OTP Sent', message: j.message || 'OTP sent to your email' });
             } else {
-                alert(j.error || 'Failed to send OTP');
+                setPopup({ isOpen: true, type: 'error', title: 'Error', message: j.error || 'Failed to send OTP' });
             }
         } catch (err) {
-            alert('Could not send OTP, please try again later');
+            setPopup({ isOpen: true, type: 'error', title: 'Network Error', message: 'Could not send OTP, please try again later' });
         } finally {
             setIsSendingOtp(false);
         }
@@ -186,7 +193,20 @@ const RegisterAdmin = () => {
                 <p style={{ textAlign: 'center', marginTop: '15px' }}>Already have an account? <Link to="/login" style={{ color: '#00796b', textDecoration: 'none', fontWeight: '600' }}>Login</Link></p>
                 <p style={{ textAlign: 'center', marginTop: '10px' }}>Register as <Link to="/register-user" style={{ color: '#00796b', textDecoration: 'none', fontWeight: '600' }}>User</Link></p>
             </div>
-        </div>
+
+            <StatusPopup
+                isOpen={popup.isOpen}
+                onClose={() => {
+                    setPopup({ ...popup, isOpen: false });
+                    if (popup.type === 'success' && popup.title === 'Registration Successful') {
+                        navigate('/login');
+                    }
+                }}
+                type={popup.type}
+                title={popup.title}
+                message={popup.message}
+            />
+        </div >
     );
 };
 

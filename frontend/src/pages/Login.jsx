@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import StatusPopup from '../components/StatusPopup';
 
 const Login = () => {
     const [activeTab, setActiveTab] = useState('user');
@@ -8,20 +9,24 @@ const Login = () => {
     // User Form State
     const [userEmail, setUserEmail] = useState('');
     const [userPassword, setUserPassword] = useState('');
-    const [userError, setUserError] = useState('');
 
     // Admin Form State
     const [adminEmail, setAdminEmail] = useState('');
     const [adminPassword, setAdminPassword] = useState('');
     const [adminId, setAdminId] = useState('');
-    const [adminError, setAdminError] = useState('');
 
     const [showUserPassword, setShowUserPassword] = useState(false);
     const [showAdminPassword, setShowAdminPassword] = useState(false);
 
+    const [popup, setPopup] = useState({
+        isOpen: false,
+        type: 'error',
+        title: '',
+        message: ''
+    });
+
     const handleUserLogin = async (e) => {
         e.preventDefault();
-        setUserError('');
         try {
             const response = await fetch('/api/login', {
                 method: 'POST',
@@ -32,19 +37,32 @@ const Login = () => {
             if (response.ok) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
-                navigate('/');
-                window.location.reload();
+                setPopup({
+                    isOpen: true,
+                    type: 'success',
+                    title: 'Login Successful',
+                    message: 'Welcome back! Redirecting you...'
+                });
             } else {
-                setUserError(data.error || 'Login failed');
+                setPopup({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Login Failed',
+                    message: data.error || 'Invalid credentials'
+                });
             }
         } catch (error) {
-            setUserError('An error occurred. Please try again.');
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Network Error',
+                message: 'An error occurred. Please check your connection.'
+            });
         }
     };
 
     const handleAdminLogin = async (e) => {
         e.preventDefault();
-        setAdminError('');
         try {
             const response = await fetch('/api/login/admin', {
                 method: 'POST',
@@ -53,15 +71,29 @@ const Login = () => {
             });
             const data = await response.json();
             if (response.ok) {
-                localStorage.setItem('token', data.token); // Admin also uses 'token'
+                localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify({ ...data.admin, isAdmin: true }));
-                navigate('/admin');
-                window.location.reload();
+                setPopup({
+                    isOpen: true,
+                    type: 'success',
+                    title: 'Admin Login Successful',
+                    message: 'Welcome Admin! Redirecting to panel...'
+                });
             } else {
-                setAdminError(data.error || 'Login failed');
+                setPopup({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Login Failed',
+                    message: data.error || 'Invalid credentials'
+                });
             }
         } catch (error) {
-            setAdminError('An error occurred during login');
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Network Error',
+                message: 'An error occurred during login.'
+            });
         }
     };
 
@@ -137,7 +169,6 @@ const Login = () => {
                         <button type="submit" className="login-btn" style={{
                             width: '100%', padding: '1rem', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1rem', cursor: 'pointer'
                         }}>Login as User</button>
-                        {userError && <div className="error-message" style={{ color: '#ff0000', marginTop: '1rem', textAlign: 'center' }}>{userError}</div>}
                         <div className="register-link" style={{ textAlign: 'center', marginTop: '1rem' }}>
                             Don't have an account? <Link to="/register-user" style={{ color: '#2ecc71' }}>Register here</Link>
                         </div>
@@ -180,7 +211,6 @@ const Login = () => {
                         <button type="submit" className="login-btn" style={{
                             width: '100%', padding: '1rem', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1rem', cursor: 'pointer'
                         }}>Login as Admin</button>
-                        {adminError && <div className="error-message" style={{ color: '#ff0000', marginTop: '1rem', textAlign: 'center' }}>{adminError}</div>}
                         <div className="register-link" style={{ textAlign: 'center', marginTop: '1rem' }}>
                             Need admin access? <Link to="/register-admin" style={{ color: '#2ecc71' }}>Register here</Link>
                         </div>
@@ -190,6 +220,25 @@ const Login = () => {
                     </form>
                 )}
             </div>
+
+            <StatusPopup
+                isOpen={popup.isOpen}
+                onClose={() => {
+                    setPopup({ ...popup, isOpen: false });
+                    if (popup.type === 'success') {
+                        if (activeTab === 'user') {
+                            navigate('/');
+                            window.location.reload();
+                        } else {
+                            navigate('/admin');
+                            window.location.reload();
+                        }
+                    }
+                }}
+                type={popup.type}
+                title={popup.title}
+                message={popup.message}
+            />
         </div>
     );
 };
