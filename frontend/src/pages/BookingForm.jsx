@@ -101,6 +101,7 @@ const BookingForm = () => {
         const bookingPayload = {
             vehicleId,
             vehicleType: apiType,
+            vehicleName: vehicle?.name, // Added vehicleName to payload
             ...formData
         };
 

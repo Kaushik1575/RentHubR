@@ -21,6 +21,17 @@ router.post('/confirmBooking', async (req, res) => {
         const userName = body.userName || 'Customer';
         const userEmail = body.userEmail;
         const vehicleName = body.vehicleName || 'Vehicle';
+        // Format vehicle type for display (e.g. 'cars' -> 'Car')
+        const rawType = body.vehicleType || 'Standard';
+        const formatType = (t) => {
+            if (!t) return 'Standard';
+            const lower = t.toLowerCase();
+            if (lower.includes('car')) return 'Car';
+            if (lower.includes('bike')) return 'Bike';
+            if (lower.includes('scooty') || lower.includes('scooter')) return 'Scooty';
+            return t.charAt(0).toUpperCase() + t.slice(1);
+        };
+        const vehicleType = formatType(rawType);
         const duration = parseFloat(body.duration) || 1;
         const startDateTime = body.startDateTime || dayjs().add(1, 'day').format();
         const totalAmount = parseFloat(body.totalAmount) || 0;
@@ -35,6 +46,7 @@ router.post('/confirmBooking', async (req, res) => {
             bookingId,
             userName,
             vehicleName,
+            vehicleType, // Added to QR payload
             pickupDateTime: startDateTime,
             totalAmount
         };
@@ -57,6 +69,7 @@ router.post('/confirmBooking', async (req, res) => {
 
         doc.fontSize(12).text(`Booking ID: ${bookingId}`);
         doc.text(`Vehicle: ${vehicleName}`);
+        doc.text(`Type: ${vehicleType}`); // Added to PDF
         doc.text(`Start: ${startDateTime}`);
         doc.text(`Duration: ${duration} hours`);
         doc.moveDown();
@@ -123,6 +136,7 @@ router.post('/confirmBooking', async (req, res) => {
               <table style="width:100%; border-collapse: collapse;">
                 <tr><td style="padding:6px; border:1px solid #eee;"><b>Booking ID</b></td><td style="padding:6px; border:1px solid #eee;">${bookingId}</td></tr>
                 <tr><td style="padding:6px; border:1px solid #eee;"><b>Vehicle</b></td><td style="padding:6px; border:1px solid #eee;">${vehicleName}</td></tr>
+                <tr><td style="padding:6px; border:1px solid #eee;"><b>Type</b></td><td style="padding:6px; border:1px solid #eee;">${vehicleType}</td></tr>
                 <tr><td style="padding:6px; border:1px solid #eee;"><b>Pickup</b></td><td style="padding:6px; border:1px solid #eee;">${startDateTime}</td></tr>
                 <tr><td style="padding:6px; border:1px solid #eee;"><b>Duration</b></td><td style="padding:6px; border:1px solid #eee;">${duration} hours</td></tr>
                 <tr><td style="padding:6px; border:1px solid #eee;"><b>Total</b></td><td style="padding:6px; border:1px solid #eee;">₹${totalAmount}</td></tr>
