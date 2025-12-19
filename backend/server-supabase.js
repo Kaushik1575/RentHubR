@@ -2829,6 +2829,26 @@ app.post('/api/admin/check-reminders', verifyAdminToken, async (req, res) => {
     }
 });
 
+// Cron-job.org endpoint (Simple security via Query Param)
+app.get('/api/cron/reminders', async (req, res) => {
+    // Check for secret key in query params
+    const secret = req.query.secret;
+    const CRON_SECRET = process.env.CRON_SECRET || 'renthub_cron_secret_2024';
+
+    if (secret !== CRON_SECRET) {
+        return res.status(401).json({ error: 'Unauthorized: Invalid Cron Secret' });
+    }
+
+    try {
+        console.log('⏰ External Cron triggered reminder check');
+        const result = await checkAndSendReminders();
+        res.json(result);
+    } catch (error) {
+        console.error('Error in cron reminder check:', error);
+        res.status(500).json({ error: 'Error checking reminders', details: error.message });
+    }
+});
+
 // Start the server
 app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
