@@ -2,6 +2,19 @@ const supabase = require('../config/supabase');
 const { sendEmail } = require('../config/emailService');
 const dayjs = require('dayjs');
 
+// Helper function to get IST timestamp
+function getISTTimestamp() {
+    const now = new Date();
+    // Convert to IST (UTC+5:30) using toLocaleString with Asia/Kolkata
+    const istTime = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+    return istTime.getFullYear() + '-' +
+        String(istTime.getMonth() + 1).padStart(2, '0') + '-' +
+        String(istTime.getDate()).padStart(2, '0') + ' ' +
+        String(istTime.getHours()).padStart(2, '0') + ':' +
+        String(istTime.getMinutes()).padStart(2, '0') + ':' +
+        String(istTime.getSeconds()).padStart(2, '0');
+}
+
 /**
  * Send pickup reminder email
  * @param {string} userEmail - User's email address
@@ -13,12 +26,10 @@ async function sendPickupReminderEmail(userEmail, userName, bookingDetails) {
 
     // Determine message based on how soon the pickup is
     let urgencyMessage = '';
-    if (hoursUntilPickup < 1) {
+    if (hoursUntilPickup < 0.5) {
         urgencyMessage = '<p style="background:#fff3cd;padding:12px;border-left:4px solid #ffc107;margin:16px 0;"><strong>⚠️ Your booking starts very soon!</strong> Please be ready for pickup.</p>';
-    } else if (hoursUntilPickup < 2) {
-        urgencyMessage = '<p style="background:#d1ecf1;padding:12px;border-left:4px solid #0dcaf0;margin:16px 0;"><strong>📢 Reminder:</strong> Your booking starts in less than 2 hours.</p>';
     } else {
-        urgencyMessage = '<p style="background:#d1ecf1;padding:12px;border-left:4px solid #0dcaf0;margin:16px 0;"><strong>📢 Reminder:</strong> Your booking starts in 2 hours.</p>';
+        urgencyMessage = '<p style="background:#d1ecf1;padding:12px;border-left:4px solid #0dcaf0;margin:16px 0;"><strong>📢 Reminder:</strong> Your booking starts in about 1 hour.</p>';
     }
 
     const html = `
@@ -33,7 +44,7 @@ async function sendPickupReminderEmail(userEmail, userName, bookingDetails) {
             ${urgencyMessage}
             
             <p style="font-size: 16px; line-height: 1.6; color: #374151;">
-              This is a friendly reminder about your upcoming vehicle pickup:
+              This is a friendly reminder about your upcoming vehicle pickup in <strong>1 hour</strong>:
             </p>
 
             <div style="background: #f9fafb; padding: 20px; border-radius: 8px; margin: 20px 0;">
@@ -95,7 +106,7 @@ async function sendPickupReminderEmail(userEmail, userName, bookingDetails) {
 
     return sendEmail({
         to: userEmail,
-        subject: `🔔 Reminder: Your ${vehicleName} pickup is ${hoursUntilPickup < 1 ? 'very soon' : hoursUntilPickup < 2 ? 'in less than 2 hours' : 'in 2 hours'}!`,
+        subject: `🔔 Reminder: Your ${vehicleName} pickup is in 1 hour!`,
         html: html
     });
 }
@@ -156,8 +167,8 @@ async function checkAndSendReminders() {
                     continue;
                 }
 
-                // Skip if booking is more than 2.5 hours away (to avoid sending too early)
-                if (hoursUntilPickup > 2.5) {
+                // Skip if booking is more than 1.5 hours away (to avoid sending too early)
+                if (hoursUntilPickup > 1.5) {
                     console.log(`⏭️  Skipping booking #${booking.id} - too far in future (${hoursUntilPickup.toFixed(2)} hours)`);
                     continue;
                 }
@@ -165,7 +176,7 @@ async function checkAndSendReminders() {
                 // Determine if we should send reminder
                 let shouldSendReminder = false;
 
-                if (hoursUntilPickup <= 2 && hoursUntilPickup >= 0) {
+                if (hoursUntilPickup <= 1 && hoursUntilPickup >= 0) {
                     shouldSendReminder = true;
                 }
 
@@ -217,7 +228,7 @@ async function checkAndSendReminders() {
                             .from('bookings')
                             .update({
                                 reminder_sent: true,
-                                reminder_sent_at: now.toISOString()
+                                reminder_sent_at: getISTTimestamp()
                             })
                             .eq('id', booking.id);
 
@@ -291,8 +302,14 @@ async function sendImmediateReminderIfNeeded(bookingId) {
         const bookingDateTime = dayjs(`${booking.start_date} ${booking.start_time}`);
         const hoursUntilPickup = bookingDateTime.diff(now, 'hour', true);
 
-        // Only send if booking is within 2 hours
-        if (hoursUntilPickup > 2 || hoursUntilPickup < 0) {
+        console.log(`[DEBUG] Immediate Reminder Check: Booking #${bookingId}`);
+        console.log(`[DEBUG] Now: ${now.format()}`);
+        console.log(`[DEBUG] Booking: ${bookingDateTime.format()}`);
+        console.log(`[DEBUG] Hours Until Pickup: ${hoursUntilPickup}`);
+        console.log(`[DEBUG] Threshold: 1.3 hours`);
+
+        // Only send if booking is within 1.3 hours (to catch bookings just over 1 hour away immediately)
+        if (hoursUntilPickup > 1.3 || hoursUntilPickup < 0) {
             console.log(`Booking #${bookingId} is ${hoursUntilPickup.toFixed(2)} hours away - no immediate reminder needed`);
             return { success: true, notNeeded: true };
         }
@@ -341,7 +358,7 @@ async function sendImmediateReminderIfNeeded(bookingId) {
                     .from('bookings')
                     .update({
                         reminder_sent: true,
-                        reminder_sent_at: now.toISOString()
+                        reminder_sent_at: getISTTimestamp()
                     })
                     .eq('id', bookingId);
 
