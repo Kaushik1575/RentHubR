@@ -117,10 +117,19 @@ async function sendPickupReminderEmail(userEmail, userName, bookingDetails) {
  */
 async function checkAndSendReminders() {
     try {
+        // Initialize Dayjs plugins locally if not global
+        const utc = require('dayjs/plugin/utc');
+        const timezone = require('dayjs/plugin/timezone');
+        const customParseFormat = require('dayjs/plugin/customParseFormat');
+        dayjs.extend(utc);
+        dayjs.extend(timezone);
+        dayjs.extend(customParseFormat);
+
         console.log('🔍 Checking for bookings that need reminder emails...');
 
         // Get current time in IST
-        const now = dayjs();
+        const now = dayjs().tz('Asia/Kolkata');
+        console.log(`[DEBUG] Server Time (IST): ${now.format('YYYY-MM-DD HH:mm:ss')}`);
 
         // Fetch all confirmed bookings that haven't received a reminder yet
         const { data: bookings, error } = await supabase
@@ -153,13 +162,17 @@ async function checkAndSendReminders() {
 
         for (const booking of bookings) {
             try {
-                // Parse booking start time
-                const bookingDateTime = dayjs(`${booking.start_date} ${booking.start_time}`);
+                // Parse booking start time explicitely as IST
+                // Input format in DB is YYYY-MM-DD and HH:mm
+                const dateTimeString = `${booking.start_date} ${booking.start_time}`;
+                // We use .tz with a second argument to specify "Keep this time, but treat it as IST"
+                // Actually dayjs.tz(string, zone) does exactly that: parses string AS that zone.
+                const bookingDateTime = dayjs.tz(dateTimeString, 'YYYY-MM-DD HH:mm', 'Asia/Kolkata');
 
                 // Calculate hours until pickup
                 const hoursUntilPickup = bookingDateTime.diff(now, 'hour', true);
 
-                console.log(`📅 Booking #${booking.id}: ${hoursUntilPickup.toFixed(2)} hours until pickup`);
+                console.log(`📅 Booking #${booking.id}: ${hoursUntilPickup.toFixed(2)} hours until pickup (IST)`);
 
                 // Skip if booking is in the past
                 if (hoursUntilPickup < 0) {
@@ -298,8 +311,14 @@ async function sendImmediateReminderIfNeeded(bookingId) {
         }
 
         // Calculate hours until pickup
-        const now = dayjs();
-        const bookingDateTime = dayjs(`${booking.start_date} ${booking.start_time}`);
+        // Ensure plugins are available (idempotent)
+        const utc = require('dayjs/plugin/utc');
+        const timezone = require('dayjs/plugin/timezone');
+        dayjs.extend(utc);
+        dayjs.extend(timezone);
+
+        const now = dayjs().tz('Asia/Kolkata');
+        const bookingDateTime = dayjs.tz(`${booking.start_date} ${booking.start_time}`, 'YYYY-MM-DD HH:mm', 'Asia/Kolkata');
         const hoursUntilPickup = bookingDateTime.diff(now, 'hour', true);
 
         // Only send if booking is within 1.3 hours (to catch bookings just over 1 hour away immediately)
