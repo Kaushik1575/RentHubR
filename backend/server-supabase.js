@@ -596,7 +596,7 @@ app.put('/api/admin/bookings/:id', verifyAdminToken, async (req, res) => {
                 total_amount: totalAmount,
                 advance_payment: advancePayment,
                 remaining_amount: remainingAmount,
-                updated_at: new Date().toISOString()
+                updated_at: getISTTimestamp()
             })
             .eq('id', req.params.id)
             .select()
@@ -879,13 +879,7 @@ app.post('/api/admin/bookings/:id/reject', verifyAdminToken, async (req, res) =>
 
         // Get the reason from the request body
         const reason = req.body && req.body.reason ? req.body.reason : null;
-        const now = new Date();
-        const localTimestamp = now.getFullYear() + '-' +
-            String(now.getMonth() + 1).padStart(2, '0') + '-' +
-            String(now.getDate()).padStart(2, '0') + ' ' +
-            String(now.getHours()).padStart(2, '0') + ':' +
-            String(now.getMinutes()).padStart(2, '0') + ':' +
-            String(now.getSeconds()).padStart(2, '0');
+        const localTimestamp = getISTTimestamp();
         // Update booking status to rejected and save the reason, timestamps, and refund info
         const { error: updateError } = await supabase
             .from('bookings')
@@ -1660,6 +1654,17 @@ app.post('/api/bookings/check-availability', verifyToken, async (req, res) => {
         const [hours, minutes] = startTime.split(':').map(Number);
         const formattedStartTime = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
 
+        // Validate that booking is not in the past
+        const now = new Date();
+        const istNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        const currentIso = istNow.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
+        const bookingIso = `${startDate}T${formattedStartTime}`;
+
+        if (bookingIso < currentIso) {
+            console.log(`❌ Rejected past booking attempt: ${bookingIso} < ${currentIso}`);
+            return res.status(400).json({ error: 'Cannot book for a past date or time.' });
+        }
+
         const conflict = await checkTimeConflict(vehicleId, startDate, formattedStartTime, duration);
         if (conflict.conflict) {
             return res.status(409).json(conflict);
@@ -1723,6 +1728,23 @@ app.post('/api/bookings', verifyToken, async (req, res) => {
         const conflict = await checkTimeConflict(vehicleId, startDate, formattedStartTime, duration);
         if (conflict.conflict) {
             return res.status(409).json(conflict);
+        }
+
+        // Validate that booking is not in the past
+        const now = new Date();
+        const istNow = new Date(now.toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        const bookingDateTime = new Date(`${startDate}T${formattedStartTime}:00`);
+
+        // Adjust bookingDateTime to ensure it's treated as IST
+        // (Since startDate string is purely date/time without offset, 
+        // comparing it directly to a Date object created from IST string works if we align them correctly)
+        // Better: Compare timestamps or string-sortable formats
+
+        const currentIso = istNow.toISOString().slice(0, 16); // "YYYY-MM-DDTHH:mm"
+        const bookingIso = `${startDate}T${formattedStartTime}`;
+
+        if (bookingIso < currentIso) {
+            return res.status(400).json({ error: 'Cannot book for a past date or time.' });
         }
         const bookingData = {
             user_id: req.user.id,
@@ -2823,8 +2845,8 @@ app.listen(PORT, () => {
             console.error('Error in initial reminder check:', err);
         });
 
-        // Then run every 15 minutes
-        const REMINDER_CHECK_INTERVAL = 15 * 60 * 1000; // 15 minutes in milliseconds
+        // Then run every 5 minutes to ensure timely delivery
+        const REMINDER_CHECK_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
         setInterval(() => {
             console.log('⏰ Running scheduled reminder check...');
             checkAndSendReminders().catch(err => {

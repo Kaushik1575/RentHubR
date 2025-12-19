@@ -41,16 +41,16 @@ Look for this in the logs:
 
 ## ✅ Quick Test (2 minutes)
 
-### Test Immediate Reminder (< 2 hours)
+### Test Immediate Reminder (< 1 hour)
 
-1. **Create a booking** with pickup time **1.5 hours from now**
-   - Example: If it's 2:00 PM now, set pickup for 3:30 PM
+1. **Create a booking** with pickup time **45 minutes from now**
+   - Example: If it's 2:00 PM now, set pickup for 2:45 PM
 
 2. **Admin confirms the booking**
 
 3. **Check your email** - You should receive:
    ```
-   Subject: 🔔 Reminder: Your [Vehicle] pickup is in less than 2 hours!
+   Subject: 🔔 Reminder: Your [Vehicle] pickup is in 1 hour!
    ```
 
 4. **Verify in database**:
@@ -67,23 +67,23 @@ Look for this in the logs:
 
 ## 🧪 Test Scenarios
 
-### Scenario 1: Booking < 1 Hour Before Pickup
-- **Setup**: Create booking for 45 minutes from now
+### Scenario 1: Booking < 30 Mins Before Pickup
+- **Setup**: Create booking for 20 minutes from now
 - **Expected**: Immediate urgent reminder
 - **Subject**: "Your [Vehicle] pickup is very soon!"
 - **Message**: "Your booking starts very soon! Please be ready for pickup."
 
-### Scenario 2: Booking 1-2 Hours Before Pickup
-- **Setup**: Create booking for 1.5 hours from now
+### Scenario 2: Booking 0.5-1 Hour Before Pickup
+- **Setup**: Create booking for 50 minutes from now
 - **Expected**: Immediate reminder
-- **Subject**: "Your [Vehicle] pickup is in less than 2 hours!"
-- **Message**: "Your booking starts in less than 2 hours."
+- **Subject**: "Your [Vehicle] pickup is in 1 hour!"
+- **Message**: "Your booking starts in about 1 hour."
 
-### Scenario 3: Booking > 2 Hours Before Pickup
-- **Setup**: Create booking for 3 hours from now
-- **Expected**: Reminder sent by scheduled job ~2 hours before pickup
-- **Subject**: "Your [Vehicle] pickup is in 2 hours!"
-- **Message**: "Your booking starts in 2 hours."
+### Scenario 3: Booking > 1 Hour Before Pickup
+- **Setup**: Create booking for 2 hours from now
+- **Expected**: Reminder sent by scheduled job ~1 hour before pickup
+- **Subject**: "Your [Vehicle] pickup is in 1 hour!"
+- **Message**: "Your booking starts in about 1 hour."
 
 ---
 
@@ -117,7 +117,7 @@ curl -X POST http://localhost:3005/api/admin/check-reminders \
 ⏰ Running scheduled reminder check...
 🔍 Checking for bookings that need reminder emails...
 📋 Found 3 bookings to check
-📅 Booking #45: 1.85 hours until pickup
+📅 Booking #45: 0.85 hours until pickup
 ✅ Reminder sent for booking #45 to user@example.com
 ✅ Reminder check complete. Sent 1 reminders.
 ```
@@ -168,32 +168,32 @@ WHERE id = YOUR_BOOKING_ID;
 
 ## 📝 Configuration
 
-### Change Reminder Time (from 2 hours to X hours)
+### Change Reminder Time (from 1 hour to X hours)
 
-Edit `backend/services/reminderService.js` line ~140:
+Edit `backend/services/reminderService.js` line ~168:
 
 ```javascript
-// Current: 2 hours
-if (hoursUntilPickup <= 2 && hoursUntilPickup >= 0) {
+// Current: 1 hour
+if (hoursUntilPickup <= 1 && hoursUntilPickup >= 0) {
     shouldSendReminder = true;
 }
 
-// Change to 3 hours:
-if (hoursUntilPickup <= 3 && hoursUntilPickup >= 0) {
+// Change to 2 hours:
+if (hoursUntilPickup <= 2 && hoursUntilPickup >= 0) {
     shouldSendReminder = true;
 }
 ```
 
 ### Change Check Frequency (from 15 minutes to X minutes)
 
-Edit `backend/server-supabase.js` line ~2798:
+Edit `backend/server-supabase.js` line ~2827:
 
 ```javascript
 // Current: 15 minutes
 const REMINDER_CHECK_INTERVAL = 15 * 60 * 1000;
 
-// Change to 10 minutes:
-const REMINDER_CHECK_INTERVAL = 10 * 60 * 1000;
+// Change to 5 minutes:
+const REMINDER_CHECK_INTERVAL = 5 * 60 * 1000;
 ```
 
 ---
@@ -204,9 +204,9 @@ Before going to production:
 
 - [ ] Database migration completed successfully
 - [ ] Server shows "Reminder scheduler active" message
-- [ ] Test booking < 1 hour: Immediate urgent reminder ✅
-- [ ] Test booking 1-2 hours: Immediate reminder ✅
-- [ ] Test booking > 2 hours: Scheduled reminder works ✅
+- [ ] Test booking < 30 mins: Immediate urgent reminder ✅
+- [ ] Test booking 0.5-1 hours: Immediate reminder ✅
+- [ ] Test booking > 1 hour: Scheduled reminder works ✅
 - [ ] No duplicate emails sent ✅
 - [ ] Manual trigger endpoint works ✅
 - [ ] Email template looks good on mobile ✅
@@ -219,13 +219,13 @@ Before going to production:
 ✅ **No changes needed** - Current implementation works!
 
 ### If using Vercel:
-⚠️ **Need to modify** - See walkthrough.md for Vercel Cron setup
+⚠️ **Need to modify** - See CRON_SETUP.md for Vercel Cron setup
 
 ---
 
 ## 📞 Need Help?
 
-1. Check `walkthrough.md` for detailed documentation
+1. Check `CRON_SETUP.md` for detailed documentation
 2. Review server logs for error messages
 3. Test manual trigger endpoint first
 4. Verify database migration completed
@@ -234,4 +234,4 @@ Before going to production:
 
 **You're all set! 🎉**
 
-The reminder email system is now active and will automatically send emails 2 hours before pickup time.
+The reminder email system is now active and will automatically send emails 1 hour before pickup time.
