@@ -78,6 +78,13 @@ async function sendPickupReminderEmail(userEmail, userName, bookingDetails) {
               </table>
             </div>
 
+            <div style="text-align: center; margin: 25px 0;">
+                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickupLocation || 'GITA Autonomous College BBSR')}" 
+                   style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
+                   📍 View Pickup Location
+                </a>
+            </div>
+
             <div style="background: #fef3c7; padding: 16px; border-radius: 8px; border-left: 4px solid #f59e0b; margin: 20px 0;">
               <h3 style="margin: 0 0 10px 0; color: #92400e; font-size: 16px;">📋 Important Reminders:</h3>
               <ul style="margin: 0; padding-left: 20px; color: #78350f;">
