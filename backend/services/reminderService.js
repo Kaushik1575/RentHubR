@@ -302,12 +302,6 @@ async function sendImmediateReminderIfNeeded(bookingId) {
         const bookingDateTime = dayjs(`${booking.start_date} ${booking.start_time}`);
         const hoursUntilPickup = bookingDateTime.diff(now, 'hour', true);
 
-        console.log(`[DEBUG] Immediate Reminder Check: Booking #${bookingId}`);
-        console.log(`[DEBUG] Now: ${now.format()}`);
-        console.log(`[DEBUG] Booking: ${bookingDateTime.format()}`);
-        console.log(`[DEBUG] Hours Until Pickup: ${hoursUntilPickup}`);
-        console.log(`[DEBUG] Threshold: 1.3 hours`);
-
         // Only send if booking is within 1.3 hours (to catch bookings just over 1 hour away immediately)
         if (hoursUntilPickup > 1.3 || hoursUntilPickup < 0) {
             console.log(`Booking #${bookingId} is ${hoursUntilPickup.toFixed(2)} hours away - no immediate reminder needed`);
