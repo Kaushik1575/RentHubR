@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import StatusPopup from '../components/StatusPopup';
 
 const ForgotPassword = () => {
     const navigate = useNavigate();
@@ -9,10 +10,18 @@ const ForgotPassword = () => {
     const [otp, setOtp] = useState(['', '', '', '', '', '']);
     const [newPassword, setNewPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
-    const [message, setMessage] = useState({ type: '', text: '' });
+    // const [message, setMessage] = useState({ type: '', text: '' }); // Removed old message state
     const [timeLeft, setTimeLeft] = useState(0);
     const [loading, setLoading] = useState(false);
     const [verifiedOtp, setVerifiedOtp] = useState(null);
+
+    // Popup State
+    const [popup, setPopup] = useState({
+        isOpen: false,
+        type: 'error', // 'success' or 'error'
+        title: '',
+        message: ''
+    });
 
     // Timer logic
     useEffect(() => {
@@ -23,9 +32,14 @@ const ForgotPassword = () => {
         return () => clearInterval(timer);
     }, [timeLeft]);
 
-    const showMessage = (type, text) => {
-        setMessage({ type, text });
-        setTimeout(() => setMessage({ type: '', text: '' }), 5000);
+    // Helper to show popup
+    const showPopup = (type, title, msg) => {
+        setPopup({
+            isOpen: true,
+            type,
+            title,
+            message: msg
+        });
     };
 
     const handleSendOTP = async (e) => {
@@ -42,14 +56,14 @@ const ForgotPassword = () => {
             const data = await res.json();
 
             if (res.ok) {
-                showMessage('success', 'OTP sent successfully! Check your email.');
+                showPopup('success', 'OTP Sent', 'Check your email for the verification code.');
                 setStep(2);
                 setTimeLeft(60);
             } else {
-                showMessage('error', data.error || 'Failed to send OTP');
+                showPopup('error', 'Failed', data.error || 'Failed to send OTP');
             }
         } catch (err) {
-            showMessage('error', 'Network error. Please try again.');
+            showPopup('error', 'Network Error', 'Please check your connection and try again.');
         } finally {
             setLoading(false);
         }
@@ -58,16 +72,10 @@ const ForgotPassword = () => {
     const handleVerifyOTP = async (e) => {
         e.preventDefault();
         const otpString = otp.join('');
-        if (otpString.length !== 6) return showMessage('error', 'Please enter complete 6-digit OTP');
+        if (otpString.length !== 6) return showPopup('error', 'Invalid OTP', 'Please enter complete 6-digit OTP');
 
         setLoading(true);
         try {
-            // We use the reset-password endpoint to verify only first if possible, 
-            // but the legacy app combines verification and reset mostly. 
-            // However, legacy logic shows verifying first.
-            // We can just verify locally or use the endpoint if it supports check-only.
-            // Looking at legacy, it calls reset-password with just email and otp to verify.
-
             const res = await fetch('/api/reset-password', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
@@ -78,12 +86,12 @@ const ForgotPassword = () => {
             if (res.ok) {
                 setVerifiedOtp(otpString);
                 setStep(3);
-                showMessage('success', 'OTP verified');
+                showPopup('success', 'Verified', 'OTP verified successfully. Please set a new password.');
             } else {
-                showMessage('error', data.error || 'Invalid OTP');
+                showPopup('error', 'Verification Failed', data.error || 'Invalid OTP');
             }
         } catch (err) {
-            showMessage('error', 'Verification failed');
+            showPopup('error', 'Error', 'Verification failed due to network error');
         } finally {
             setLoading(false);
         }
@@ -91,8 +99,8 @@ const ForgotPassword = () => {
 
     const handleResetPassword = async (e) => {
         e.preventDefault();
-        if (newPassword !== confirmPassword) return showMessage('error', 'Passwords do not match');
-        if (newPassword.length < 6) return showMessage('error', 'Password must be at least 6 characters');
+        if (newPassword !== confirmPassword) return showPopup('error', 'Mismatch', 'Passwords do not match');
+        if (newPassword.length < 6) return showPopup('error', 'Weak Password', 'Password must be at least 6 characters');
 
         setLoading(true);
         try {
@@ -108,13 +116,13 @@ const ForgotPassword = () => {
             const data = await res.json();
 
             if (res.ok) {
-                showMessage('success', 'Password reset successfully! Redirecting...');
+                showPopup('success', 'Password Reset', 'Your password has been reset successfully! Redirecting to login...');
                 setTimeout(() => navigate(activeTab === 'admin' ? '/login' : '/login'), 2000);
             } else {
-                showMessage('error', data.error || 'Reset failed');
+                showPopup('error', 'Reset Failed', data.error || 'Reset failed');
             }
         } catch (err) {
-            showMessage('error', 'Reset failed');
+            showPopup('error', 'Error', 'Reset failed due to network error');
         } finally {
             setLoading(false);
         }
@@ -177,16 +185,6 @@ const ForgotPassword = () => {
                                 'Create a strong new password.'}
                     </p>
                 </div>
-
-                {message.text && (
-                    <div style={{
-                        padding: '10px', borderRadius: '5px', marginBottom: '1rem', textAlign: 'center',
-                        background: message.type === 'success' ? '#d4edda' : '#f8d7da',
-                        color: message.type === 'success' ? '#155724' : '#721c24'
-                    }}>
-                        {message.text}
-                    </div>
-                )}
 
                 {step === 1 && (
                     <form onSubmit={handleSendOTP}>
@@ -277,6 +275,14 @@ const ForgotPassword = () => {
                     </Link>
                 </div>
             </div>
+
+            <StatusPopup
+                isOpen={popup.isOpen}
+                onClose={() => setPopup({ ...popup, isOpen: false })}
+                type={popup.type}
+                title={popup.title}
+                message={popup.message}
+            />
         </div>
     );
 };
