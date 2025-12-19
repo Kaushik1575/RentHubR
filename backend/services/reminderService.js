@@ -136,7 +136,6 @@ async function checkAndSendReminders() {
 
         // Get current time in IST
         const now = dayjs().tz('Asia/Kolkata');
-        console.log(`[DEBUG] Server Time (IST): ${now.format('YYYY-MM-DD HH:mm:ss')}`);
 
         // Fetch all confirmed bookings that haven't received a reminder yet
         const { data: bookings, error } = await supabase
