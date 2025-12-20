@@ -195,6 +195,7 @@ async function checkAndSendReminders() {
                 // Determine if we should send reminder
                 let shouldSendReminder = false;
 
+                // Normal mode: 0-1 hour before pickup
                 if (hoursUntilPickup <= 1 && hoursUntilPickup >= 0) {
                     shouldSendReminder = true;
                 }
@@ -327,69 +328,30 @@ async function sendImmediateReminderIfNeeded(bookingId) {
         const bookingDateTime = dayjs.tz(`${booking.start_date} ${booking.start_time}`, 'YYYY-MM-DD HH:mm', 'Asia/Kolkata');
         const hoursUntilPickup = bookingDateTime.diff(now, 'hour', true);
 
-        // Only send if booking is within 1.3 hours (to catch bookings just over 1 hour away immediately)
-        if (hoursUntilPickup > 1.3 || hoursUntilPickup < 0) {
-            console.log(`Booking #${bookingId} is ${hoursUntilPickup.toFixed(2)} hours away - no immediate reminder needed`);
-            return { success: true, notNeeded: true };
+        // LOGIC UPDATE:
+        // 1. If booking is < 1 hour away: Suppress reminder (mark as sent) to avoid redundancy with Confirmation Email.
+        // 2. If booking is >= 1 hour away: Do nothing. Let the scheduled Cron job send the reminder when it's 1 hour away.
+        // This prevents "Confirmation + Reminder" arriving simultaneously.
+
+        if (hoursUntilPickup < 1.0) {
+            console.log(`Booking #${bookingId} starts in ${hoursUntilPickup.toFixed(2)}h (< 1h). Suppressing reminder (marking as sent).`);
+
+            // Mark as sent so Cron doesn't send it
+            await supabase
+                .from('bookings')
+                .update({
+                    reminder_sent: true,
+                    reminder_sent_at: getISTTimestamp()
+                })
+                .eq('id', bookingId);
+
+            return { success: true, suppressed: true };
+        } else {
+            console.log(`Booking #${bookingId} starts in ${hoursUntilPickup.toFixed(2)}h (> 1h). Deferring reminder to scheduler.`);
+            return { success: true, deferred: true };
         }
 
-        // Fetch vehicle details
-        let vehicleName = 'Vehicle';
-        let vehicleType = booking.vehicle_type || 'bike';
-
-        try {
-            const { data: vehicle } = await supabase
-                .from(vehicleType === 'scooty' ? 'scooty' : vehicleType === 'car' ? 'cars' : 'bikes')
-                .select('name, type')
-                .eq('id', booking.vehicle_id)
-                .single();
-
-            if (vehicle) {
-                vehicleName = vehicle.name;
-                vehicleType = vehicle.type || vehicleType;
-            }
-        } catch (vError) {
-            console.log('Could not fetch vehicle details');
-        }
-
-        // Send reminder email
-        if (booking.users && booking.users.email) {
-            const bookingDetails = {
-                bookingId: booking.id,
-                vehicleName: vehicleName,
-                vehicleType: vehicleType,
-                startDate: booking.start_date,
-                startTime: booking.start_time,
-                duration: booking.duration,
-                pickupLocation: booking.pickup_location || 'GITA Autonomous College BBSR',
-                hoursUntilPickup: hoursUntilPickup
-            };
-
-            const emailResult = await sendPickupReminderEmail(
-                booking.users.email,
-                booking.users.full_name || 'Customer',
-                bookingDetails
-            );
-
-            if (emailResult.success) {
-                // Mark reminder as sent
-                await supabase
-                    .from('bookings')
-                    .update({
-                        reminder_sent: true,
-                        reminder_sent_at: getISTTimestamp()
-                    })
-                    .eq('id', bookingId);
-
-                console.log(`✅ Immediate reminder sent for booking #${bookingId}`);
-                return { success: true, reminderSent: true };
-            } else {
-                console.error(`Failed to send immediate reminder for booking #${bookingId}:`, emailResult.error);
-                return { success: false, error: emailResult.error };
-            }
-        }
-
-        return { success: false, error: 'No user email found' };
+        // Unreachable code removed (legacy email sending logic)
 
     } catch (error) {
         console.error('Error in sendImmediateReminderIfNeeded:', error);

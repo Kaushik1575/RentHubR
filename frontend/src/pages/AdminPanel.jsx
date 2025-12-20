@@ -426,12 +426,24 @@ const AdminPanel = () => {
                                                 <td>
                                                     {(b.status === 'cancelled' || b.status === 'rejected') ? (
                                                         <div className="refund-info">
-                                                            <p><strong>Ref:</strong> ₹{b.refund_amount}</p>
+                                                            <p><strong>Refund:</strong> ₹{b.refund_amount}</p>
                                                             <p><strong>Status:</strong> {b.refund_status}</p>
-                                                            {b.refund_details && (
-                                                                b.refund_details.method === 'auto_reversal' ?
-                                                                    <p className="text-muted" style={{ fontSize: '0.85em' }}><em>Auto-Reversed (Tx: {b.refund_details.original_tx || 'N/A'})</em></p> :
-                                                                    (b.refund_details.method === 'upi' ? <p>UPI: {b.refund_details.upiId}</p> : <p>Bank: {b.refund_details.accountNumber}</p>)
+                                                            {b.transaction_id && (
+                                                                <p style={{ fontSize: '0.85em', color: '#666' }}>
+                                                                    <strong>Payment ID:</strong><br />
+                                                                    {b.transaction_id}
+                                                                </p>
+                                                            )}
+                                                            {b.refund_id && (
+                                                                <p style={{ fontSize: '0.85em', color: '#4CAF50' }}>
+                                                                    <strong>Refund ID:</strong><br />
+                                                                    {b.refund_id}
+                                                                </p>
+                                                            )}
+                                                            {b.refund_details && b.refund_details.method === 'auto_razorpay' && (
+                                                                <p className="text-muted" style={{ fontSize: '0.85em', fontStyle: 'italic', color: '#2196F3' }}>
+                                                                    ✓ Auto-Refunded via Razorpay
+                                                                </p>
                                                             )}
                                                         </div>
                                                     ) : 'N/A'}
