@@ -53,7 +53,7 @@ class SupabaseDB {
             .from('bookings')
             .select('*')
             .eq('user_id', userId)
-            .order('id', { ascending: true }); // Sort by ID ascending (serial order)
+            .order('id', { ascending: false }); // Sort by ID descending (newest first)
 
         if (error) throw error;
 
