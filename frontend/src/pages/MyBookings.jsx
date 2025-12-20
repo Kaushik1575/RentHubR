@@ -68,7 +68,7 @@ const MyBookings = () => {
                 // Calculate display amounts
                 const duration = parseInt(booking.duration) || 0;
                 const totalAmount = duration * vehiclePrice;
-                const advancePayment = 100;
+                const advancePayment = booking.advance_payment ? parseFloat(booking.advance_payment) : Math.ceil(totalAmount * 0.3);
                 const remainingAmount = totalAmount - advancePayment;
 
                 return {
@@ -76,11 +76,38 @@ const MyBookings = () => {
                     vehicleName,
                     vehiclePrice,
                     totalDisplayAmount: totalAmount, // avoid conflict with booking.total_amount if exists
-                    remainingDisplayAmount: remainingAmount
+                    remainingDisplayAmount: remainingAmount,
+                    displayAdvancePayment: advancePayment
                 };
             }));
 
-            setBookings(enrichedBookings);
+            // Filter out bookings ONLY if they are effectively in the past (Start Time + 12 Hours)
+            // User Logic: "Completed" means started. Disappear 12h after START.
+            const activeBookings = enrichedBookings.filter(booking => {
+                // Determine the start time
+                let startDateTime;
+
+                if (booking.start_date) {
+                    startDateTime = new Date(`${booking.start_date}T${booking.start_time || '00:00'}`);
+                } else {
+                    // Fallback if data missing - keep it visible
+                    return true;
+                }
+
+                // Rule: Disappear 12 hours after START time
+                const disappearTime = new Date(startDateTime.getTime() + (12 * 60 * 60 * 1000));
+
+                const now = new Date();
+
+                // If we are PAST the disappear time, hide it
+                if (now > disappearTime) {
+                    return false;
+                }
+
+                return true;
+            });
+
+            setBookings(activeBookings);
         } catch (error) {
             console.error('Error fetching bookings:', error);
             setError('Error loading bookings. Please try again.');
@@ -92,27 +119,16 @@ const MyBookings = () => {
     const handleCancelClick = (bookingId) => {
         setCurrentBookingId(bookingId);
         setShowCancellationModal(true);
-        setRefundMethod('upi'); // Reset default
     };
 
     const handleRefundDetailsClick = (bookingId) => {
         setCurrentBookingId(bookingId);
         setShowRefundDetailsModal(true);
-        setRefundMethod('upi'); // Reset default
     };
 
     const handleConfirmCancel = async () => {
         if (!currentBookingId) return;
         setIsCancelling(true);
-
-        const detailsToSend = { method: refundMethod };
-        if (refundMethod === 'upi') {
-            detailsToSend.upiId = refundDetails.upiId;
-        } else {
-            detailsToSend.accountHolder = refundDetails.accountHolder;
-            detailsToSend.accountNumber = refundDetails.accountNumber;
-            detailsToSend.ifsc = refundDetails.ifsc;
-        }
 
         try {
             const token = localStorage.getItem('token');
@@ -121,8 +137,7 @@ const MyBookings = () => {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ refundDetails: detailsToSend })
+                }
             });
 
             if (!response.ok) {
@@ -131,7 +146,7 @@ const MyBookings = () => {
             }
 
             const data = await response.json();
-            alert(`Booking cancelled successfully!\nRefund Amount: ₹${data.refundAmount}${data.deduction ? '\nDeduction: ₹' + data.deduction : ''}\nRefund will be processed within 1-2 hours.`);
+            alert(`Booking cancelled successfully!\nRefund Amount: ₹${data.refundAmount}${data.deduction ? '\nDeduction: ₹' + data.deduction : ''}\n\nYour refund will be processed automatically to your original payment method within 5-7 business days.`);
             setShowCancellationModal(false);
             fetchUserBookings();
         } catch (error) {
@@ -199,7 +214,7 @@ const MyBookings = () => {
                             <p><strong>End Date:</strong> {booking.end_date || 'N/A'}</p>
                             <p><strong>Duration:</strong> {booking.duration || '0'} hours</p>
                             <p><strong>Total Amount:</strong> ₹{booking.totalDisplayAmount || '0'}</p>
-                            <p><strong>Advance Payment:</strong> ₹100</p>
+                            <p><strong>Advance Payment:</strong> ₹{booking.displayAdvancePayment || '0'}</p>
                             <p><strong>Remaining Amount:</strong> ₹{booking.remainingDisplayAmount >= 0 ? booking.remainingDisplayAmount : '0'}</p>
                             <p><strong>Transaction ID:</strong> {booking.transaction_id || 'N/A'}</p>
 
@@ -230,7 +245,7 @@ const MyBookings = () => {
 
                             {booking.status === 'rejected' && (
                                 <div className="refund-info" style={{ marginTop: '0.5rem', color: '#4CAF50', fontWeight: 'bold', padding: '0.5rem', backgroundColor: '#e8f5e9', borderRadius: '5px', fontSize: '0.9rem' }}>
-                                    <p><strong>Refund Amount:</strong> ₹{booking.refund_amount || '100'}</p>
+                                    <p><strong>Refund Amount:</strong> ₹{booking.refund_amount || booking.displayAdvancePayment || '0'}</p>
                                     <p><strong>Refund Status:</strong> {booking.refund_status || 'Completed'}</p>
                                     {booking.refund_details?.original_tx && (
                                         <p style={{ fontSize: '0.85em', color: '#666' }}>Ref Tx: {booking.refund_details.original_tx}</p>
@@ -247,40 +262,28 @@ const MyBookings = () => {
                 <div className="modal" style={{ display: 'block', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000 }}>
                     <div className="modal-content" style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', backgroundColor: 'white', padding: '2rem', borderRadius: '20px 20px 0 0', maxHeight: '80vh', overflowY: 'auto' }}>
                         <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #eee' }}>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Cancellation & Refund</h2>
+                            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Cancel Booking</h2>
                             <button onClick={() => setShowCancellationModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.8rem', cursor: 'pointer' }}>&times;</button>
                         </div>
-                        <ul className="rules-list" style={{ listStyle: 'none', padding: 0, margin: '0 0 1.5rem 0' }}>
-                            <li style={{ padding: '0.5rem 0', borderBottom: '1px solid #eee' }}>• Cancellation 2 hours before booking: Full refund of advance.</li>
-                            <li style={{ padding: '0.5rem 0', borderBottom: '1px solid #eee' }}>• Cancellation within 2 hours of/after booking: 50% deduction.</li>
-                            <li style={{ padding: '0.5rem 0', borderBottom: '1px solid #eee' }}>• No show without cancellation: No refund.</li>
-                            <li style={{ padding: '0.5rem 0' }}>• Please provide your refund details below.</li>
-                        </ul>
-                        <div className="refund-method-options" style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                            <label><input type="radio" name="refundMethod" checked={refundMethod === 'upi'} onChange={() => setRefundMethod('upi')} /> UPI/Payment App</label>
-                            <label><input type="radio" name="refundMethod" checked={refundMethod === 'bank'} onChange={() => setRefundMethod('bank')} /> Bank Transfer</label>
+
+                        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '8px', borderLeft: '4px solid #ffc107' }}>
+                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>📋 Cancellation & Refund Policy</h3>
+                            <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
+                                <li style={{ marginBottom: '0.5rem' }}>Cancellation within 2 hours of booking: <strong>Full refund</strong></li>
+                                <li style={{ marginBottom: '0.5rem' }}>Cancellation after 2 hours: <strong>70% refund</strong> (30% deduction)</li>
+                                <li style={{ marginBottom: '0.5rem' }}>Refund will be processed automatically to your original payment method</li>
+                                <li>Refund timeline: <strong>5-7 business days</strong></li>
+                            </ul>
                         </div>
 
-                        {refundMethod === 'upi' ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <label>UPI ID</label>
-                                <input type="text" placeholder="e.g. yourname@upi" value={refundDetails.upiId} onChange={e => setRefundDetails({ ...refundDetails, upiId: e.target.value })} style={{ padding: '0.8rem', border: '1px solid #ccc', borderRadius: '5px' }} />
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <label>Account Holder Name</label>
-                                <input type="text" value={refundDetails.accountHolder} onChange={e => setRefundDetails({ ...refundDetails, accountHolder: e.target.value })} style={{ padding: '0.8rem', border: '1px solid #ccc', borderRadius: '5px' }} />
-                                <label>Account Number</label>
-                                <input type="text" value={refundDetails.accountNumber} onChange={e => setRefundDetails({ ...refundDetails, accountNumber: e.target.value })} style={{ padding: '0.8rem', border: '1px solid #ccc', borderRadius: '5px' }} />
-                                <label>IFSC Code</label>
-                                <input type="text" value={refundDetails.ifsc} onChange={e => setRefundDetails({ ...refundDetails, ifsc: e.target.value })} style={{ padding: '0.8rem', border: '1px solid #ccc', borderRadius: '5px' }} />
-                            </div>
-                        )}
+                        <p style={{ fontSize: '0.95rem', color: '#666', marginBottom: '1.5rem' }}>
+                            Are you sure you want to cancel this booking? Your refund will be processed automatically via Razorpay.
+                        </p>
 
-                        <div className="modal-buttons" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1.5rem', marginTop: '1rem' }}>
+                        <div className="modal-buttons" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1rem' }}>
                             <button onClick={() => setShowCancellationModal(false)} style={{ padding: '0.8rem 1.5rem', borderRadius: '5px', border: 'none', cursor: 'pointer', background: '#ccc' }}>Keep Booking</button>
-                            <button onClick={handleConfirmCancel} disabled={isCancelling} style={{ padding: '0.8rem 1.5rem', borderRadius: '5px', border: 'none', cursor: 'pointer', background: '#2ecc71', color: 'white' }}>
-                                {isCancelling ? 'Cancelling...' : 'Proceed with Cancellation'}
+                            <button onClick={handleConfirmCancel} disabled={isCancelling} style={{ padding: '0.8rem 1.5rem', borderRadius: '5px', border: 'none', cursor: isCancelling ? 'not-allowed' : 'pointer', background: '#f44336', color: 'white', opacity: isCancelling ? 0.6 : 1 }}>
+                                {isCancelling ? 'Processing...' : 'Confirm Cancellation'}
                             </button>
                         </div>
                     </div>
