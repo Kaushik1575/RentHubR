@@ -26,7 +26,8 @@ const getAllBookings = async (req, res) => {
                     email,
                     phone_number
                 )
-            `);
+            `)
+            .order('id', { ascending: true });
 
         if (error) throw error;
 
