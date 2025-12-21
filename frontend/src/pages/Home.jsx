@@ -74,7 +74,7 @@ const Home = () => {
 
                     <div className="vehicle-footer">
                         <div className="price-info">
-                            <span className="price-label">Daily Rate</span>
+                            <span className="price-label">Price per Hour</span>
                             <span className="price-value">₹{vehicle.price}</span>
                         </div>
 
