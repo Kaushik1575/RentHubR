@@ -166,14 +166,14 @@ const Login = () => {
                                 style={{ position: 'absolute', right: '1rem', top: '2.2rem', cursor: 'pointer', color: '#666' }}
                             ></i>
                         </div>
+                        <div style={{ textAlign: 'right', marginBottom: '1rem', marginTop: '-0.5rem' }}>
+                            <Link to="/forgot-password" style={{ color: '#666', fontSize: '0.9rem', textDecoration: 'none' }}>Forgot Password?</Link>
+                        </div>
                         <button type="submit" className="login-btn" style={{
                             width: '100%', padding: '1rem', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1rem', cursor: 'pointer'
                         }}>Login as User</button>
                         <div className="register-link" style={{ textAlign: 'center', marginTop: '1rem' }}>
                             Don't have an account? <Link to="/register-user" style={{ color: '#2ecc71' }}>Register here</Link>
-                        </div>
-                        <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                            <Link to="/forgot-password" style={{ color: '#666', fontSize: '0.9rem' }}>Forgot Password?</Link>
                         </div>
                     </form>
                 )}
@@ -201,6 +201,9 @@ const Login = () => {
                                 style={{ position: 'absolute', right: '1rem', top: '2.2rem', cursor: 'pointer', color: '#666' }}
                             ></i>
                         </div>
+                        <div style={{ textAlign: 'right', marginBottom: '1rem', marginTop: '-0.5rem' }}>
+                            <Link to="/forgot-password" style={{ color: '#666', fontSize: '0.9rem', textDecoration: 'none' }}>Forgot Password?</Link>
+                        </div>
                         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                             <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Admin ID</label>
                             <input
@@ -213,9 +216,6 @@ const Login = () => {
                         }}>Login as Admin</button>
                         <div className="register-link" style={{ textAlign: 'center', marginTop: '1rem' }}>
                             Need admin access? <Link to="/register-admin" style={{ color: '#2ecc71' }}>Register here</Link>
-                        </div>
-                        <div style={{ textAlign: 'center', marginTop: '0.5rem' }}>
-                            <Link to="/forgot-password" style={{ color: '#666', fontSize: '0.9rem' }}>Forgot Password?</Link>
                         </div>
                     </form>
                 )}
