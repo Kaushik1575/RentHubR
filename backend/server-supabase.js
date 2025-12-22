@@ -5,13 +5,13 @@ const compression = require('compression');
 const path = require('path');
 const { initScheduler } = require('./utils/scheduler');
 
-// Routes
 const authRoutes = require('./routes/auth.routes');
 const bookingRoutes = require('./routes/booking.routes');
 const adminRoutes = require('./routes/admin.routes');
 const vehicleRoutes = require('./routes/vehicle.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const sosRoutes = require('./routes/sos.routes');
+const invoiceRoutes = require('./routes/invoice.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -25,6 +25,7 @@ app.use(express.json()); // Parse JSON bodies
 // API Routes Mounting
 app.use('/api', authRoutes);
 app.use('/api/bookings', bookingRoutes);
+app.use('/api/bookings', invoiceRoutes); // Invoice download routes
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/vehicles', vehicleRoutes);

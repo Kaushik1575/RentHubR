@@ -27,6 +27,8 @@ const BookingForm = () => {
     });
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false); // For API calls
+    const [bookingId, setBookingId] = useState(null); // Store booking ID for invoice download
+    const [downloadingInvoice, setDownloadingInvoice] = useState(false); // Invoice download state
 
     // Popup State
     const [popup, setPopup] = useState({
@@ -242,6 +244,7 @@ const BookingForm = () => {
             const data = await response.json();
 
             if (response.ok) {
+                setBookingId(data.id); // Store booking ID
                 setStep(3); // Move to Success Step
                 setPopup({
                     isOpen: true,
@@ -462,7 +465,84 @@ const BookingForm = () => {
                         <h2 style={{ color: '#0f5132' }}>Booking Confirmed!</h2>
                         <p style={{ color: '#666', marginBottom: '2rem' }}>We've sent a confirmation email to you. Your vehicle is reserved.</p>
 
-                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                            <button
+                                onClick={async () => {
+                                    if (!bookingId) {
+                                        setPopup({
+                                            isOpen: true,
+                                            type: 'error',
+                                            title: 'Error',
+                                            message: 'Booking ID not found. Please try from My Bookings.'
+                                        });
+                                        return;
+                                    }
+
+                                    setDownloadingInvoice(true);
+                                    try {
+                                        const token = localStorage.getItem('token');
+                                        const response = await fetch(`/api/bookings/${bookingId}/invoice`, {
+                                            method: 'GET',
+                                            headers: {
+                                                'Authorization': `Bearer ${token}`
+                                            }
+                                        });
+
+                                        if (!response.ok) {
+                                            throw new Error('Failed to download invoice');
+                                        }
+
+                                        // Create blob from response
+                                        const blob = await response.blob();
+                                        const url = window.URL.createObjectURL(blob);
+
+                                        // Create temporary link and trigger download
+                                        const a = document.createElement('a');
+                                        a.href = url;
+                                        a.download = `invoice_${bookingId}.pdf`;
+                                        document.body.appendChild(a);
+                                        a.click();
+
+                                        // Cleanup
+                                        window.URL.revokeObjectURL(url);
+                                        document.body.removeChild(a);
+
+                                        setPopup({
+                                            isOpen: true,
+                                            type: 'success',
+                                            title: 'Success',
+                                            message: 'Invoice downloaded successfully!'
+                                        });
+                                    } catch (error) {
+                                        console.error('Error downloading invoice:', error);
+                                        setPopup({
+                                            isOpen: true,
+                                            type: 'error',
+                                            title: 'Download Failed',
+                                            message: 'Failed to download invoice. Please try again or check My Bookings.'
+                                        });
+                                    } finally {
+                                        setDownloadingInvoice(false);
+                                    }
+                                }}
+                                disabled={downloadingInvoice}
+                                style={{
+                                    padding: '0.8rem 1.5rem',
+                                    background: downloadingInvoice ? '#6c757d' : '#0f5132',
+                                    color: 'white',
+                                    border: 'none',
+                                    borderRadius: '4px',
+                                    cursor: downloadingInvoice ? 'not-allowed' : 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '0.5rem',
+                                    fontSize: '1rem',
+                                    fontWeight: '500'
+                                }}
+                            >
+                                <i className={downloadingInvoice ? 'fas fa-spinner fa-spin' : 'fas fa-print'}></i>
+                                {downloadingInvoice ? 'Downloading...' : 'Print Invoice'}
+                            </button>
                             <button onClick={() => navigate('/my-bookings')} style={{ padding: '0.8rem 1.5rem', background: '#0f5132', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>My Bookings</button>
                             <button onClick={() => navigate('/')} style={{ padding: '0.8rem 1.5rem', background: 'none', border: '1px solid #0f5132', color: '#0f5132', borderRadius: '4px', cursor: 'pointer' }}>Home</button>
                         </div>

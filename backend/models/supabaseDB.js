@@ -78,6 +78,28 @@ class SupabaseDB {
         return updatedData;
     }
 
+    static async getBookingById(bookingId) {
+        const { data, error } = await supabase
+            .from('bookings')
+            .select('*')
+            .eq('id', bookingId)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+        return data;
+    }
+
+    static async getUserById(userId) {
+        const { data, error } = await supabase
+            .from('users')
+            .select('*')
+            .eq('id', userId)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+        return data;
+    }
+
     // Vehicle operations (bikes, cars, scooty)
     static async getVehicles(type) {
         const { data, error } = await supabase
