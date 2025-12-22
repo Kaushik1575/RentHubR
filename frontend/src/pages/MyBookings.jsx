@@ -107,7 +107,44 @@ const MyBookings = () => {
                 return true;
             });
 
-            setBookings(activeBookings);
+            // Format dates for display
+            const formattedBookings = activeBookings.map(booking => {
+                let startDisplay = 'N/A';
+                let endDisplay = 'N/A';
+
+                if (booking.start_date && booking.start_time) {
+                    // Start Date
+                    startDisplay = `${booking.start_date} (${booking.start_time})`;
+
+                    // Calculate End Date
+                    try {
+                        const [year, month, day] = booking.start_date.split('-').map(Number);
+                        const [hours, minutes] = booking.start_time.split(':').map(Number);
+                        const startDateObj = new Date(year, month - 1, day, hours, minutes);
+
+                        const durationHours = parseInt(booking.duration) || 0;
+                        const endDateObj = new Date(startDateObj.getTime() + (durationHours * 60 * 60 * 1000));
+
+                        const endYear = endDateObj.getFullYear();
+                        const endMonth = String(endDateObj.getMonth() + 1).padStart(2, '0');
+                        const endDay = String(endDateObj.getDate()).padStart(2, '0');
+                        const endHours = String(endDateObj.getHours()).padStart(2, '0');
+                        const endMinutes = String(endDateObj.getMinutes()).padStart(2, '0');
+
+                        endDisplay = `${endYear}-${endMonth}-${endDay} (${endHours}:${endMinutes})`;
+                    } catch (e) {
+                        console.error("Error calculating end date", e);
+                    }
+                }
+
+                return {
+                    ...booking,
+                    displayStartDate: startDisplay,
+                    displayEndDate: endDisplay
+                };
+            });
+
+            setBookings(formattedBookings);
         } catch (error) {
             console.error('Error fetching bookings:', error);
             setError('Error loading bookings. Please try again.');
@@ -234,8 +271,8 @@ const MyBookings = () => {
                         <div key={booking.id} className="booking-card" style={{ background: '#fff', padding: '2rem', borderRadius: '10px', boxShadow: '0 2px 15px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
                             <h3 style={{ margin: 0, color: '#2ecc71', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Booking ID: {booking.id}</h3>
                             <p><strong>Vehicle:</strong> {booking.vehicleName} ({booking.vehicle_type})</p>
-                            <p><strong>Start Date:</strong> {booking.start_date || 'N/A'}</p>
-                            <p><strong>End Date:</strong> {booking.end_date || 'N/A'}</p>
+                            <p><strong>Start Date:</strong> {booking.displayStartDate}</p>
+                            <p><strong>End Date:</strong> {booking.displayEndDate}</p>
                             <p><strong>Duration:</strong> {booking.duration || '0'} hours</p>
                             <p><strong>Total Amount:</strong> ₹{booking.totalDisplayAmount || '0'}</p>
                             <p><strong>Advance Payment:</strong> ₹{booking.displayAdvancePayment || '0'}</p>
