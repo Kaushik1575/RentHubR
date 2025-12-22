@@ -151,6 +151,29 @@ const MyBookings = () => {
             });
 
             setBookings(formattedBookings);
+            if (!response.ok) {
+                if (response.status === 403) {
+                    const errorData = await response.json();
+                    if (errorData.code === 'USER_BLOCKED') {
+                        alert('Your account has been blocked. You will be logged out.');
+                        localStorage.removeItem('token');
+                        localStorage.removeItem('user');
+                        navigate('/login');
+                        window.location.reload();
+                        return;
+                    }
+                }
+                throw new Error('Failed to fetch bookings');
+            }
+
+            const data = await response.json();
+
+            const formattedBookings = data.map(booking => {
+                // ... (rest of mapping logic handled by existing code, but I need to be careful with replace)
+                // Wait, I am replacing the fetch block. Let me verify the fetch block context first.
+            });
+            // Actually, I should just modify the fetch block.
+            setBookings(formattedBookings);
         } catch (error) {
             console.error('Error fetching bookings:', error);
             setError('Error loading bookings. Please try again.');

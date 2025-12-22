@@ -178,6 +178,12 @@ const loginUser = async (req, res) => {
             return res.status(403).json({ error: 'Admins must login via Admin Portal' });
         }
 
+        // Check if user is blocked
+        if (user.is_blocked) {
+            console.log('❌ Blocked user login attempt:', email);
+            return res.status(403).json({ error: 'Your account has been blocked. Please contact support.' });
+        }
+
         const validPassword = await bcrypt.compare(password, user.password);
         if (!validPassword) {
             console.log('❌ Invalid password');

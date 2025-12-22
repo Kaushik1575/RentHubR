@@ -133,6 +133,10 @@ body {
     flex: 1;
 }
 
+.hamburger {
+    display: none;
+}
+
 /* Buttons */
 .btn {
     padding: 0.8rem 1.5rem;
@@ -553,17 +557,35 @@ footer {
     }
 
     .hamburger {
-        display: block;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        width: 30px;
+        height: 21px;
         cursor: pointer;
+        z-index: 1100;
     }
 
     .hamburger span {
         display: block;
-        width: 25px;
+        width: 100%;
         height: 3px;
         background-color: var(--dark-color);
-        margin: 5px 0;
-        transition: var(--transition);
+        border-radius: 3px;
+        transition: all 0.3s ease-in-out;
+        transform-origin: left;
+    }
+
+    .hamburger.active span:nth-child(1) {
+        transform: rotate(45deg);
+    }
+
+    .hamburger.active span:nth-child(2) {
+        opacity: 0;
+    }
+
+    .hamburger.active span:nth-child(3) {
+        transform: rotate(-45deg);
     }
 
     .auth-buttons {
@@ -2621,14 +2643,14 @@ main.booking-page-main {
     padding: 16px;
     background: #fff;
     border-radius: 12px;
-    box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.04);
     transition: all 0.3s ease;
     border-left: 4px solid transparent;
 }
 
 .activity-item:hover {
     transform: translateX(5px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
 }
 
 .activity-icon-wrapper {
@@ -2665,6 +2687,7 @@ main.booking-page-main {
 .activity-item.confirmed {
     border-left-color: #2ecc71;
 }
+
 .activity-item.confirmed .activity-icon-wrapper {
     background-color: rgba(46, 204, 113, 0.1);
     color: #2ecc71;
@@ -2673,6 +2696,7 @@ main.booking-page-main {
 .activity-item.cancelled {
     border-left-color: #e74c3c;
 }
+
 .activity-item.cancelled .activity-icon-wrapper {
     background-color: rgba(231, 76, 60, 0.1);
     color: #e74c3c;
@@ -2681,6 +2705,7 @@ main.booking-page-main {
 .activity-item.rejected {
     border-left-color: #f39c12;
 }
+
 .activity-item.rejected .activity-icon-wrapper {
     background-color: rgba(243, 156, 18, 0.1);
     color: #f39c12;
@@ -2689,6 +2714,7 @@ main.booking-page-main {
 .activity-item.created {
     border-left-color: #3f99ff;
 }
+
 .activity-item.created .activity-icon-wrapper {
     background-color: rgba(52, 152, 219, 0.1);
     color: #3498db;

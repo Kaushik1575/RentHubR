@@ -378,11 +378,13 @@ const AdminPanel = () => {
                                                 <td>{u.isAdmin ? 'Admin' : 'User'}</td>
                                                 <td>{u.isBlocked ? <span style={{ color: 'red' }}>Blocked</span> : <span style={{ color: 'green' }}>Active</span>}</td>
                                                 <td>
-                                                    <button className="action-btn btn-view-user" onClick={() => setModal({ type: 'viewUser', data: u })}><i className="fas fa-eye"></i> View</button>
-                                                    <button className="action-btn btn-edit-user" onClick={() => { setEditUserData(u); setModal({ type: 'editUser' }); }}><i className="fas fa-edit"></i> Edit</button>
-                                                    <button className={`action-btn ${u.isBlocked ? 'btn-unblock-user' : 'btn-block-user'}`} onClick={() => handleBlockUser(u.id, u.isBlocked)}>
-                                                        <i className="fas fa-ban"></i> {u.isBlocked ? 'Unblock' : 'Block'}
-                                                    </button>
+                                                    <div style={{ display: 'flex', gap: '10px' }}>
+                                                        <button className="action-btn btn-view-user" onClick={() => setModal({ type: 'viewUser', data: u })}><i className="fas fa-eye"></i> View</button>
+                                                        <button className="action-btn btn-edit-user" onClick={() => { setEditUserData(u); setModal({ type: 'editUser' }); }}><i className="fas fa-edit"></i> Edit</button>
+                                                        <button className={`action-btn ${u.isBlocked ? 'btn-unblock-user' : 'btn-block-user'}`} onClick={() => handleBlockUser(u.id, u.isBlocked)}>
+                                                            <i className="fas fa-ban"></i> {u.isBlocked ? 'Unblock' : 'Block'}
+                                                        </button>
+                                                    </div>
                                                 </td>
                                             </tr>
                                         ))}
