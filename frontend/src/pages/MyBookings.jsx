@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import StatusPopup from '../components/StatusPopup';
+
 
 const MyBookings = () => {
     const navigate = useNavigate();
@@ -12,6 +14,10 @@ const MyBookings = () => {
     const [showRefundDetailsModal, setShowRefundDetailsModal] = useState(false);
     const [currentBookingId, setCurrentBookingId] = useState(null);
     const [isCancelling, setIsCancelling] = useState(false);
+
+    // Success Popup State
+    const [showSuccessPopup, setShowSuccessPopup] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
 
     // Refund Form States
     const [refundMethod, setRefundMethod] = useState('upi'); // 'upi' or 'bank'
@@ -207,7 +213,43 @@ const MyBookings = () => {
             }
 
             const data = await response.json();
-            alert(`Booking cancelled successfully!\nRefund Amount: ₹${data.refundAmount}${data.deduction ? '\nDeduction: ₹' + data.deduction : ''}\n\nYour refund will be processed automatically to your original payment method within 5-7 business days.`);
+
+            // Format success message with refund details
+            const msg = (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', alignItems: 'center' }}>
+                    <p style={{ margin: 0 }}>Booking cancelled successfully!</p>
+
+                    <div style={{
+                        background: '#f8f9fa',
+                        padding: '10px 15px',
+                        borderRadius: '8px',
+                        width: '100%',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        gap: '5px',
+                        border: '1px solid #e9ecef'
+                    }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '1.1rem' }}>
+                            <span style={{ color: '#555' }}>Refund Amount:</span>
+                            <span style={{ fontWeight: 'bold', color: '#2e7d32' }}>₹{data.refundAmount}</span>
+                        </div>
+                        {data.deduction > 0 && (
+                            <div style={{ display: 'flex', justifyContent: 'space-between', width: '100%', fontSize: '0.95rem' }}>
+                                <span style={{ color: '#666' }}>Deduction:</span>
+                                <span style={{ color: '#d32f2f' }}>-₹{data.deduction}</span>
+                            </div>
+                        )}
+                    </div>
+
+                    <p style={{ margin: '5px 0 0 0', fontSize: '0.9rem', color: '#888' }}>
+                        Your refund will be processed automatically to your original payment method within 5-7 business days.
+                    </p>
+                </div>
+            );
+
+            setSuccessMessage(msg);
+            setShowSuccessPopup(true);
+
             setShowCancellationModal(false);
             fetchUserBookings();
         } catch (error) {
@@ -400,6 +442,14 @@ const MyBookings = () => {
                     </div>
                 </div>
             )}
+
+            <StatusPopup
+                isOpen={showSuccessPopup}
+                onClose={() => setShowSuccessPopup(false)}
+                type="success"
+                title="Cancellation Successful"
+                message={successMessage}
+            />
         </main>
     );
 };
