@@ -14,6 +14,7 @@ import AdminPanel from './pages/AdminPanel';
 import ForgotPassword from './pages/ForgotPassword';
 import TrackBooking from './pages/TrackBooking';
 import SOSActivate from './pages/SOSActivate';
+import GlobalAuthCheck from './components/GlobalAuthCheck';
 
 function Layout() {
   const location = useLocation();
@@ -48,6 +49,9 @@ function Layout() {
         </a>
       )}
       {!isSOS && <Footer />}
+
+      {/* Global authentication check - monitors user block status */}
+      <GlobalAuthCheck />
     </div>
   );
 }
