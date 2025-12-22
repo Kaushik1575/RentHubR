@@ -292,6 +292,7 @@ const AdminPanel = () => {
         const matchSearch = !s ||
             (b.customerName || '').toLowerCase().includes(s) ||
             (b.vehicleName || '').toLowerCase().includes(s) ||
+            (b.booking_id || '').toLowerCase().includes(s) ||
             String(b.id).includes(s);
         const matchStatus = !bookingsStatusFilter || (b.status || '').toLowerCase() === bookingsStatusFilter;
         const matchDate = !bookingsDateFilter || b.start_date === bookingsDateFilter;
@@ -442,7 +443,7 @@ const AdminPanel = () => {
                                     <tbody>
                                         {filteredBookings.map(b => (
                                             <tr key={b.id}>
-                                                <td>{b.id}</td>
+                                                <td>{b.booking_id || `#${b.id}`}</td>
                                                 <td>{b.customerName}</td>
                                                 <td>{b.vehicleName}</td>
                                                 <td>{b.start_date}</td>
@@ -559,7 +560,7 @@ const AdminPanel = () => {
                         <span className="close-button" onClick={() => setModal({ type: null })}>&times;</span>
                         <h2>Booking Details</h2>
                         <div className="booking-details">
-                            <p><strong>Booking ID:</strong> {modal.data.id}</p>
+                            <p><strong>Booking ID:</strong> {modal.data.booking_id || `#${modal.data.id}`}</p>
                             <p><strong>Customer:</strong> {modal.data.customerName} ({modal.data.customerPhone})</p>
                             <p><strong>Vehicle:</strong> {modal.data.vehicleName}</p>
                             <p><strong>Range:</strong> {modal.data.start_date} {modal.data.start_time} (Duration: {modal.data.duration})</p>

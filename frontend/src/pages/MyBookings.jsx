@@ -209,11 +209,17 @@ const MyBookings = () => {
 
             if (!response.ok) throw new Error('Failed to download invoice');
 
+            // Find booking to get formatted ID
+            const booking = bookings.find(b => b.id === bookingId);
+            const downloadFilename = booking && booking.booking_id
+                ? `invoice_${booking.booking_id}.pdf`
+                : `Invoice_${bookingId}.pdf`;
+
             const blob = await response.blob();
             const url = window.URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `Invoice_${bookingId}.pdf`;
+            a.download = downloadFilename;
             document.body.appendChild(a);
             a.click();
             window.URL.revokeObjectURL(url);
@@ -342,7 +348,7 @@ const MyBookings = () => {
                 ) : (
                     bookings.map(booking => (
                         <div key={booking.id} className="booking-card" style={{ background: '#fff', padding: '2rem', borderRadius: '10px', boxShadow: '0 2px 15px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                            <h3 style={{ margin: 0, color: '#2ecc71', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Booking ID: {booking.id}</h3>
+                            <h3 style={{ margin: 0, color: '#2ecc71', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Booking ID: {booking.booking_id || `#${booking.id}`}</h3>
                             <p><strong>Vehicle:</strong> {booking.vehicleName} ({booking.vehicle_type})</p>
                             <p><strong>Start Date:</strong> {booking.displayStartDate}</p>
                             <p><strong>End Date:</strong> {booking.displayEndDate}</p>
@@ -353,9 +359,9 @@ const MyBookings = () => {
                             <p><strong>Transaction ID:</strong> {booking.transaction_id || 'N/A'}</p>
 
                             {/* Show booking confirmation time for refund calculation */}
-                            {booking.created_at && (
+                            {(booking.confirmation_timestamp || booking.created_at) && (
                                 <p style={{ fontSize: '0.9rem', color: '#666', background: '#f8f9fa', padding: '0.5rem', borderRadius: '5px', border: '1px solid #e0e0e0' }}>
-                                    <strong>📅 Booked on:</strong> {new Date(booking.created_at).toLocaleString('en-IN', {
+                                    <strong>📅 Booked on:</strong> {new Date(booking.confirmation_timestamp || booking.created_at).toLocaleString('en-IN', {
                                         dateStyle: 'medium',
                                         timeStyle: 'short',
                                         timeZone: 'Asia/Kolkata'
@@ -442,8 +448,8 @@ const MyBookings = () => {
                         {/* Show booking confirmation time and refund calculation */}
                         {(() => {
                             const currentBooking = bookings.find(b => b.id === currentBookingId);
-                            if (currentBooking?.created_at) {
-                                const bookedTime = new Date(currentBooking.created_at);
+                            if (currentBooking?.confirmation_timestamp || currentBooking?.created_at) {
+                                const bookedTime = new Date(currentBooking.confirmation_timestamp || currentBooking.created_at);
                                 const now = new Date();
                                 const hoursSinceBooking = (now - bookedTime) / (1000 * 60 * 60);
                                 const isFullRefund = hoursSinceBooking <= 2;

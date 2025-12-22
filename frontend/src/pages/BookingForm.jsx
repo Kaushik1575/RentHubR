@@ -28,6 +28,7 @@ const BookingForm = () => {
     const [loading, setLoading] = useState(true);
     const [processing, setProcessing] = useState(false); // For API calls
     const [bookingId, setBookingId] = useState(null); // Store booking ID for invoice download
+    const [formattedBookingId, setFormattedBookingId] = useState(null); // Store formatted ID for display/download
     const [downloadingInvoice, setDownloadingInvoice] = useState(false); // Invoice download state
 
     // Popup State
@@ -245,12 +246,13 @@ const BookingForm = () => {
 
             if (response.ok) {
                 setBookingId(data.id); // Store booking ID
+                setFormattedBookingId(data.booking_id); // Store formatted ID
                 setStep(3); // Move to Success Step
                 setPopup({
                     isOpen: true,
                     type: 'success',
                     title: 'Booking Confirmed!',
-                    message: `Booking #${data.id} successful. Check your email for details.`
+                    message: `Booking ${data.booking_id || `#${data.id}`} successful. Check your email for details.`
                 });
             } else {
                 // Show detailed error if available
@@ -499,7 +501,7 @@ const BookingForm = () => {
                                         // Create temporary link and trigger download
                                         const a = document.createElement('a');
                                         a.href = url;
-                                        a.download = `invoice_${bookingId}.pdf`;
+                                        a.download = `invoice_${formattedBookingId || bookingId}.pdf`;
                                         document.body.appendChild(a);
                                         a.click();
 

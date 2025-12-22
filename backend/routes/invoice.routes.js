@@ -35,7 +35,7 @@ router.get('/:bookingId/invoice', verifyToken, async (req, res) => {
             if (type === 'car') type = 'cars';
             if (type === 'bike') type = 'bikes';
             if (type === 'scooty') type = 'scooty';
-            
+
             const vehicle = await SupabaseDB.getVehicleById(type, booking.vehicle_id);
             if (vehicle && vehicle.name) {
                 vehicleName = vehicle.name;
@@ -46,7 +46,7 @@ router.get('/:bookingId/invoice', verifyToken, async (req, res) => {
 
         // Generate invoice PDF
         const pdfBuffer = await generateInvoiceBuffer(
-            booking.id,
+            booking.booking_id || booking.id,
             user.full_name,
             user.email,
             vehicleName,
