@@ -30,8 +30,20 @@ const MyBookings = () => {
         ifsc: ''
     });
 
+    // Force re-render every minute to update cancel button visibility
+    const [currentTime, setCurrentTime] = useState(new Date());
+
     useEffect(() => {
         fetchUserBookings();
+    }, []);
+
+    // Update current time every second to refresh cancel button visibility immediately
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 1000); // Update every 1 second for immediate response
+
+        return () => clearInterval(interval);
     }, []);
 
     const fetchUserBookings = async () => {
@@ -358,13 +370,27 @@ const MyBookings = () => {
                                         <span>📄</span> Download Invoice
                                     </button>
 
-                                    {booking.status === 'confirmed' && (
-                                        <button className="btn-cancel-booking" onClick={() => handleCancelClick(booking.id)} style={{
-                                            backgroundColor: '#f44336', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer'
-                                        }}>
-                                            <i className="fas fa-times"></i> Cancel Booking
-                                        </button>
-                                    )}
+                                    {booking.status === 'confirmed' && (() => {
+                                        // Only show cancel button if start time hasn't passed
+                                        if (booking.start_date && booking.start_time) {
+                                            const startDateTime = new Date(`${booking.start_date}T${booking.start_time}`);
+                                            // Use currentTime state to ensure real-time updates without page refresh
+                                            const now = currentTime;
+
+                                            // Hide cancel button if start time has passed
+                                            if (now >= startDateTime) {
+                                                return null;
+                                            }
+                                        }
+
+                                        return (
+                                            <button className="btn-cancel-booking" onClick={() => handleCancelClick(booking.id)} style={{
+                                                backgroundColor: '#f44336', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer'
+                                            }}>
+                                                <i className="fas fa-times"></i> Cancel Booking
+                                            </button>
+                                        );
+                                    })()}
                                 </div>
                             )}
 

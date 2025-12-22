@@ -690,11 +690,11 @@ const AdminPanel = () => {
                 isOpen={modal.type === 'confirmBlockUser'}
                 onClose={() => setModal({ type: null })}
                 onConfirm={executeBlockUser}
-                title="Confirm Action"
+                title={modal.data?.isBlocked ? 'Unblock User' : 'Block User'}
                 message={`Are you sure you want to ${modal.data?.isBlocked ? 'unblock' : 'block'} this user?`}
                 confirmText={`Yes, ${modal.data?.isBlocked ? 'Unblock' : 'Block'}`}
-                type="warning"
-                icon="fa-user-slash"
+                type={modal.data?.isBlocked ? 'warning' : 'danger'}
+                icon={modal.data?.isBlocked ? 'fa-user-check' : 'fa-user-slash'}
             />
 
             {/* Refund Complete Confirmation */}
