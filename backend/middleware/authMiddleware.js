@@ -4,7 +4,7 @@ const supabase = require('../config/supabase');
 const JWT_SECRET = 'your-secret-key'; // Use the same secret key as server-new.js
 
 // Middleware to verify user token
-const verifyToken = (req, res, next) => {
+const verifyToken = async (req, res, next) => {
     const authHeader = req.headers.authorization;
     if (!authHeader) {
         console.log('VerifyToken: No auth header');
@@ -19,6 +19,24 @@ const verifyToken = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
+
+        // Check user status in database
+        const { data: user, error } = await supabase
+            .from('users')
+            .select('is_blocked')
+            .eq('id', decoded.id)
+            .single();
+
+        if (error || !user) {
+            console.error('VerifyToken: User lookup failed', error);
+            return res.status(401).json({ error: 'User not found' });
+        }
+
+        if (user.is_blocked) {
+            console.log('VerifyToken: User is blocked');
+            return res.status(403).json({ error: 'Account blocked', code: 'USER_BLOCKED' });
+        }
+
         req.user = decoded;
         next();
     } catch (error) {
