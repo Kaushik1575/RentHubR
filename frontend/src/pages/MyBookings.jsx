@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
+import ConfirmationPopup from '../components/ConfirmationPopup';
 
 
 const MyBookings = () => {
@@ -18,6 +19,7 @@ const MyBookings = () => {
     // Success Popup State
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
     const [successMessage, setSuccessMessage] = useState('');
+    const [popup, setPopup] = useState({ isOpen: false, type: 'error', title: '', message: '' });
 
     // Refund Form States
     const [refundMethod, setRefundMethod] = useState('upi'); // 'upi' or 'bank'
@@ -49,11 +51,10 @@ const MyBookings = () => {
                     try {
                         const errorData = await response.json();
                         if (errorData.code === 'USER_BLOCKED') {
-                            alert('Your account has been blocked. You will be logged out.');
-                            localStorage.removeItem('token');
-                            localStorage.removeItem('user');
-                            navigate('/login');
-                            window.location.reload();
+                            setPopup({
+                                isOpen: true, type: 'error', title: 'Account Blocked',
+                                message: 'Your account has been blocked by the administrator. You will be logged out.'
+                            });
                             return;
                         }
                     } catch (e) {
@@ -207,7 +208,7 @@ const MyBookings = () => {
             document.body.removeChild(a);
         } catch (error) {
             console.error('Download error:', error);
-            alert('Could not download invoice. Please try again.');
+            setPopup({ isOpen: true, type: 'error', title: 'Download Error', message: 'Could not download invoice. Please try again.' });
         }
     };
 
@@ -271,7 +272,7 @@ const MyBookings = () => {
             setShowCancellationModal(false);
             fetchUserBookings();
         } catch (error) {
-            alert(error.message || 'Error cancelling booking.');
+            setPopup({ isOpen: true, type: 'error', title: 'Cancellation Failed', message: error.message || 'Error cancelling booking.' });
         } finally {
             setIsCancelling(false);
         }
@@ -282,10 +283,10 @@ const MyBookings = () => {
 
         const detailsToSend = { method: refundMethod };
         if (refundMethod === 'upi') {
-            if (!refundDetails.upiId) return alert('Please enter UPI ID.');
+            if (!refundDetails.upiId) return setPopup({ isOpen: true, type: 'error', title: 'Missing Information', message: 'Please enter UPI ID.' });
             detailsToSend.upiId = refundDetails.upiId;
         } else {
-            if (!refundDetails.accountHolder || !refundDetails.accountNumber || !refundDetails.ifsc) return alert('Please fill all bank details.');
+            if (!refundDetails.accountHolder || !refundDetails.accountNumber || !refundDetails.ifsc) return setPopup({ isOpen: true, type: 'error', title: 'Missing Information', message: 'Please fill all bank details.' });
             detailsToSend.accountHolder = refundDetails.accountHolder;
             detailsToSend.accountNumber = refundDetails.accountNumber;
             detailsToSend.ifsc = refundDetails.ifsc;
@@ -304,11 +305,11 @@ const MyBookings = () => {
 
             if (!response.ok) throw new Error('Failed to submit refund details');
 
-            alert('Refund details submitted successfully!');
+            setPopup({ isOpen: true, type: 'success', title: 'Submitted', message: 'Refund details submitted successfully!' });
             setShowRefundDetailsModal(false);
             fetchUserBookings();
         } catch (error) {
-            alert(error.message);
+            setPopup({ isOpen: true, type: 'error', title: 'Submission Error', message: error.message });
         }
     };
 
@@ -388,38 +389,32 @@ const MyBookings = () => {
                 )}
             </section>
 
-            {/* Cancellation Modal */}
-            {showCancellationModal && (
-                <div className="modal" style={{ display: 'block', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000 }}>
-                    <div className="modal-content" style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', backgroundColor: 'white', padding: '2rem', borderRadius: '20px 20px 0 0', maxHeight: '80vh', overflowY: 'auto' }}>
-                        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #eee' }}>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Cancel Booking</h2>
-                            <button onClick={() => setShowCancellationModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.8rem', cursor: 'pointer' }}>&times;</button>
-                        </div>
-
-                        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '8px', borderLeft: '4px solid #ffc107' }}>
-                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1.1rem' }}>📋 Cancellation & Refund Policy</h3>
-                            <ul style={{ margin: 0, paddingLeft: '1.5rem' }}>
-                                <li style={{ marginBottom: '0.5rem' }}>Cancellation within 2 hours of booking: <strong>Full refund</strong></li>
-                                <li style={{ marginBottom: '0.5rem' }}>Cancellation after 2 hours: <strong>70% refund</strong> (30% deduction)</li>
-                                <li style={{ marginBottom: '0.5rem' }}>Refund will be processed automatically to your original payment method</li>
-                                <li>Refund timeline: <strong>5-7 business days</strong></li>
+            {/* Cancellation Modal using ConfirmationPopup */}
+            <ConfirmationPopup
+                isOpen={showCancellationModal}
+                onClose={() => setShowCancellationModal(false)}
+                onConfirm={handleConfirmCancel}
+                title="Cancel Booking"
+                confirmText="Confirm Cancellation"
+                cancelText="Keep Booking"
+                type="danger"
+                isLoading={isCancelling}
+                icon="fa-calendar-times"
+                message={
+                    <div style={{ textAlign: 'left' }}>
+                        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '8px', borderLeft: '4px solid #ffc107', fontSize: '0.9rem' }}>
+                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#856404' }}>📋 Cancellation & Refund Policy</h3>
+                            <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#856404' }}>
+                                <li style={{ marginBottom: '0.3rem' }}>Cancellation within 2 hours: <strong>Full refund</strong></li>
+                                <li style={{ marginBottom: '0.3rem' }}>Cancellation after 2 hours: <strong>70% refund</strong></li>
+                                <li style={{ marginBottom: '0.3rem' }}>Automatic refund to original method</li>
+                                <li>Timeline: <strong>5-7 business days</strong></li>
                             </ul>
                         </div>
-
-                        <p style={{ fontSize: '0.95rem', color: '#666', marginBottom: '1.5rem' }}>
-                            Are you sure you want to cancel this booking? Your refund will be processed automatically via Razorpay.
-                        </p>
-
-                        <div className="modal-buttons" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1rem' }}>
-                            <button onClick={() => setShowCancellationModal(false)} style={{ padding: '0.8rem 1.5rem', borderRadius: '5px', border: 'none', cursor: 'pointer', background: '#ccc' }}>Keep Booking</button>
-                            <button onClick={handleConfirmCancel} disabled={isCancelling} style={{ padding: '0.8rem 1.5rem', borderRadius: '5px', border: 'none', cursor: isCancelling ? 'not-allowed' : 'pointer', background: '#f44336', color: 'white', opacity: isCancelling ? 0.6 : 1 }}>
-                                {isCancelling ? 'Processing...' : 'Confirm Cancellation'}
-                            </button>
-                        </div>
+                        <p>Are you sure you want to cancel this booking? This action cannot be undone.</p>
                     </div>
-                </div>
-            )}
+                }
+            />
 
             {/* Refund Details Modal (Rejected) - reusing similar logic */}
             {showRefundDetailsModal && (
@@ -462,14 +457,28 @@ const MyBookings = () => {
             )}
 
             <StatusPopup
-                isOpen={showSuccessPopup}
-                onClose={() => setShowSuccessPopup(false)}
-                type="success"
-                title="Cancellation Successful"
-                message={successMessage}
+                isOpen={showSuccessPopup || popup.isOpen}
+                onClose={() => {
+                    if (popup.isOpen) {
+                        if (popup.title === 'Account Blocked') {
+                            localStorage.removeItem('token');
+                            localStorage.removeItem('user');
+                            window.location.href = '/login'; // Force reload to login
+                            return;
+                        }
+                        setPopup({ ...popup, isOpen: false });
+                    }
+                    if (showSuccessPopup) {
+                        setShowSuccessPopup(false);
+                    }
+                }}
+                type={popup.isOpen ? popup.type : 'success'}
+                title={popup.isOpen ? popup.title : 'Success!'}
+                message={popup.isOpen ? popup.message : successMessage}
             />
         </main>
     );
 };
+
 
 export default MyBookings;

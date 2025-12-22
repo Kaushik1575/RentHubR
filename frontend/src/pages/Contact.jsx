@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import StatusPopup from '../components/StatusPopup';
 
 const Contact = () => {
     const [formData, setFormData] = useState({
@@ -7,6 +8,7 @@ const Contact = () => {
         subject: '',
         message: ''
     });
+    const [popup, setPopup] = useState({ isOpen: false, type: 'success', title: '', message: '' });
 
     const handleChange = (e) => {
         setFormData({
@@ -18,7 +20,7 @@ const Contact = () => {
     const handleSubmit = (e) => {
         e.preventDefault();
         // Simulate form submission
-        alert('Thank you for your message! We will get back to you soon.');
+        setPopup({ isOpen: true, type: 'success', title: 'Message Sent', message: 'Thank you for your message! We will get back to you soon.' });
         setFormData({ name: '', email: '', subject: '', message: '' });
     };
 
@@ -151,6 +153,14 @@ const Contact = () => {
             </section>
 
 
+
+            <StatusPopup
+                isOpen={popup.isOpen}
+                onClose={() => setPopup({ ...popup, isOpen: false })}
+                type={popup.type}
+                title={popup.title}
+                message={popup.message}
+            />
         </main>
     );
 };

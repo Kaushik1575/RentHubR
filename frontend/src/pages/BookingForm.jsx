@@ -53,12 +53,12 @@ const BookingForm = () => {
                     setLoading(false);
                 })
                 .catch(err => {
-                    alert('Error loading vehicle data');
-                    navigate('/');
+                    setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error loading vehicle data' });
+                    setTimeout(() => navigate('/'), 2000);
                 });
         } else {
-            alert('Invalid vehicle selection');
-            navigate('/');
+            setPopup({ isOpen: true, type: 'error', title: 'Invalid Vehicle', message: 'Invalid vehicle selection' });
+            setTimeout(() => navigate('/'), 2000);
         }
     }, [vehicleId, apiType, navigate]);
 

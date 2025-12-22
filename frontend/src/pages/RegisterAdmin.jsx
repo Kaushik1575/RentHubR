@@ -68,20 +68,18 @@ const RegisterAdmin = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         if (formData.password !== formData.confirmPassword) {
-            alert('Passwords do not match');
+            setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Passwords do not match' });
             return;
         }
 
         const failed = Object.entries(passwordChecks).filter(([k, v]) => !v).map(x => x[0]);
         if (failed.length > 0) {
-            alert('Password does not meet complexity requirements.');
+            setPopup({ isOpen: true, type: 'error', title: 'Weak Password', message: 'Password does not meet complexity requirements.' });
             return;
         }
 
-
-
         if (!formData.otp) {
-            alert('Please verify your email with OTP before submitting.');
+            setPopup({ isOpen: true, type: 'error', title: 'Verification Required', message: 'Please verify your email with OTP before submitting.' });
             return;
         }
 
@@ -93,17 +91,17 @@ const RegisterAdmin = () => {
             });
             const data = await response.json();
             if (response.ok) {
-                alert('Admin registered successfully! Redirecting to login...');
-                setTimeout(() => navigate('/login'), 2000);
+                setPopup({ isOpen: true, type: 'success', title: 'Registration Successful', message: 'Admin registered successfully! Redirecting to login...' });
+                // Navigation handled in StatusPopup onClose
             } else {
                 if (data && data.error && data.details && Array.isArray(data.details)) {
-                    alert(data.error + '\n' + data.details.join('\n'));
+                    setPopup({ isOpen: true, type: 'error', title: 'Registration Failed', message: data.error + '\n' + data.details.join('\n') });
                 } else {
-                    alert(data.error || 'Registration failed');
+                    setPopup({ isOpen: true, type: 'error', title: 'Registration Failed', message: data.error || 'Registration failed' });
                 }
             }
         } catch (error) {
-            alert('An error occurred during registration.');
+            setPopup({ isOpen: true, type: 'error', title: 'System Error', message: 'An error occurred during registration.' });
         }
     };
 
