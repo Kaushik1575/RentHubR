@@ -352,6 +352,17 @@ const MyBookings = () => {
                             <p><strong>Remaining Amount:</strong> ₹{booking.remainingDisplayAmount >= 0 ? booking.remainingDisplayAmount : '0'}</p>
                             <p><strong>Transaction ID:</strong> {booking.transaction_id || 'N/A'}</p>
 
+                            {/* Show booking confirmation time for refund calculation */}
+                            {booking.created_at && (
+                                <p style={{ fontSize: '0.9rem', color: '#666', background: '#f8f9fa', padding: '0.5rem', borderRadius: '5px', border: '1px solid #e0e0e0' }}>
+                                    <strong>📅 Booked on:</strong> {new Date(booking.created_at).toLocaleString('en-IN', {
+                                        dateStyle: 'medium',
+                                        timeStyle: 'short',
+                                        timeZone: 'Asia/Kolkata'
+                                    })}
+                                </p>
+                            )}
+
                             <span className={`booking-status status-${booking.status}`} style={{
                                 fontWeight: 'bold', padding: '0.5rem 1rem', borderRadius: '5px', display: 'inline-block', marginTop: '0.5rem', color: 'white', textAlign: 'center', width: 'fit-content',
                                 backgroundColor: booking.status === 'confirmed' ? '#4CAF50' :
@@ -428,6 +439,41 @@ const MyBookings = () => {
                 icon="fa-calendar-times"
                 message={
                     <div style={{ textAlign: 'left' }}>
+                        {/* Show booking confirmation time and refund calculation */}
+                        {(() => {
+                            const currentBooking = bookings.find(b => b.id === currentBookingId);
+                            if (currentBooking?.created_at) {
+                                const bookedTime = new Date(currentBooking.created_at);
+                                const now = new Date();
+                                const hoursSinceBooking = (now - bookedTime) / (1000 * 60 * 60);
+                                const isFullRefund = hoursSinceBooking <= 2;
+                                const refundPercentage = isFullRefund ? 100 : 70;
+                                const estimatedRefund = Math.round((currentBooking.displayAdvancePayment || 0) * (refundPercentage / 100));
+
+                                return (
+                                    <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: isFullRefund ? '#e8f5e9' : '#fff3cd', borderRadius: '8px', borderLeft: `4px solid ${isFullRefund ? '#4caf50' : '#ffc107'}` }}>
+                                        <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: isFullRefund ? '#2e7d32' : '#856404' }}>
+                                            ⏰ Booking Time Information
+                                        </h3>
+                                        <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: isFullRefund ? '#2e7d32' : '#856404' }}>
+                                            <strong>Booked on:</strong> {bookedTime.toLocaleString('en-IN', {
+                                                dateStyle: 'medium',
+                                                timeStyle: 'short',
+                                                timeZone: 'Asia/Kolkata'
+                                            })}
+                                        </p>
+                                        <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: isFullRefund ? '#2e7d32' : '#856404' }}>
+                                            <strong>Time elapsed:</strong> {hoursSinceBooking.toFixed(1)} hours
+                                        </p>
+                                        <p style={{ margin: '0.5rem 0 0 0', fontSize: '1rem', fontWeight: 'bold', color: isFullRefund ? '#2e7d32' : '#856404' }}>
+                                            💰 Estimated Refund: ₹{estimatedRefund}
+                                        </p>
+                                    </div>
+                                );
+                            }
+                            return null;
+                        })()}
+
                         <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '8px', borderLeft: '4px solid #ffc107', fontSize: '0.9rem' }}>
                             <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#856404' }}>📋 Cancellation & Refund Policy</h3>
                             <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#856404' }}>
