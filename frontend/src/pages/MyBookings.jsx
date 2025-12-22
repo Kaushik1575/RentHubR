@@ -126,6 +126,30 @@ const MyBookings = () => {
         setShowRefundDetailsModal(true);
     };
 
+    const handleDownloadInvoice = async (bookingId) => {
+        try {
+            const token = localStorage.getItem('token');
+            const response = await fetch(`/api/bookings/${bookingId}/invoice`, {
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+
+            if (!response.ok) throw new Error('Failed to download invoice');
+
+            const blob = await response.blob();
+            const url = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `Invoice_${bookingId}.pdf`;
+            document.body.appendChild(a);
+            a.click();
+            window.URL.revokeObjectURL(url);
+            document.body.removeChild(a);
+        } catch (error) {
+            console.error('Download error:', error);
+            alert('Could not download invoice. Please try again.');
+        }
+    };
+
     const handleConfirmCancel = async () => {
         if (!currentBookingId) return;
         setIsCancelling(true);
@@ -228,12 +252,22 @@ const MyBookings = () => {
                                 {booking.status ? booking.status.toUpperCase() : 'N/A'}
                             </span>
 
-                            {booking.status === 'confirmed' && (
-                                <button className="btn-cancel-booking" onClick={() => handleCancelClick(booking.id)} style={{
-                                    backgroundColor: '#f44336', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer', marginTop: '1rem', width: 'fit-content'
-                                }}>
-                                    <i className="fas fa-times"></i> Cancel Booking
-                                </button>
+                            {(booking.status === 'confirmed' || booking.status === 'completed') && (
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
+                                    <button onClick={() => handleDownloadInvoice(booking.id)} style={{
+                                        backgroundColor: '#2196F3', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem'
+                                    }}>
+                                        <span>📄</span> Download Invoice
+                                    </button>
+
+                                    {booking.status === 'confirmed' && (
+                                        <button className="btn-cancel-booking" onClick={() => handleCancelClick(booking.id)} style={{
+                                            backgroundColor: '#f44336', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer'
+                                        }}>
+                                            <i className="fas fa-times"></i> Cancel Booking
+                                        </button>
+                                    )}
+                                </div>
                             )}
 
                             {booking.status === 'cancelled' && booking.refund_amount && (
