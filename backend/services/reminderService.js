@@ -207,10 +207,19 @@ async function checkAndSendReminders() {
                 // Fetch vehicle details
                 let vehicleName = 'Vehicle';
                 let vehicleType = booking.vehicle_type || 'bike';
+                let tableName = 'bikes';
+
+                // Determine correct table name based on vehicle type
+                if (vehicleType) {
+                    const typeLower = vehicleType.toLowerCase();
+                    if (typeLower === 'car') tableName = 'cars';
+                    else if (typeLower === 'scooty') tableName = 'scooty';
+                    else tableName = 'bikes';
+                }
 
                 try {
                     const { data: vehicle } = await supabase
-                        .from(vehicleType === 'scooty' ? 'scooty' : vehicleType === 'car' ? 'cars' : 'bikes')
+                        .from(tableName)
                         .select('name, type')
                         .eq('id', booking.vehicle_id)
                         .single();

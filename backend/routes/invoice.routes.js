@@ -28,12 +28,28 @@ router.get('/:bookingId/invoice', verifyToken, async (req, res) => {
         // Fetch user details
         const user = await SupabaseDB.getUserById(booking.user_id);
 
+        // Fetch vehicle details to get the name
+        let vehicleName = `${booking.vehicle_type} #${booking.vehicle_id}`;
+        try {
+            let type = booking.vehicle_type.toLowerCase();
+            if (type === 'car') type = 'cars';
+            if (type === 'bike') type = 'bikes';
+            if (type === 'scooty') type = 'scooty';
+            
+            const vehicle = await SupabaseDB.getVehicleById(type, booking.vehicle_id);
+            if (vehicle && vehicle.name) {
+                vehicleName = vehicle.name;
+            }
+        } catch (err) {
+            console.warn('Could not fetch vehicle details for invoice:', err);
+        }
+
         // Generate invoice PDF
         const pdfBuffer = await generateInvoiceBuffer(
             booking.id,
             user.full_name,
             user.email,
-            booking.vehicle_name || `${booking.vehicle_type} #${booking.vehicle_id}`,
+            vehicleName,
             booking.duration,
             `${booking.start_date} ${booking.start_time}`,
             booking.total_amount,
