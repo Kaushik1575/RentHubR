@@ -6,6 +6,7 @@ const { getISTTimestamp } = require('../utils/dateUtils');
 const { generateInvoiceBuffer } = require('../utils/invoiceGenerator');
 const { sendImmediateReminderIfNeeded } = require('../services/reminderService');
 const { makeBookingConfirmationCall } = require('../config/retellCallService');
+const { generateBookingId } = require('../utils/bookingIdGenerator');
 const Razorpay = require('razorpay');
 
 // Helpers
@@ -177,7 +178,18 @@ const createBooking = async (req, res) => {
         const totalAmount = req.body.totalAmount || 0;
         const advancePayment = req.body.actualAdvancePayment || Math.ceil(totalAmount * 0.3);
 
+        // Generate professional Booking ID (format: RHYYMMDD-XXX)
+        let bookingId;
+        try {
+            bookingId = await generateBookingId();
+            console.log(`📋 Generated Booking ID: ${bookingId}`);
+        } catch (idError) {
+            console.error('❌ Failed to generate Booking ID:', idError);
+            return res.status(500).json({ error: 'Failed to generate booking ID. Please try again.' });
+        }
+
         const bookingData = {
+            booking_id: bookingId,
             user_id: req.user.id,
             vehicle_id: vehicleId,
             start_date: startDate,
@@ -241,7 +253,7 @@ const createBooking = async (req, res) => {
                 try {
                     // Generate PDF invoice buffer
                     const pdfBuffer = await generateInvoiceBuffer(
-                        data.id, // bookingId
+                        data.booking_id, // Professional Booking ID (e.g., RH251222-001)
                         userDetails.full_name, // userName
                         userDetails.email, // userEmail
                         vehicleName,
@@ -261,8 +273,8 @@ const createBooking = async (req, res) => {
                     };
                     const gcalDates = `${formatForCal(start)}/${formatForCal(end)}`;
                     const gcalBase = 'https://calendar.google.com/calendar/render?action=TEMPLATE';
-                    const gcalText = encodeURIComponent(`RentHub booking ${data.id} — ${vehicleName}`);
-                    const gcalDetails = encodeURIComponent(`Booking ID: ${data.id}\nVehicle: ${vehicleName}\nPickup: ${startDate} ${formattedStartTime}`);
+                    const gcalText = encodeURIComponent(`RentHub booking ${data.booking_id} — ${vehicleName}`);
+                    const gcalDetails = encodeURIComponent(`Booking ID: ${data.booking_id}\nVehicle: ${vehicleName}\nPickup: ${startDate} ${formattedStartTime}`);
                     const gcalUrl = `${gcalBase}&text=${gcalText}&dates=${gcalDates}&details=${gcalDetails}`;
 
                     // Construct Rich HTML Email
@@ -272,7 +284,7 @@ const createBooking = async (req, res) => {
                           <p>We are excited to let you know that your booking has been <b>confirmed</b> by the RentHub team. Please find your invoice attached.</p>
                           <h3>Booking Details</h3>
                           <table style="width:100%; border-collapse: collapse;">
-                            <tr><td style="padding:6px; border:1px solid #eee;"><b>Booking ID</b></td><td style="padding:6px; border:1px solid #eee;">${data.id}</td></tr>
+                            <tr><td style="padding:6px; border:1px solid #eee;"><b>Booking ID</b></td><td style="padding:6px; border:1px solid #eee;">${data.booking_id}</td></tr>
                             <tr><td style="padding:6px; border:1px solid #eee;"><b>Vehicle</b></td><td style="padding:6px; border:1px solid #eee;">${vehicleName}</td></tr>
                             <tr><td style="padding:6px; border:1px solid #eee;"><b>Pickup Date & Time</b></td><td style="padding:6px; border:1px solid #eee;">${startDate} ${formattedStartTime}</td></tr>
                             <tr><td style="padding:6px; border:1px solid #eee;"><b>Duration</b></td><td style="padding:6px; border:1px solid #eee;">${duration} hours</td></tr>
@@ -315,7 +327,7 @@ const createBooking = async (req, res) => {
                 // 5. Trigger Retell AI Call
                 if (userDetails.phone_number) {
                     const detailsForCall = {
-                        bookingId: data.id,
+                        bookingId: data.booking_id,
                         vehicleName: vehicleName,
                         vehicleType: vehicleType,
                         startDate: startDate,

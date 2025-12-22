@@ -51,7 +51,7 @@ async function sendPickupReminderEmail(userEmail, userName, bookingDetails) {
               <table style="width: 100%; border-collapse: collapse;">
                 <tr>
                   <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Booking ID:</td>
-                  <td style="padding: 8px 0; color: #1f2937; font-weight: bold;">#${bookingId}</td>
+                  <td style="padding: 8px 0; color: #1f2937; font-weight: bold;">${bookingId}</td>
                 </tr>
                 <tr>
                   <td style="padding: 8px 0; color: #6b7280; font-weight: 600;">Vehicle:</td>
@@ -235,7 +235,7 @@ async function checkAndSendReminders() {
                 // Send reminder email
                 if (booking.users && booking.users.email) {
                     const bookingDetails = {
-                        bookingId: booking.id,
+                        bookingId: booking.booking_id || `#${booking.id}`,
                         vehicleName: vehicleName,
                         vehicleType: vehicleType,
                         startDate: booking.start_date,

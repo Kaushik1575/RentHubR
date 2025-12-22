@@ -48,6 +48,7 @@ const getAllBookings = async (req, res) => {
 
             return {
                 id: booking.id,
+                booking_id: booking.booking_id || null,
                 customerName: booking.users?.full_name || 'N/A',
                 customerEmail: booking.users?.email || 'N/A',
                 customerPhone: booking.users?.phone_number || 'N/A',
@@ -69,7 +70,8 @@ const getAllBookings = async (req, res) => {
                 created_at: booking.created_at || null,
                 confirmation_timestamp: booking.confirmation_timestamp || null,
                 cancelled_timestamp: booking.cancelled_timestamp || null,
-                transaction_id: booking.transaction_id || 'N/A'
+                transaction_id: booking.transaction_id || 'N/A',
+                refund_id: booking.refund_id || null
             };
         });
 
@@ -129,6 +131,7 @@ const getBookingById = async (req, res) => {
 
         const enrichedBooking = {
             id: booking.id,
+            booking_id: booking.booking_id || null,
             customerName: booking.users?.full_name || 'N/A',
             customerEmail: booking.users?.email || 'N/A',
             customerPhone: booking.users?.phone_number || 'N/A',
@@ -150,7 +153,8 @@ const getBookingById = async (req, res) => {
             created_at: booking.created_at || null,
             confirmation_timestamp: booking.confirmation_timestamp || null,
             cancelled_timestamp: booking.cancelled_timestamp || null,
-            transaction_id: booking.transaction_id || 'N/A'
+            transaction_id: booking.transaction_id || 'N/A',
+            refund_id: booking.refund_id || null
         };
 
         res.json(enrichedBooking);
@@ -264,7 +268,7 @@ const confirmBooking = async (req, res) => {
                 const remainingAmount = totalAmount - advancePayment;
 
                 const pdfBuffer = await generateInvoiceBuffer(
-                    bookingId,
+                    booking.booking_id || booking.id,
                     booking.users.full_name,
                     booking.users.email,
                     vehicle ? vehicle.name : 'Vehicle',
@@ -536,7 +540,7 @@ const markRefundComplete = async (req, res) => {
 
         // Email
         if (booking.users?.email) {
-            await sendRefundCompleteEmail(booking.users.email, booking.users.full_name, booking.id, booking.refund_amount, booking.refund_timestamp, booking.refund_details);
+            await sendRefundCompleteEmail(booking.users.email, booking.users.full_name, booking.booking_id || booking.id, booking.refund_amount, booking.refund_timestamp, booking.refund_details);
         }
 
         res.json({ message: 'Refund marked as completed', booking });
@@ -561,7 +565,8 @@ const sendSOS = async (req, res) => {
         if (!userEmail) return res.status(404).json({ error: 'User email not found' });
 
         const sosToken = crypto.randomBytes(32).toString('hex');
-        const sosActivationLink = `https://rentahub-service.vercel.app/sos-activate?token=${sosToken}&bookingId=${bookingId}`;
+        const frontendUrl = process.env.FRONTEND_URL || 'https://rentahub-service.vercel.app';
+        const sosActivationLink = `${frontendUrl}/sos-activate?token=${sosToken}&bookingId=${bookingId}`;
 
         if (!global.sosTokens) global.sosTokens = {};
         global.sosTokens[sosToken] = { bookingId, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() };
@@ -612,7 +617,7 @@ const getDashboardStats = async (req, res) => {
         const { count: todaysBookings } = await supabase.from('bookings').select('id', { count: 'exact', head: true })
             .gte('created_at', today + 'T00:00:00').lt('created_at', today + 'T23:59:59');
 
-        const { data: recentBookings } = await supabase.from('bookings').select(`id, status, created_at, users (full_name), vehicle_type`).order('created_at', { ascending: false }).limit(5);
+        const { data: recentBookings } = await supabase.from('bookings').select(`id, booking_id, status, created_at, users (full_name), vehicle_type`).order('created_at', { ascending: false }).limit(5);
 
         const recentActivity = (recentBookings || []).map(b => {
             let description = '';
@@ -622,10 +627,12 @@ const getDashboardStats = async (req, res) => {
             else if (b.status === 'cancelled') type = 'cancelled';
             else if (b.status === 'rejected') type = 'rejected';
 
-            if (b.status === 'confirmed') description = `Booking #${b.id} confirmed for ${userName}`;
-            else if (b.status === 'cancelled') description = `Booking #${b.id} cancelled by ${userName}`;
-            else if (b.status === 'rejected') description = `Booking #${b.id} rejected`;
-            else description = `New booking #${b.id} from ${userName}`;
+            const displayId = b.booking_id || `#${b.id}`;
+
+            if (b.status === 'confirmed') description = `Booking ${displayId} confirmed for ${userName}`;
+            else if (b.status === 'cancelled') description = `Booking ${displayId} cancelled by ${userName}`;
+            else if (b.status === 'rejected') description = `Booking ${displayId} rejected`;
+            else description = `New booking ${displayId} from ${userName}`;
 
             return { type, description, timestamp: b.created_at };
         });

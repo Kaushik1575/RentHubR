@@ -12,18 +12,25 @@ const activateSOS = async (req, res) => {
         }
 
         // Fetch booking details with user info
-        const { data: booking, error: bookingError } = await supabase
-            .from('bookings')
-            .select(`
+
+
+        // Handle formatted booking ID (RH...) or numeric ID
+        let query = supabase.from('bookings').select(`
                 *,
                 users:user_id (
                     full_name,
                     email,
                     phone_number
                 )
-            `)
-            .eq('id', bookingId)
-            .single();
+            `);
+
+        if (bookingId.toString().startsWith('RH')) {
+            query = query.eq('booking_id', bookingId);
+        } else {
+            query = query.eq('id', bookingId);
+        }
+
+        const { data: booking, error: bookingError } = await query.single();
 
         if (bookingError || !booking) {
             console.error('Error fetching booking for SOS:', bookingError);
