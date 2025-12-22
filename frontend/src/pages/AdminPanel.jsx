@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
+import ConfirmationPopup from '../components/ConfirmationPopup';
 
 
 const AdminPanel = () => {
@@ -116,17 +117,27 @@ const AdminPanel = () => {
     };
 
     // User Actions
-    const handleBlockUser = async (userId, isBlocked) => {
-        if (!confirm(`Are you sure you want to ${isBlocked ? 'unblock' : 'block'} this user?`)) return;
+    // User Actions
+    const executeBlockUser = async () => {
+        const { userId, isBlocked } = modal.data;
         try {
             const res = await fetch(`/api/admin/users/${userId}/block`, {
                 method: 'PATCH',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify({ isBlocked: !isBlocked })
             });
-            if (res.ok) loadUsers();
-            else setPopup({ isOpen: true, type: 'error', title: 'Action Failed', message: 'Failed to update status' });
+            if (res.ok) {
+                loadUsers();
+                setModal({ type: null });
+                setPopup({ isOpen: true, type: 'success', title: 'Success', message: `User ${isBlocked ? 'unblocked' : 'blocked'} successfully` });
+            } else {
+                setPopup({ isOpen: true, type: 'error', title: 'Action Failed', message: 'Failed to update status' });
+            }
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error updating status' }); }
+    };
+
+    const handleBlockUser = (userId, isBlocked) => {
+        setModal({ type: 'confirmBlockUser', data: { userId, isBlocked } });
     };
 
     const handleUpdateUser = async (e) => {
@@ -194,24 +205,28 @@ const AdminPanel = () => {
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error updating' }); }
     };
 
-    const handleRefundComplete = async (id) => {
-        if (!confirm('Mark refund as completed?')) return;
+    const executeRefundComplete = async () => {
         try {
-            await fetch(`/api/admin/bookings/${id}/refund-complete`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
+            await fetch(`/api/admin/bookings/${modal.data.id}/refund-complete`, { method: 'POST', headers: { 'Authorization': `Bearer ${token}` } });
             loadBookings();
+            setModal({ type: null });
             setPopup({ isOpen: true, type: 'success', title: 'Refunded', message: 'Refund marked as complete' });
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error processing refund' }); }
     };
 
-    const handleSendSOS = async (id) => {
-        if (!confirm('Send SOS activation?')) return;
+    const handleRefundComplete = (id) => {
+        setModal({ type: 'confirmRefundComplete', data: { id } });
+    };
+
+    const executeSendSOS = async () => {
         try {
             const res = await fetch('/api/admin/send-sos', {
                 method: 'POST',
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ bookingId: id })
+                body: JSON.stringify({ bookingId: modal.data.id })
             });
             const d = await res.json();
+            setModal({ type: null });
             if (res.ok) {
                 setPopup({ isOpen: true, type: 'success', title: 'SOS Sent', message: d.message });
             } else {
@@ -220,14 +235,23 @@ const AdminPanel = () => {
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error sending SOS' }); }
     };
 
+    const handleSendSOS = (id) => {
+        setModal({ type: 'confirmSOS', data: { id } });
+    };
+
     // Vehicle Actions
-    const handleDeleteVehicle = async (id, type) => {
-        if (!confirm('Delete this vehicle?')) return;
+    const executeDeleteVehicle = async () => {
+        const { id, type } = modal.data;
         try {
             await fetch(`/api/admin/vehicles/${type}/${id}`, { method: 'DELETE', headers: { 'Authorization': `Bearer ${token}` } });
             loadVehicles();
+            setModal({ type: null });
             setPopup({ isOpen: true, type: 'success', title: 'Deleted', message: 'Vehicle deleted successfully' });
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error deleting vehicle' }); }
+    };
+
+    const handleDeleteVehicle = (id, type) => {
+        setModal({ type: 'confirmDeleteVehicle', data: { id, type } });
     };
 
     const handleVehicleSubmit = async (e) => {
@@ -579,18 +603,17 @@ const AdminPanel = () => {
                 </div>
             )}
 
-            {modal.type === 'deleteBooking' && (
-                <div className="modal">
-                    <div className="modal-content">
-                        <h2>Confirm Delete</h2>
-                        <p>Are you sure you want to delete this booking?</p>
-                        <div style={{ display: 'flex', gap: '10px' }}>
-                            <button className="action-btn btn-delete" onClick={() => handleDeleteBooking(modal.data.id)}>Yes, Delete</button>
-                            <button className="action-btn" style={{ background: '#ccc' }} onClick={() => setModal({ type: null })}>Cancel</button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            {/* CONFIRM DELETE BOOKING */}
+            <ConfirmationPopup
+                isOpen={modal.type === 'deleteBooking'}
+                onClose={() => setModal({ type: null })}
+                onConfirm={() => handleDeleteBooking(modal.data?.id)}
+                title="Confirm Delete"
+                message="Are you sure you want to delete this booking?"
+                confirmText="Yes, Delete"
+                cancelText="Cancel"
+                type="danger"
+            />
 
             {modal.type === 'viewUser' && (
                 <div className="modal">
@@ -660,6 +683,54 @@ const AdminPanel = () => {
                     </div>
                 </div>
             )}
+
+            {/* Custom Confirmation Modals */}
+            {/* Active User Block/Unblock Confirmation */}
+            <ConfirmationPopup
+                isOpen={modal.type === 'confirmBlockUser'}
+                onClose={() => setModal({ type: null })}
+                onConfirm={executeBlockUser}
+                title="Confirm Action"
+                message={`Are you sure you want to ${modal.data?.isBlocked ? 'unblock' : 'block'} this user?`}
+                confirmText={`Yes, ${modal.data?.isBlocked ? 'Unblock' : 'Block'}`}
+                type="warning"
+                icon="fa-user-slash"
+            />
+
+            {/* Refund Complete Confirmation */}
+            <ConfirmationPopup
+                isOpen={modal.type === 'confirmRefundComplete'}
+                onClose={() => setModal({ type: null })}
+                onConfirm={executeRefundComplete}
+                title="Confirm Refund"
+                message="Are you sure you want to mark this refund as COMPLETED? This action cannot be undone."
+                confirmText="Yes, Complete Refund"
+                type="warning"
+                icon="fa-check-circle"
+            />
+
+            {/* SOS Confirmation */}
+            <ConfirmationPopup
+                isOpen={modal.type === 'confirmSOS'}
+                onClose={() => setModal({ type: null })}
+                onConfirm={executeSendSOS}
+                title="Confirm SOS"
+                message="Are you sure you want to trigger SOS for this booking? This will send emergency alerts."
+                confirmText="Yes, Send SOS"
+                type="danger"
+                icon="fa-bell"
+            />
+
+            {/* Delete Vehicle Confirmation */}
+            <ConfirmationPopup
+                isOpen={modal.type === 'confirmDeleteVehicle'}
+                onClose={() => setModal({ type: null })}
+                onConfirm={executeDeleteVehicle}
+                title="Confirm Delete"
+                message="Are you sure you want to delete this vehicle?"
+                confirmText="Yes, Delete"
+                type="danger"
+            />
 
             <StatusPopup
                 isOpen={popup.isOpen}
