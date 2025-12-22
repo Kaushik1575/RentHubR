@@ -66,14 +66,14 @@ const StatusPopup = ({ isOpen, onClose, type = 'error', title, message }) => {
                 </h2>
 
                 {/* Message */}
-                <p style={{
+                <div style={{
                     color: '#666',
                     marginBottom: '2rem',
                     lineHeight: '1.6',
                     fontSize: '1rem'
                 }}>
                     {message}
-                </p>
+                </div>
 
                 {/* Button */}
                 <button
