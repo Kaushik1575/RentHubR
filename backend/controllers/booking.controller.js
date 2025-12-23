@@ -445,30 +445,31 @@ const cancelBooking = async (req, res) => {
         });
 
         if (booking.transaction_id && refundAmount > 0) {
-            // try {
-            //     console.log(`Initiating Razorpay refund for user cancellation - booking ${bookingId}, payment ${booking.transaction_id}, amount: ₹${refundAmount}`);
+            try {
+                console.log(`Initiating Razorpay refund for user cancellation - booking ${bookingId}, payment ${booking.transaction_id}, amount: ₹${refundAmount}`);
 
-            //     const refundResponse = await razorpay.payments.refund(booking.transaction_id, {
-            //         amount: refundAmount * 100, // Convert to paise
-            //         speed: 'optimum', // Attempts instant refund if enabled
-            //         notes: {
-            //             booking_id: bookingId,
-            //             reason: 'Booking cancelled by user',
-            //             cancelled_at: localCancelTimestamp
-            //         }
-            //     });
+                const refundResponse = await razorpay.payments.refund(booking.transaction_id, {
+                    amount: refundAmount * 100, // Convert to paise
+                    speed: 'optimum', // Attempts instant refund if enabled
+                    notes: {
+                        booking_id: bookingId,
+                        reason: 'Booking cancelled by user',
+                        cancelled_at: localCancelTimestamp
+                    }
+                });
 
-            //     console.log('Razorpay refund successful for user cancellation:', refundResponse);
-            //     refundStatus = 'completed';
-            //     razorpayRefundId = refundResponse.id;
+                console.log('Razorpay refund successful for user cancellation:', refundResponse);
+                refundStatus = 'completed';
+                razorpayRefundId = refundResponse.id;
 
-            // } catch (refundError) {
-            //     console.error('Razorpay refund failed for user cancellation:', refundError);
-            //     // Keep refund_status as 'processing' for manual intervention
-            //     console.log('Refund will remain in processing status for manual handling');
-            // }
-            console.log('Auto-refund disabled. Marking as processing for manual admin verification.');
+            } catch (refundError) {
+                console.error('Razorpay refund failed for user cancellation:', refundError);
+                // Keep refund_status as 'processing' for manual intervention
+                console.log('Refund will remain in processing status for manual handling');
+            }
+            // console.log('Auto-refund disabled. Marking as processing for manual admin verification.');
         } else if (refundAmount === 0) {
+
             refundStatus = 'not_applicable';
         }
 
