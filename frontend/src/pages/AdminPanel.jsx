@@ -551,17 +551,94 @@ const AdminPanel = () => {
 
                     {/* POLICIES */}
                     {activeTab === 'policies' && (
-                        <div id="policies" className="content-section active">
-                            <h2>Policies</h2>
-                            <div className="table-container">
-                                <table id="policies-table">
-                                    <thead><tr><th>#</th><th>Title</th><th>Description</th></tr></thead>
-                                    <tbody>
-                                        <tr><td>1</td><td>Cancellation</td><td>Free cancellation up to 24 hours before trip start.</td></tr>
-                                        <tr><td>2</td><td>Late Return</td><td>Penalty charges apply for late returns beyond grace period.</td></tr>
-                                        <tr><td>3</td><td>Fuel Policy</td><td>Vehicle provided with full tank must be returned with full tank.</td></tr>
-                                    </tbody>
-                                </table>
+                        <div id="policies" className="content-section active" style={{ display: 'flex', justifyContent: 'center', background: '#f0f2f5', padding: '20px' }}>
+                            <div className="policy-document" style={{
+                                background: 'white',
+                                width: '100%',
+                                maxWidth: '800px',
+                                minHeight: '800px',
+                                padding: '50px',
+                                boxShadow: '0 4px 15px rgba(0,0,0,0.1)',
+                                borderRadius: '4px',
+                                color: '#333',
+                                fontFamily: "'Times New Roman', Times, serif"
+                            }}>
+                                <div style={{ textAlign: 'center', marginBottom: '40px', borderBottom: '2px solid #333', paddingBottom: '20px' }}>
+                                    <h1 style={{ margin: '0', fontSize: '28px', textTransform: 'uppercase', letterSpacing: '2px' }}>Terms & Conditions</h1>
+                                    <p style={{ margin: '10px 0 0', fontSize: '14px', fontStyle: 'italic', color: '#666' }}>RentHub Vehicle Rental Services</p>
+                                </div>
+
+                                <div className="policy-section" style={{ marginBottom: '25px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>1. Driver Eligibility</h3>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>1.1 Age Limit:</strong> The rider must be at least 18 years of age to rent a vehicle.
+                                    </p>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>1.2 License:</strong> The rider must verify they possess a valid, government-issued driving license appropriate for the vehicle category (LMV/MCWG) and carry the original during the trip.
+                                    </p>
+                                </div>
+
+                                <div className="policy-section" style={{ marginBottom: '25px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>2. Booking & Cancellation</h3>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>2.1 Confirmation:</strong> Bookings are confirmed only upon receipt of the advance payment.
+                                    </p>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>2.2 Cancellation Policy:</strong> Free cancellation is available up to 24 hours before the trip start time. Cancellations made within 24 hours will incur a fee of 50% of the advance amount. No refunds for cancellations after the trip start time.
+                                    </p>
+                                </div>
+
+                                <div className="policy-section" style={{ marginBottom: '25px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>3. Security Deposit & Payments</h3>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        Refundable security deposits may be required for certain high-end vehicles. This deposit will be refunded within 5-7 business days after the vehicle is returned damage-free.
+                                    </p>
+                                </div>
+
+                                <div className="policy-section" style={{ marginBottom: '25px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>4. Vehicle Usage</h3>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>4.1 Prohibited Use:</strong> Vehicles cannot be used for racing, towing, transporting illegal substances, or commercial passenger transport.
+                                    </p>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>4.2 Territory:</strong> Vehicles must be driven within the state limits unless a special permit is obtained and approved by RentHub.
+                                    </p>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>4.3 Traffic Violations:</strong> The user is solely responsible for paying any traffic fines or challans incurred during the rental period.
+                                    </p>
+                                </div>
+
+                                <div className="policy-section" style={{ marginBottom: '25px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>5. Fuel Policy</h3>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        The vehicle is provided with a full tank (or sufficient fuel to reach the nearest station). It must be returned with the same fuel level. If returned with less fuel, the cost of the difference plus a refueling surcharge will be deducted.
+                                    </p>
+                                </div>
+
+                                <div className="policy-section" style={{ marginBottom: '25px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>6. Damage & Breakdown</h3>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>6.1 Accident:</strong> In case of an accident, the user must immediately notify RentHub and valid authorities. The user is liable for damage costs up to the insurance deductible amount.
+                                    </p>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>6.2 Breakdown:</strong> For mechanical failures not caused by user negligence, RentHub will provide roadside assistance or a replacement vehicle subject to availability.
+                                    </p>
+                                </div>
+
+                                <div className="policy-section" style={{ marginBottom: '25px' }}>
+                                    <h3 style={{ fontSize: '16px', fontWeight: 'bold', marginBottom: '8px', textTransform: 'uppercase', borderBottom: '1px solid #eee', paddingBottom: '5px' }}>7. Return Policy</h3>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>7.1 Late Return:</strong> A grace period of 30 minutes is allowed. Returns delayed by more than 30 minutes will attract a penalty of ₹100/hour + double the hourly rental rate for the extended duration.
+                                    </p>
+                                    <p style={{ fontSize: '14px', lineHeight: '1.6', textAlign: 'justify', color: '#444' }}>
+                                        <strong>7.2 Condition:</strong> The vehicle must be returned in a clean condition. Excessive dirt or trash may incur a cleaning fee.
+                                    </p>
+                                </div>
+
+                                <div className="policy-footer" style={{ marginTop: '50px', borderTop: '1px solid #ddd', paddingTop: '20px', textAlign: 'center', fontSize: '12px', color: '#888' }}>
+                                    <p>Last updated: December 2025</p>
+                                    <p>RentHub Inc. &copy; All rights reserved.</p>
+                                </div>
                             </div>
                         </div>
                     )}
