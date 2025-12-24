@@ -402,9 +402,9 @@ const rejectBooking = async (req, res) => {
 
         if (booking.transaction_id && refundAmount > 0) {
             try {
+                console.log('Initiating Razorpay refund (Admin Reject)...', { transaction_id: booking.transaction_id, amount: refundAmount * 100 });
                 const refundResponse = await razorpay.payments.refund(booking.transaction_id, {
                     amount: refundAmount * 100,
-                    speed: 'optimum',
                     notes: {
                         booking_id: bookingId,
                         reason: 'Booking rejected by admin',
@@ -412,10 +412,14 @@ const rejectBooking = async (req, res) => {
                         rejected_at: localTimestamp
                     }
                 });
+                console.log('✅ Razorpay Refund SUCCESS (Admin Reject):', JSON.stringify(refundResponse, null, 2));
                 refundStatus = 'completed';
                 razorpayRefundId = refundResponse.id;
             } catch (refundError) {
-                console.error('Refund failed:', refundError);
+                console.error('❌ Razorpay Refund FAILED (Admin Reject):', refundError);
+                if (refundError.error) {
+                    console.error('Razorpay Error Details:', JSON.stringify(refundError.error, null, 2));
+                }
             }
         } else if (refundAmount === 0) {
             refundStatus = 'not_applicable';
@@ -476,15 +480,19 @@ const cancelBookingAdmin = async (req, res) => {
 
         if (booking.transaction_id && refundAmount > 0) {
             try {
+                console.log('Initiating Razorpay refund (Admin Cancel)...', { transaction_id: booking.transaction_id, amount: refundAmount * 100 });
                 const refundResponse = await razorpay.payments.refund(booking.transaction_id, {
                     amount: refundAmount * 100,
-                    speed: 'optimum',
                     notes: { booking_id: bookingId, reason: 'Booking cancelled by admin', cancelled_at: localCancelTimestamp }
                 });
+                console.log('✅ Razorpay Refund SUCCESS (Admin Cancel):', JSON.stringify(refundResponse, null, 2));
                 refundStatus = 'completed';
                 razorpayRefundId = refundResponse.id;
             } catch (e) {
-                console.error('Refund failed:', e);
+                console.error('❌ Razorpay Refund FAILED (Admin Cancel):', e);
+                if (e.error) {
+                    console.error('Razorpay Error Details:', JSON.stringify(e.error, null, 2));
+                }
             }
         } else if (refundAmount === 0) refundStatus = 'not_applicable';
 

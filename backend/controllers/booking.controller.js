@@ -446,11 +446,10 @@ const cancelBooking = async (req, res) => {
 
         if (booking.transaction_id && refundAmount > 0) {
             try {
-                console.log(`Initiating Razorpay refund for user cancellation - booking ${bookingId}, payment ${booking.transaction_id}, amount: ₹${refundAmount}`);
+                console.log(`Initiating Razorpay refund (User Cancel) - booking ${bookingId}, payment ${booking.transaction_id}, amount: ₹${refundAmount} (in paise: ${refundAmount * 100})`);
 
                 const refundResponse = await razorpay.payments.refund(booking.transaction_id, {
                     amount: refundAmount * 100, // Convert to paise
-                    speed: 'optimum', // Attempts instant refund if enabled
                     notes: {
                         booking_id: bookingId,
                         reason: 'Booking cancelled by user',
@@ -458,16 +457,20 @@ const cancelBooking = async (req, res) => {
                     }
                 });
 
-                console.log('Razorpay refund successful for user cancellation:', refundResponse);
+                console.log('✅ Razorpay refund SUCCESS (User Cancel):', JSON.stringify(refundResponse, null, 2));
                 refundStatus = 'completed';
                 razorpayRefundId = refundResponse.id;
 
             } catch (refundError) {
-                console.error('Razorpay refund failed for user cancellation:', refundError);
+                console.error('❌ Razorpay refund FAILED (User Cancel):', refundError);
+                if (refundError.error) {
+                    console.error('Razorpay Error Details:', JSON.stringify(refundError.error, null, 2));
+                }
                 // Keep refund_status as 'processing' for manual intervention
                 console.log('Refund will remain in processing status for manual handling');
             }
-            // console.log('Auto-refund disabled. Marking as processing for manual admin verification.');
+            // Keep refund_status as 'processing' for manual intervention
+            console.log('Refund will remain in processing status for manual handling');
         } else if (refundAmount === 0) {
 
             refundStatus = 'not_applicable';
