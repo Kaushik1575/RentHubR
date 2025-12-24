@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 import ConfirmationPopup from '../components/ConfirmationPopup';
+import RefundDetailsPopup from '../components/RefundDetailsPopup';
 
 
 const MyBookings = () => {
@@ -15,6 +16,7 @@ const MyBookings = () => {
     const [showRefundDetailsModal, setShowRefundDetailsModal] = useState(false);
     const [currentBookingId, setCurrentBookingId] = useState(null);
     const [isCancelling, setIsCancelling] = useState(false);
+    const [refundFlowMode, setRefundFlowMode] = useState('rejected'); // 'rejected' or 'cancellation'
 
     // Success Popup State
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -197,6 +199,7 @@ const MyBookings = () => {
 
     const handleRefundDetailsClick = (bookingId) => {
         setCurrentBookingId(bookingId);
+        setRefundFlowMode('rejected');
         setShowRefundDetailsModal(true);
     };
 
@@ -232,8 +235,37 @@ const MyBookings = () => {
 
     const handleConfirmCancel = async () => {
         if (!currentBookingId) return;
-        setIsCancelling(true);
 
+        // Check if there is a refund amount
+        const currentBooking = bookings.find(b => b.id === currentBookingId);
+        let hasRefund = false;
+
+        if (currentBooking) {
+            const bookedTime = new Date(currentBooking.confirmation_timestamp || currentBooking.created_at);
+            const now = new Date();
+            const hoursSinceBooking = (now - bookedTime) / (1000 * 60 * 60);
+
+            // Advance payment logic
+            const advancePayment = currentBooking.displayAdvancePayment || 0;
+            if (advancePayment > 0) {
+                hasRefund = true;
+            }
+        }
+
+        setShowCancellationModal(false);
+
+        if (hasRefund) {
+            // Open Refund Details Modal instead of cancelling immediately
+            setRefundFlowMode('cancellation');
+            setShowRefundDetailsModal(true);
+        } else {
+            // No refund involved, cancel directly
+            await executeCancellation({});
+        }
+    };
+
+    const executeCancellation = async (refundDetailsObj) => {
+        setIsCancelling(true);
         try {
             const token = localStorage.getItem('token');
             const response = await fetch(`/api/bookings/${currentBookingId}/cancel`, {
@@ -241,7 +273,8 @@ const MyBookings = () => {
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
-                }
+                },
+                body: JSON.stringify({ refundDetails: refundDetailsObj })
             });
 
             if (!response.ok) {
@@ -279,15 +312,14 @@ const MyBookings = () => {
                     </div>
 
                     <p style={{ margin: '5px 0 0 0', fontSize: '0.9rem', color: '#888' }}>
-                        Your refund will be processed automatically to your original payment method within 5-7 business days.
+                        Your refund will be processed manually within 24 hours.
                     </p>
                 </div>
             );
 
             setSuccessMessage(msg);
             setShowSuccessPopup(true);
-
-            setShowCancellationModal(false);
+            setShowRefundDetailsModal(false); // Close refund modal if open
             fetchUserBookings();
         } catch (error) {
             setPopup({ isOpen: true, type: 'error', title: 'Cancellation Failed', message: error.message || 'Error cancelling booking.' });
@@ -296,39 +328,52 @@ const MyBookings = () => {
         }
     };
 
-    const handleSubmitRefundDetails = async () => {
+    const submitRefundWithArgs = async (details) => {
         if (!currentBookingId) return;
 
-        const detailsToSend = { method: refundMethod };
-        if (refundMethod === 'upi') {
-            if (!refundDetails.upiId) return setPopup({ isOpen: true, type: 'error', title: 'Missing Information', message: 'Please enter UPI ID.' });
-            detailsToSend.upiId = refundDetails.upiId;
+        // "details" is passed directly from RefundDetailsPopup
+        // Structure: { method: 'upi', upiId: '...' } OR { method: 'bank', accountHolder: ... }
+
+        // Map to the format backend expects
+        const detailsToSend = { method: details.method };
+        if (details.method === 'upi') {
+            detailsToSend.upiId = details.upiId;
         } else {
-            if (!refundDetails.accountHolder || !refundDetails.accountNumber || !refundDetails.ifsc) return setPopup({ isOpen: true, type: 'error', title: 'Missing Information', message: 'Please fill all bank details.' });
-            detailsToSend.accountHolder = refundDetails.accountHolder;
-            detailsToSend.accountNumber = refundDetails.accountNumber;
-            detailsToSend.ifsc = refundDetails.ifsc;
+            detailsToSend.accountHolder = details.accountHolder;
+            detailsToSend.accountNumber = details.accountNumber;
+            detailsToSend.ifsc = details.ifsc;
         }
 
-        try {
-            const token = localStorage.getItem('token');
-            const response = await fetch(`/api/bookings/${currentBookingId}/refund-details`, {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                },
-                body: JSON.stringify({ refundDetails: detailsToSend })
-            });
+        if (refundFlowMode === 'cancellation') {
+            await executeCancellation(detailsToSend);
+        } else {
+            // REJECTED Flow (Existing) flow
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/bookings/${currentBookingId}/refund-details`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ refundDetails: detailsToSend })
+                });
 
-            if (!response.ok) throw new Error('Failed to submit refund details');
+                if (!response.ok) throw new Error('Failed to submit refund details');
 
-            setPopup({ isOpen: true, type: 'success', title: 'Submitted', message: 'Refund details submitted successfully!' });
-            setShowRefundDetailsModal(false);
-            fetchUserBookings();
-        } catch (error) {
-            setPopup({ isOpen: true, type: 'error', title: 'Submission Error', message: error.message });
+                setPopup({ isOpen: true, type: 'success', title: 'Submitted', message: 'Refund details submitted successfully!' });
+                setShowRefundDetailsModal(false);
+                fetchUserBookings();
+            } catch (error) {
+                setPopup({ isOpen: true, type: 'error', title: 'Submission Error', message: error.message });
+            }
         }
+    };
+
+    // Keep this for backward compatibility or direct calls if state was used, 
+    // but we are switching to "submitRefundWithArgs" for the new popup.
+    const handleSubmitRefundDetails = () => {
+        // Legacy wrapper if needed, but we replaced the usage in the render method.
     };
 
     if (loading) return <div style={{ textAlign: 'center', padding: '5rem' }}>Loading bookings...</div>;
@@ -494,45 +539,33 @@ const MyBookings = () => {
                 }
             />
 
-            {/* Refund Details Modal (Rejected) - reusing similar logic */}
-            {showRefundDetailsModal && (
-                <div className="modal" style={{ display: 'block', position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 1000 }}>
-                    <div className="modal-content" style={{ position: 'fixed', bottom: 0, left: 0, width: '100%', backgroundColor: 'white', padding: '2rem', borderRadius: '20px 20px 0 0', maxHeight: '80vh', overflowY: 'auto' }}>
-                        <div className="modal-header" style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '1.5rem', paddingBottom: '1rem', borderBottom: '1px solid #eee' }}>
-                            <h2 style={{ fontSize: '1.5rem', fontWeight: 'bold' }}>Submit Refund Details</h2>
-                            <button onClick={() => setShowRefundDetailsModal(false)} style={{ background: 'none', border: 'none', fontSize: '1.8rem', cursor: 'pointer' }}>&times;</button>
-                        </div>
-                        <p>Your booking was rejected. Please provide details for refund.</p>
 
-                        <div className="refund-method-options" style={{ display: 'flex', gap: '1.5rem', marginBottom: '1.5rem', marginTop: '1rem' }}>
-                            <label><input type="radio" name="refundMethodRejected" checked={refundMethod === 'upi'} onChange={() => setRefundMethod('upi')} /> UPI/Payment App</label>
-                            <label><input type="radio" name="refundMethodRejected" checked={refundMethod === 'bank'} onChange={() => setRefundMethod('bank')} /> Bank Transfer</label>
-                        </div>
+            {/* Refund Details Modal (Matches Confirmation Style) */}
+            <RefundDetailsPopup
+                isOpen={showRefundDetailsModal}
+                onClose={() => setShowRefundDetailsModal(false)}
+                onSubmit={(details) => {
+                    // Adapt the new payload format back to the expected state logic if needed,
+                    // or just pass it directly. My logic expects state 'refundMethod' etc.
+                    // But wait, the child component now manages the form state.
+                    // I need to adapt handleSubmitRefundDetails to accept arguments or update parent state.
+                    // EASIER: Update the local state here instantly and call submit.
 
-                        {refundMethod === 'upi' ? (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <label>UPI ID</label>
-                                <input type="text" placeholder="e.g. yourname@upi" value={refundDetails.upiId} onChange={e => setRefundDetails({ ...refundDetails, upiId: e.target.value })} style={{ padding: '0.8rem', border: '1px solid #ccc', borderRadius: '5px' }} />
-                            </div>
-                        ) : (
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                                <label>Account Holder Name</label>
-                                <input type="text" value={refundDetails.accountHolder} onChange={e => setRefundDetails({ ...refundDetails, accountHolder: e.target.value })} style={{ padding: '0.8rem', border: '1px solid #ccc', borderRadius: '5px' }} />
-                                <label>Account Number</label>
-                                <input type="text" value={refundDetails.accountNumber} onChange={e => setRefundDetails({ ...refundDetails, accountNumber: e.target.value })} style={{ padding: '0.8rem', border: '1px solid #ccc', borderRadius: '5px' }} />
-                                <label>IFSC Code</label>
-                                <input type="text" value={refundDetails.ifsc} onChange={e => setRefundDetails({ ...refundDetails, ifsc: e.target.value })} style={{ padding: '0.8rem', border: '1px solid #ccc', borderRadius: '5px' }} />
-                            </div>
-                        )}
+                    setRefundMethod(details.method);
+                    setRefundDetails({
+                        upiId: details.upiId,
+                        accountHolder: details.accountHolder,
+                        accountNumber: details.accountNumber,
+                        ifsc: details.ifsc
+                    });
 
-                        <div className="modal-buttons" style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end', paddingTop: '1.5rem', marginTop: '1rem' }}>
-                            <button onClick={handleSubmitRefundDetails} style={{ padding: '0.8rem 1.5rem', borderRadius: '5px', border: 'none', cursor: 'pointer', background: '#2ecc71', color: 'white' }}>
-                                Submit Refund Details
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+                    // We need a slight delay or a direct call function that takes args.
+                    // Let's modify handleSubmitRefundDetails to accept args optionally.
+                    submitRefundWithArgs(details);
+                }}
+                mode={refundFlowMode}
+                isLoading={isCancelling} // Re-using isCancelling for loading state if applicable
+            />
 
             <StatusPopup
                 isOpen={showSuccessPopup || popup.isOpen}

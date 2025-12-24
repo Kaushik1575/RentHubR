@@ -374,6 +374,7 @@ const cancelBooking = async (req, res) => {
     try {
         const bookingId = parseInt(req.params.id);
         const userId = req.user.id;
+        const { refundDetails } = req.body;
         console.log('Processing user booking cancellation for ID:', bookingId);
 
         // First, fetch the booking
@@ -435,45 +436,13 @@ const cancelBooking = async (req, res) => {
             String(nowCancel.getMinutes()).padStart(2, '0') + ':' +
             String(nowCancel.getSeconds()).padStart(2, '0');
 
-        // Attempt Razorpay auto-refund if transaction_id exists and refund amount > 0
         let refundStatus = 'processing';
-        let razorpayRefundId = null;
 
-        const razorpay = new Razorpay({
-            key_id: process.env.RAZORPAY_KEY_ID,
-            key_secret: process.env.RAZORPAY_KEY_SECRET
-        });
-
-        if (booking.transaction_id && refundAmount > 0) {
-            try {
-                console.log(`Initiating Razorpay refund (User Cancel) - booking ${bookingId}, payment ${booking.transaction_id}, amount: ₹${refundAmount} (in paise: ${refundAmount * 100})`);
-
-                const refundResponse = await razorpay.payments.refund(booking.transaction_id, {
-                    amount: refundAmount * 100, // Convert to paise
-                    notes: {
-                        booking_id: bookingId,
-                        reason: 'Booking cancelled by user',
-                        cancelled_at: localCancelTimestamp
-                    }
-                });
-
-                console.log('✅ Razorpay refund SUCCESS (User Cancel):', JSON.stringify(refundResponse, null, 2));
-                refundStatus = 'completed';
-                razorpayRefundId = refundResponse.id;
-
-            } catch (refundError) {
-                console.error('❌ Razorpay refund FAILED (User Cancel):', refundError);
-                if (refundError.error) {
-                    console.error('Razorpay Error Details:', JSON.stringify(refundError.error, null, 2));
-                }
-                // Keep refund_status as 'processing' for manual intervention
-                console.log('Refund will remain in processing status for manual handling');
-            }
-            // Keep refund_status as 'processing' for manual intervention
-            console.log('Refund will remain in processing status for manual handling');
-        } else if (refundAmount === 0) {
-
+        if (refundAmount === 0) {
             refundStatus = 'not_applicable';
+        } else if (!refundDetails) {
+            // Require refund details if there is a refund amount
+            return res.status(400).json({ error: 'Refund details are required for cancellation with refund.' });
         }
 
         // Update booking status to cancelled with refund details, timestamps, and deduction
@@ -482,15 +451,9 @@ const cancelBooking = async (req, res) => {
             refund_amount: refundAmount,
             refund_status: refundStatus,
             cancelled_timestamp: localCancelTimestamp,
-            refund_deduction: deductionAmount
+            refund_deduction: deductionAmount,
+            refund_details: refundDetails || null // Store the manual refund details (UPI/Bank)
         };
-
-        // Only add these fields if they have values
-        if (razorpayRefundId) {
-            updateData.refund_id = razorpayRefundId;
-            updateData.refund_timestamp = localCancelTimestamp;
-            updateData.refund_details = { method: 'auto_razorpay', refund_id: razorpayRefundId };
-        }
 
         const { data: updatedBooking, error: updateError } = await supabase
             .from('bookings')
@@ -509,6 +472,7 @@ const cancelBooking = async (req, res) => {
             let vehicleTable = booking.vehicle_type;
             if (vehicleTable === 'car') vehicleTable = 'cars';
             if (vehicleTable === 'bike') vehicleTable = 'bikes';
+            if (vehicleTable === 'scooty') vehicleTable = 'scooty';
 
             const { error: vehicleError } = await supabase
                 .from(vehicleTable)
@@ -520,10 +484,10 @@ const cancelBooking = async (req, res) => {
             }
         }
 
-        console.log('Booking cancelled successfully:', updatedBooking);
+        console.log('Booking cancelled successfully (Manual Refund Initiated):', updatedBooking);
 
         res.json({
-            message: 'Booking cancelled successfully',
+            message: 'Booking cancelled successfully. Refund processing initiated.',
             refundAmount,
             deduction: deductionAmount,
             refundStatus,
