@@ -467,10 +467,25 @@ const AdminPanel = () => {
                                                                     {b.refund_id}
                                                                 </p>
                                                             )}
-                                                            {b.refund_details && b.refund_details.method === 'auto_razorpay' && (
-                                                                <p className="text-muted" style={{ fontSize: '0.85em', fontStyle: 'italic', color: '#2196F3' }}>
-                                                                    ✓ Auto-Refunded via Razorpay
-                                                                </p>
+                                                            {/* Show Refund Details if present */}
+                                                            {b.refund_details && (
+                                                                <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#555', background: '#f5f5f5', padding: '5px', borderRadius: '4px' }}>
+                                                                    {(b.refund_details.method === 'upi' || b.refund_details.method === 'UPI') && (
+                                                                        <p><strong>UPI:</strong> {b.refund_details.upiId}</p>
+                                                                    )}
+                                                                    {(b.refund_details.method === 'bank' || b.refund_details.method === 'Bank') && (
+                                                                        <>
+                                                                            <p><strong>Bank:</strong> {b.refund_details.accountNumber}</p>
+                                                                            <p><strong>IFSC:</strong> {b.refund_details.ifsc}</p>
+                                                                            <p><strong>Holder:</strong> {b.refund_details.accountHolder}</p>
+                                                                        </>
+                                                                    )}
+                                                                    {b.refund_details.method === 'auto_razorpay' && (
+                                                                        <p className="text-muted" style={{ fontStyle: 'italic', color: '#2196F3' }}>
+                                                                            ✓ Auto-Refund
+                                                                        </p>
+                                                                    )}
+                                                                </div>
                                                             )}
                                                         </div>
                                                     ) : 'N/A'}
@@ -567,6 +582,27 @@ const AdminPanel = () => {
                             <p><strong>Total:</strong> ₹{modal.data.total_amount}</p>
                             <p><strong>Advance:</strong> ₹{modal.data.advance_payment}</p>
                             <p><strong>Status:</strong> {modal.data.status}</p>
+                            {(modal.data.status === 'cancelled' || modal.data.status === 'rejected') && (
+                                <>
+                                    <p><strong>Refund Amount:</strong> ₹{modal.data.refund_amount}</p>
+                                    <p><strong>Refund Status:</strong> {modal.data.refund_status}</p>
+                                    {modal.data.refund_details && (
+                                        <div style={{ marginTop: '10px', padding: '10px', background: '#f9f9f9', borderRadius: '5px', border: '1px solid #eee' }}>
+                                            <h4 style={{ margin: '0 0 5px 0', fontSize: '1em' }}>Refund Details</h4>
+                                            {(modal.data.refund_details.method === 'upi' || modal.data.refund_details.method === 'UPI') && (
+                                                <p style={{ margin: '5px 0' }}><strong>UPI ID:</strong> {modal.data.refund_details.upiId}</p>
+                                            )}
+                                            {(modal.data.refund_details.method === 'bank' || modal.data.refund_details.method === 'Bank') && (
+                                                <>
+                                                    <p style={{ margin: '5px 0' }}><strong>Bank Account:</strong> {modal.data.refund_details.accountNumber}</p>
+                                                    <p style={{ margin: '5px 0' }}><strong>IFSC:</strong> {modal.data.refund_details.ifsc}</p>
+                                                    <p style={{ margin: '5px 0' }}><strong>Holder Name:</strong> {modal.data.refund_details.accountHolder}</p>
+                                                </>
+                                            )}
+                                        </div>
+                                    )}
+                                </>
+                            )}
                         </div>
                     </div>
                 </div>
