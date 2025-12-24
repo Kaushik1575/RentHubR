@@ -21,26 +21,33 @@ const SOSActivate = () => {
 
     const activateSOS = async () => {
         setStatus('activating');
-        setMessage('Accessing location...');
+        setMessage('Requesting location access... Please click "Allow" if prompted.');
 
-        // 1. Try to get GPS with aggressive timeout (4 seconds)
+        // 1. Try to get GPS with a reasonable timeout (15 seconds to allow user to click Allow)
         try {
             if (navigator.geolocation) {
-                // Race condition: Browser Geo API vs Manual Timeout
-                // Some mobile browsers hang indefinitely if GPS is off, so we force a fail after 4s
                 const getPosition = new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(resolve, reject, {
-                        enableHighAccuracy: true,
-                        timeout: 3500, // Browser timeout
-                        maximumAge: 0
-                    });
+                    navigator.geolocation.getCurrentPosition(
+                        (position) => {
+                            resolve(position);
+                        },
+                        (error) => {
+                            reject(error);
+                        },
+                        {
+                            enableHighAccuracy: true,
+                            timeout: 15000, // 15 seconds - ample time for user to read and click Allow
+                            maximumAge: 0
+                        }
+                    );
                 });
 
-                const timeoutParams = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("Location request timed out completely")), 4000)
+                // Additional safety timeout in case the browser API hangs completely (rare but possible on some mobile webviews)
+                const safetyTimeout = new Promise((_, reject) =>
+                    setTimeout(() => reject(new Error("Location request timed out completely")), 16000)
                 );
 
-                const position = await Promise.race([getPosition, timeoutParams]);
+                const position = await Promise.race([getPosition, safetyTimeout]);
 
                 const gpsLocation = {
                     latitude: position.coords.latitude,
@@ -52,15 +59,17 @@ const SOSActivate = () => {
                 sendSOS(gpsLocation);
 
             } else {
-                throw new Error("Geolocation not supported");
+                throw new Error("Geolocation not supported by this browser.");
             }
         } catch (e) {
             console.warn("GPS failed", e);
             // Handle specific errors
             let errorMsg = "Could not access location.";
-            if (e.code === 1) errorMsg = "Location permission denied.";
-            if (e.code === 2) errorMsg = "Location unavailable (GPS off?).";
-            if (e.code === 3 || e.message.includes('time')) errorMsg = "Location request slow or timed out.";
+
+            // GeolocationPositionError codes: 1=PERMISSION_DENIED, 2=POSITION_UNAVAILABLE, 3=TIMEOUT
+            if (e.code === 1) errorMsg = "Location permission was denied. Please enable it for better assistance.";
+            if (e.code === 2) errorMsg = "Location signal unavailable. Check your GPS settings.";
+            if (e.code === 3 || e.message && e.message.includes('time')) errorMsg = "Location request timed out. Weak signal or permission not granted in time.";
 
             setMessage(errorMsg);
             setStatus('location_error');
