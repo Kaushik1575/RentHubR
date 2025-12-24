@@ -575,15 +575,40 @@ const AdminPanel = () => {
                         <span className="close-button" onClick={() => setModal({ type: null })}>&times;</span>
                         <h2>Booking Details</h2>
                         <div className="booking-details">
-                            <p><strong>Booking ID:</strong> {modal.data.booking_id || `#${modal.data.id}`}</p>
-                            <p><strong>Customer:</strong> {modal.data.customerName} ({modal.data.customerPhone})</p>
-                            <p><strong>Vehicle:</strong> {modal.data.vehicleName}</p>
-                            <p><strong>Range:</strong> {modal.data.start_date} {modal.data.start_time} (Duration: {modal.data.duration})</p>
-                            <p><strong>Total:</strong> ₹{modal.data.total_amount}</p>
-                            <p><strong>Advance:</strong> ₹{modal.data.advance_payment}</p>
-                            <p><strong>Status:</strong> {modal.data.status}</p>
+                            <h4 style={{ color: '#4CAF50', margin: '0 0 15px 0' }}>Booking ID: {modal.data.booking_id || `#${modal.data.id}`}</h4>
+
+                            <p><strong>Vehicle:</strong> {modal.data.vehicleName} {modal.data.vehicleType ? `(${modal.data.vehicleType})` : ''}</p>
+                            <p><strong>Start Date:</strong> {modal.data.start_date} ({modal.data.start_time})</p>
+
+                            {/* Calculate End Date roughly for display */}
+                            {(() => {
+                                const start = new Date(`${modal.data.start_date}T${modal.data.start_time}`);
+                                const end = new Date(start.getTime() + (modal.data.duration * 60 * 60 * 1000));
+                                const endDate = end.toLocaleDateString('en-CA');
+                                const endTime = end.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
+                                return <p><strong>End Date:</strong> {endDate} ({endTime})</p>;
+                            })()}
+
+                            <p><strong>Duration:</strong> {modal.data.duration} hours</p>
+                            <p><strong>Total Amount:</strong> ₹{modal.data.total_amount}</p>
+                            <p><strong>Advance Payment:</strong> ₹{modal.data.advance_payment}</p>
+                            <p><strong>Remaining Amount:</strong> ₹{modal.data.remaining_amount || (modal.data.total_amount - modal.data.advance_payment)}</p>
+
+                            {modal.data.transaction_id && (
+                                <p><strong>Transaction ID:</strong> {modal.data.transaction_id}</p>
+                            )}
+
+                            <div style={{ marginTop: '15px', padding: '10px', background: '#f8f9fa', borderRadius: '5px', border: '1px solid #e9ecef', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className="fas fa-calendar-alt" style={{ color: '#6c757d' }}></i>
+                                <span style={{ color: '#495057', fontSize: '0.9em' }}>
+                                    <strong>Booked on:</strong> {formatDate(modal.data.created_at)}
+                                </span>
+                            </div>
+
+                            <p style={{ marginTop: '15px' }}><strong>Status:</strong> <span className={`status-badge status-${(modal.data.status || 'pending').toLowerCase()}`}>{modal.data.status}</span></p>
+
                             {(modal.data.status === 'cancelled' || modal.data.status === 'rejected') && (
-                                <>
+                                <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '10px' }}>
                                     <p><strong>Refund Amount:</strong> ₹{modal.data.refund_amount}</p>
                                     <p><strong>Refund Status:</strong> {modal.data.refund_status}</p>
                                     {modal.data.refund_details && (
@@ -601,7 +626,7 @@ const AdminPanel = () => {
                                             )}
                                         </div>
                                     )}
-                                </>
+                                </div>
                             )}
                         </div>
                     </div>

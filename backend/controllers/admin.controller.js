@@ -36,7 +36,11 @@ const getAllBookings = async (req, res) => {
         const { data: cars } = await supabase.from('cars').select('*');
         const { data: scooty } = await supabase.from('scooty').select('*');
 
-        const allVehicles = [...(bikes || []), ...(cars || []), ...(scooty || [])];
+        const allVehicles = [
+            ...(bikes || []).map(v => ({ ...v, type: 'bike' })),
+            ...(cars || []).map(v => ({ ...v, type: 'car' })),
+            ...(scooty || []).map(v => ({ ...v, type: 'scooty' }))
+        ];
 
         const enrichedBookings = bookings.map(booking => {
             const vehicle = allVehicles.find(v => v.id === booking.vehicle_id);
