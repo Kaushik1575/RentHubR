@@ -37,13 +37,13 @@ function formatPhoneNumber(phoneNumber) {
 
     // Convert to string if it's a number (Supabase might return numbers)
     let cleaned = String(phoneNumber).trim();
-    
+
     // If it already starts with +, remove it temporarily
     const hasPlus = cleaned.startsWith('+');
     if (hasPlus) {
         cleaned = cleaned.substring(1);
     }
-    
+
     // Remove all non-digit characters
     cleaned = cleaned.replace(/\D/g, '');
 
@@ -61,7 +61,7 @@ function formatPhoneNumber(phoneNumber) {
     // 1. Already has country code (starts with country code like 91, 1, etc.)
     // 2. 10-digit number (assume Indian number, add +91)
     // 3. Other lengths (assume it already has country code or is invalid)
-    
+
     if (cleaned.length === 10) {
         // 10-digit number - assume Indian number and add +91
         cleaned = '91' + cleaned;
@@ -89,7 +89,7 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
     try {
         // Format the phone number
         const formattedToNumber = formatPhoneNumber(toNumber);
-        
+
         if (!formattedToNumber) {
             return {
                 success: false,
@@ -105,9 +105,24 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
             override_agent_id: RETELL_AGENT_ID
         };
 
-        // Add metadata if provided
+        // Add metadata if provided (for tracking/logging)
         if (Object.keys(callMetadata).length > 0) {
             payload.metadata = callMetadata;
+
+            // IMPORTANT: Add retell_llm_dynamic_variables so the AI agent can access these values during the call
+            // This allows the agent to speak the booking details to the customer
+            payload.retell_llm_dynamic_variables = {
+                booking_id: String(callMetadata.booking_id || ''),
+                vehicle_name: String(callMetadata.vehicle_name || callMetadata.vehicleName || ''),
+                vehicle_type: String(callMetadata.vehicle_type || callMetadata.vehicleType || ''),
+                start_date: String(callMetadata.start_date || callMetadata.startDate || ''),
+                start_time: String(callMetadata.start_time || callMetadata.startTime || ''),
+                duration: String(callMetadata.duration || ''),
+                user_name: String(callMetadata.user_name || callMetadata.userName || ''),
+                total_amount: String(callMetadata.total_amount || callMetadata.totalAmount || ''),
+                advance_payment: String(callMetadata.advance_payment || callMetadata.advancePayment || ''),
+                remaining_amount: String(callMetadata.remaining_amount || callMetadata.remainingAmount || '')
+            };
         }
 
         console.log('Making Retell AI outbound call:', {
@@ -180,7 +195,7 @@ async function makeBookingConfirmationCall(userPhoneNumber, bookingDetails = {})
         };
 
         const result = await makeOutboundCall(userPhoneNumber, callMetadata);
-        
+
         if (result.success) {
             console.log(`✅ Booking confirmation call initiated for user: ${userPhoneNumber}`);
         } else {
