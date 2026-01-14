@@ -1,17 +1,18 @@
 import React from 'react';
 
-const StatusPopup = ({ isOpen, onClose, type = 'error', title, message }) => {
+const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, message, confirmText = 'Yes, Logout', cancelText = 'Cancel' }) => {
     if (!isOpen) return null;
 
     const isSuccess = type === 'success';
+    const isConfirm = type === 'confirm';
 
     // Design configuration matching the user's "Login Successful" image
     const config = {
-        icon: isSuccess ? 'fa-check' : 'fa-exclamation-triangle',
-        iconColor: isSuccess ? '#4caf50' : '#f44336', // Green for success, Red for error
-        iconBg: isSuccess ? '#e8f5e9' : '#ffebee',   // Light green/red background
-        btnBg: isSuccess ? '#4caf50' : '#f44336',     // Button matches icon color
-        defaultTitle: isSuccess ? 'Success' : 'Error',
+        icon: isSuccess ? 'fa-check' : (isConfirm ? 'fa-question' : 'fa-exclamation-triangle'),
+        iconColor: isSuccess ? '#4caf50' : (isConfirm ? '#3182ce' : '#f44336'), // Green for success, Blue for confirm, Red for error
+        iconBg: isSuccess ? '#e8f5e9' : (isConfirm ? '#ebf8ff' : '#ffebee'),   // Light backgrounds
+        btnBg: isSuccess ? '#4caf50' : (isConfirm ? '#3182ce' : '#f44336'),     // Button matches icon color
+        defaultTitle: isSuccess ? 'Success' : (isConfirm ? 'Confirmation' : 'Error'),
         btnText: 'Okay, Got it'
     };
 
@@ -76,33 +77,74 @@ const StatusPopup = ({ isOpen, onClose, type = 'error', title, message }) => {
                     marginBottom: '2rem',
                     fontSize: '1rem',
                     lineHeight: '1.5',
-                    maxWidth: '100%'
+                    maxWidth: '100%',
+                    whiteSpace: 'pre-wrap' // Allow newlines to render properly
                 }}>
                     {message}
                 </div>
 
-                {/* Button */}
-                <button
-                    onClick={onClose}
-                    style={{
-                        background: config.btnBg,
-                        color: 'white',
-                        border: 'none',
-                        padding: '0.8rem 0',
-                        width: '80%', // Not full width, but wide
-                        borderRadius: '50px', // Fully rounded pill button
-                        fontSize: '1.05rem',
-                        fontWeight: '600',
-                        cursor: 'pointer',
-                        transition: 'transform 0.1s ease, box-shadow 0.2s',
-                        boxShadow: `0 4px 12px ${isSuccess ? 'rgba(76, 175, 80, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
-                    }}
-                    onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                    onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
-                    onMouseDown={e => e.currentTarget.style.transform = 'translateY(1px)'}
-                >
-                    {config.btnText}
-                </button>
+                {/* Buttons */}
+                {isConfirm ? (
+                    <div style={{ display: 'flex', gap: '1rem', width: '100%', justifyContent: 'center' }}>
+                        <button
+                            onClick={onClose}
+                            style={{
+                                background: '#edf2f7',
+                                color: '#4a5568',
+                                border: 'none',
+                                padding: '0.8rem 0',
+                                flex: 1,
+                                borderRadius: '50px',
+                                fontSize: '1.05rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'transform 0.1s ease',
+                            }}
+                        >
+                            {cancelText}
+                        </button>
+                        <button
+                            onClick={onConfirm}
+                            style={{
+                                background: config.btnBg,
+                                color: 'white',
+                                border: 'none',
+                                padding: '0.8rem 0',
+                                flex: 1,
+                                borderRadius: '50px',
+                                fontSize: '1.05rem',
+                                fontWeight: '600',
+                                cursor: 'pointer',
+                                transition: 'transform 0.1s ease, box-shadow 0.2s',
+                                boxShadow: '0 4px 12px rgba(49, 130, 206, 0.4)'
+                            }}
+                        >
+                            {confirmText}
+                        </button>
+                    </div>
+                ) : (
+                    <button
+                        onClick={onClose}
+                        style={{
+                            background: config.btnBg,
+                            color: 'white',
+                            border: 'none',
+                            padding: '0.8rem 0',
+                            width: '80%', // Not full width, but wide
+                            borderRadius: '50px', // Fully rounded pill button
+                            fontSize: '1.05rem',
+                            fontWeight: '600',
+                            cursor: 'pointer',
+                            transition: 'transform 0.1s ease, box-shadow 0.2s',
+                            boxShadow: `0 4px 12px ${isSuccess ? 'rgba(76, 175, 80, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
+                        }}
+                        onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
+                        onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
+                        onMouseDown={e => e.currentTarget.style.transform = 'translateY(1px)'}
+                    >
+                        {config.btnText}
+                    </button>
+                )}
             </div>
 
             <style>

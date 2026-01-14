@@ -1,4 +1,5 @@
-import { BrowserRouter as Router, Routes, Route, useLocation } from 'react-router-dom';
+import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
+import { useEffect } from 'react';
 import { Toaster } from 'react-hot-toast'; // Import Toaster
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -20,6 +21,39 @@ function Layout() {
   const location = useLocation();
   const isAdmin = location.pathname === '/admin';
   const isSOS = location.pathname === '/sos-activate';
+  const navigate = useNavigate();
+
+  useEffect(() => {
+    const checkAdminRoute = () => {
+      const token = localStorage.getItem('token');
+      const userStr = localStorage.getItem('user');
+
+      if (token && userStr) {
+        try {
+          const user = JSON.parse(userStr);
+          const isUserAdmin = user.isAdmin === true || user.is_admin === true;
+
+          // If user is admin AND currently NOT on /admin (and not on login/register/sos pages)
+          // We allow /login because that's where they might go after logout
+          // If user is admin AND currently NOT on /admin
+          // We must enforce this strictly. Even if they go to /login, they should be logged out first.
+          // Since we check for token existence, if they are already logged out, this won't trigger loop.
+          if (isUserAdmin && location.pathname !== '/admin') {
+            console.log("Admin attempted to leave Admin Panel. Auto-logging out.");
+            localStorage.removeItem('token');
+            localStorage.removeItem('user');
+            // Force reload or redirect to login
+            navigate('/login');
+            window.location.reload();
+          }
+        } catch (e) {
+          console.error("Error parsing user for admin check", e);
+        }
+      }
+    };
+
+    checkAdminRoute();
+  }, [location.pathname, navigate]);
 
   return (
     <div className="App">

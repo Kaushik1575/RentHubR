@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import StatusPopup from './StatusPopup';
 
 const Navbar = () => {
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isLoggedIn, setIsLoggedIn] = useState(false);
     const [isAdmin, setIsAdmin] = useState(false);
     const [showRegisterModal, setShowRegisterModal] = useState(false);
+    const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -31,10 +33,15 @@ const Navbar = () => {
     }, []);
 
     const handleLogout = () => {
+        setShowLogoutConfirm(true);
+    };
+
+    const confirmLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
         setIsLoggedIn(false);
         setIsAdmin(false);
+        setShowLogoutConfirm(false);
         navigate('/login');
         // Force reload to clear state if needed, or just let state handle it
         window.location.reload();
@@ -84,6 +91,18 @@ const Navbar = () => {
                     </div>
                 </div>
             )}
+
+            {/* Logout Confirmation Popup */}
+            <StatusPopup
+                isOpen={showLogoutConfirm}
+                onClose={() => setShowLogoutConfirm(false)}
+                onConfirm={confirmLogout}
+                type="confirm"
+                title="Log Out"
+                message="Are you sure you want to log out?"
+                confirmText="Yes, Logout"
+                cancelText="Cancel"
+            />
         </>
     );
 };
