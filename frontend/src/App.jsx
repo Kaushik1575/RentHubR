@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { useEffect } from 'react';
-import { Toaster } from 'react-hot-toast'; // Import Toaster
+import { Toaster, toast } from 'react-hot-toast'; // Import Toaster
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
 import Home from './pages/Home';
@@ -16,6 +16,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import TrackBooking from './pages/TrackBooking';
 import SOSActivate from './pages/SOSActivate';
 import GlobalAuthCheck from './components/GlobalAuthCheck';
+import chatbotImg from './assets/chatbot_styled.png'; // Import Chatbot Image
 
 function Layout() {
   const location = useLocation();
@@ -72,8 +73,8 @@ function Layout() {
         <Route path="/track-booking" element={<TrackBooking />} />
         <Route path="/sos-activate" element={<SOSActivate />} />
       </Routes>
-      {/* WhatsApp Floating Button - Hide on SOS */}
-      {!isSOS && (
+      {/* WhatsApp Floating Button - Show ONLY on Contact Page */}
+      {location.pathname === '/contact' && (
         <a href="https://wa.me/917077733320?text=Hello%20%F0%9F%91%8B%2C%20I%20have%20a%20query%20regarding%20my%20bike%20booking%20%2F%20other%20services."
           className="whatsapp-floating-btn pulse"
           target="_blank"
@@ -82,6 +83,28 @@ function Layout() {
           <i className="fab fa-whatsapp"></i>
         </a>
       )}
+
+      {/* Chatbot Floating Button - Show on ALL pages EXCEPT SOS */}
+      {!isSOS && (
+        <div
+          className="chatbot-floating-btn pulse-blue"
+          style={{
+            bottom: location.pathname === '/contact' ? '110px' : '30px'
+          }}
+          onClick={() => toast('Chatbot Under Development', {
+            icon: '🤖',
+            style: {
+              borderRadius: '10px',
+              background: '#333',
+              color: '#fff',
+            },
+          })}
+          title="Click for AI Chat Support"
+        >
+          <img src={chatbotImg} alt="AI Chatbot" />
+        </div>
+      )}
+
       {!isSOS && <Footer />}
 
       {/* Global authentication check - monitors user block status */}
