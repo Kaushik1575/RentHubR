@@ -2819,3 +2819,65 @@ main.booking-page-main {
         height: 180px;
     }
 }
+
+/* Chatbot Speech Bubble Tooltip */
+.chatbot-speech-bubble {
+    position: absolute;
+    top: -60px;
+    /* Above the robot's head */
+    left: 50%;
+    transform: translateX(-50%) translateY(10px);
+    background-color: #ffffff;
+    padding: 12px 20px;
+    border-radius: 20px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.15);
+    color: #2c3e50;
+    font-weight: 700;
+    font-size: 0.95rem;
+    white-space: nowrap;
+    opacity: 0;
+    visibility: hidden;
+    transition: all 0.3s ease;
+    border: 2px solid #3B82F6;
+    /* Blue border to match theme */
+    z-index: 1001;
+    pointer-events: none;
+    /* Let clicks pass through to the button */
+}
+
+/* Speech bubble triangle pointer */
+.chatbot-speech-bubble::after {
+    content: '';
+    position: absolute;
+    bottom: -8px;
+    left: 50%;
+    transform: translateX(-50%);
+    border-width: 8px 8px 0;
+    border-style: solid;
+    border-color: #3B82F6 transparent transparent transparent;
+}
+
+/* Show bubble on hover */
+.chatbot-floating-btn:hover .chatbot-speech-bubble {
+    opacity: 1;
+    visibility: visible;
+    transform: translateX(-50%) translateY(0);
+}
+
+/* On mobile, adjust position */
+@media (max-width: 768px) {
+    .chatbot-floating-btn {
+        bottom: 0px;
+        right: 10px;
+        width: 140px;
+        /* Very large on mobile too */
+        height: 180px;
+    }
+
+    .chatbot-speech-bubble {
+        top: -50px;
+        /* Above head on mobile */
+        font-size: 0.8rem;
+        padding: 8px 15px;
+    }
+}

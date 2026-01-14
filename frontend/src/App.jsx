@@ -89,7 +89,7 @@ function Layout() {
         <div
           className="chatbot-floating-btn pulse-blue"
           style={{
-            bottom: location.pathname === '/contact' ? '110px' : '30px'
+            bottom: location.pathname === '/contact' ? '110px' : '0px'
           }}
           onClick={() => toast('Chatbot Under Development', {
             icon: '🤖',
@@ -101,6 +101,10 @@ function Layout() {
           })}
           title="Click for AI Chat Support"
         >
+          {/* Speech Bubble on Hover */}
+          <div className="chatbot-speech-bubble">
+            Get Booking Help
+          </div>
           <img src={chatbotImg} alt="AI Chatbot" />
         </div>
       )}
