@@ -62,7 +62,8 @@ const getAllBookings = async (req, res) => {
                 start_date: booking.start_date || 'N/A',
                 start_time: booking.start_time || 'N/A',
                 duration: duration,
-                total_amount: totalAmount,
+                // Use DB total_amount if available (captures dynamic billing), else fallback to calculated
+                total_amount: booking.total_amount ? parseFloat(booking.total_amount) : totalAmount,
                 advance_payment: advancePayment,
                 remaining_amount: remainingAmount,
                 status: booking.status || 'pending',
@@ -75,6 +76,10 @@ const getAllBookings = async (req, res) => {
                 confirmation_timestamp: booking.confirmation_timestamp || null,
                 cancelled_timestamp: booking.cancelled_timestamp || null,
                 transaction_id: booking.transaction_id || 'N/A',
+                ride_start_time: booking.ride_start_time || null,
+                ride_end_time: booking.ride_end_time || null,
+                extra_hours: booking.extra_hours || 0,
+                extra_amount: booking.extra_amount || 0,
                 refund_id: booking.refund_id || null
             };
         });
@@ -383,83 +388,7 @@ const confirmBooking = async (req, res) => {
     }
 };
 
-// Admin: Reject booking
-const rejectBooking = async (req, res) => {
-    try {
-        const bookingId = parseInt(req.params.id);
 
-        const { data: booking, error: fetchError } = await supabase
-            .from('bookings')
-            .select(`id, user_id, vehicle_id, vehicle_type, start_date, start_time, duration, status, created_at, transaction_id, advance_payment`)
-            .eq('id', bookingId)
-            .single();
-
-        if (fetchError) return res.status(500).json({ error: 'Error fetching booking' });
-        if (!booking) return res.status(404).json({ error: 'Booking not found' });
-        if (booking.status !== 'pending') return res.status(400).json({ error: 'Only pending bookings can be rejected' });
-
-        const reason = req.body && req.body.reason ? req.body.reason : null;
-        const localTimestamp = getISTTimestamp();
-        const refundAmount = booking.advance_payment || 100;
-        let refundStatus = 'processing';
-        let razorpayRefundId = null;
-
-        if (booking.transaction_id && refundAmount > 0) {
-            try {
-                console.log('Initiating Razorpay refund (Admin Reject)...', { transaction_id: booking.transaction_id, amount: refundAmount * 100 });
-                const refundResponse = await razorpay.payments.refund(booking.transaction_id, {
-                    amount: refundAmount * 100,
-                    notes: {
-                        booking_id: bookingId,
-                        reason: 'Booking rejected by admin',
-                        rejection_reason: reason || 'Not specified',
-                        rejected_at: localTimestamp
-                    }
-                });
-                console.log('✅ Razorpay Refund SUCCESS (Admin Reject):', JSON.stringify(refundResponse, null, 2));
-                refundStatus = 'completed';
-                razorpayRefundId = refundResponse.id;
-            } catch (refundError) {
-                console.error('❌ Razorpay Refund FAILED (Admin Reject):', refundError);
-                if (refundError.error) {
-                    console.error('Razorpay Error Details:', JSON.stringify(refundError.error, null, 2));
-                }
-            }
-        } else if (refundAmount === 0) {
-            refundStatus = 'not_applicable';
-        }
-
-        const { error: updateError } = await supabase
-            .from('bookings')
-            .update({
-                status: 'rejected',
-                rejection_reason: reason,
-                refund_status: refundStatus,
-                refund_amount: refundAmount,
-                refund_id: razorpayRefundId,
-                refund_details: { method: 'auto_razorpay', original_tx: booking.transaction_id },
-                rejection_timestamp: localTimestamp,
-                refund_timestamp: refundStatus === 'completed' ? localTimestamp : null,
-                refund_deduction: 0
-            })
-            .eq('id', bookingId);
-
-        if (updateError) throw updateError;
-
-        if (booking.vehicle_id && booking.vehicle_type) {
-            let vehicleTable = booking.vehicle_type;
-            if (vehicleTable === 'car') vehicleTable = 'cars';
-            if (vehicleTable === 'bike') vehicleTable = 'bikes';
-            await supabase.from(vehicleTable).update({ is_available: true }).eq('id', booking.vehicle_id);
-        }
-
-        res.json({ message: 'Booking rejected successfully' });
-
-    } catch (error) {
-        console.error('Error rejecting booking:', error);
-        res.status(500).json({ error: 'Error rejecting booking' });
-    }
-};
 
 // Admin: Cancel booking
 const cancelBookingAdmin = async (req, res) => {
@@ -592,6 +521,234 @@ const sendSOS = async (req, res) => {
 };
 
 
+
+// Admin: Handle QR Scan (Start/End Ride)
+const handleQRScan = async (req, res) => {
+    try {
+        let { bookingId } = req.body;
+        console.log('📷 QR Scan received for Booking ID:', bookingId);
+
+        // 0. Parse Booking ID if it's a JSON string (Fix for QR codes containing full JSON)
+        try {
+            if (bookingId && typeof bookingId === 'string' && bookingId.trim().startsWith('{')) {
+                const parsed = JSON.parse(bookingId);
+                if (parsed.bookingId) {
+                    bookingId = parsed.bookingId;
+                    console.log('✅ Extracted Booking ID from JSON:', bookingId);
+                }
+            }
+        } catch (e) {
+            console.log('⚠️ Failed to parse Booking ID as JSON, using raw value');
+        }
+
+        if (!bookingId) {
+            return res.status(400).json({ error: 'Booking ID is required' });
+        }
+
+        // 1. Fetch Booking
+        // Try searching by booking_id string first, then fallback to id if numeric
+        let query = supabase.from('bookings').select('*, users:user_id(full_name)').eq('booking_id', bookingId).single();
+        let { data: booking, error } = await query;
+
+        // If not found by booking_id, and input is numeric, try searching by numeric id
+        if (!booking && !Number.isNaN(Number(bookingId))) {
+            const { data: bookingById } = await supabase.from('bookings').select('*, users:user_id(full_name)').eq('id', bookingId).single();
+            booking = bookingById;
+        }
+
+        if (!booking) {
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+
+        const now = new Date();
+        const localTimestamp = getISTTimestamp();
+
+        // 2. Logic: Confirmed -> RIDE_STARTED
+        if (booking.status === 'confirmed') {
+            // ---------------------------------------------------------
+            // RIDE START LOGIC
+            // ---------------------------------------------------------
+            const nowISO = new Date().toISOString();
+
+            // Validate: Don't start if already started
+            if (booking.ride_start_time) {
+                return res.status(400).json({ success: false, message: 'Ride already started for this booking.' });
+            }
+
+            const { error: updateError } = await supabase
+                .from('bookings')
+                .update({
+                    status: 'ride_started',
+                    ride_start_time: nowISO, // Store UTC ISO
+                    updated_at: nowISO
+                })
+                .eq('id', booking.id);
+
+            if (updateError) throw updateError;
+
+            return res.json({
+                success: true,
+                message: 'Ride started successfully',
+                type: 'ride_start',
+                booking: { ...booking, status: 'ride_started', ride_start_time: nowISO }
+            });
+        }
+
+        // 3. Logic: RIDE_STARTED -> RIDE_COMPLETED
+        if (booking.status === 'ride_started') {
+            const startTimeStr = booking.ride_start_time || booking.updated_at;
+            let startTime = new Date(startTimeStr);
+
+            // Check for Invalid Date (fallback logic)
+            if (isNaN(startTime.getTime())) {
+                // Try manual IST fix as last resort if old data exists
+                startTime = new Date(startTimeStr.replace(' ', 'T') + '+05:30');
+            }
+
+            const endTime = now; // 'now' is new Date()
+            const localTimestamp = now.toISOString(); // Store UTC ISO
+
+            // Calculate duration in milliseconds
+            const durationMs = endTime - startTime;
+
+            // Safety: Ensure non-negative duration
+            if (durationMs < 0) {
+                // This should theoretically not happen with UTC-UTC math, but if it does, clamp to 0 or 1 min
+                console.warn("Negative duration detected:", durationMs);
+            }
+
+            const totalMinutes = Math.max(0, Math.floor(durationMs / (1000 * 60)));
+            const totalHours = Math.floor(totalMinutes / 60);
+            const remainingMinutes = totalMinutes % 60;
+
+            // ---------------------------------------------------------
+            // USAGE-BASED BILLING LOGIC
+            // ---------------------------------------------------------
+
+            // 1. Get Vehicle Price
+            let vehiclePricePerHour = 0;
+            let vehicleTable = booking.vehicle_type;
+            if (vehicleTable === 'car') vehicleTable = 'cars';
+            if (vehicleTable === 'bike') vehicleTable = 'bikes';
+            if (vehicleTable === 'scooty') vehicleTable = 'scooty';
+
+            const { data: vehicle } = await supabase.from(vehicleTable).select('price').eq('id', booking.vehicle_id).single();
+            if (vehicle) {
+                vehiclePricePerHour = parseFloat(vehicle.price) || 0;
+            }
+
+            // 2. Calculate Actual Billable Amount
+            // POLICY UPDATE: "No Refund for Early Return"
+            // If used time < booked time, charge for full booked time.
+            // If used time > booked time, charge for actual used time (Booked + Extra).
+            const bookedDurationHours = parseFloat(booking.duration) || 0; // Use parseFloat to handle half hours if any
+            const bookedDurationMinutes = Math.floor(bookedDurationHours * 60);
+
+            // The Effective Billable Minutes is whichever is larger
+            const effectiveBillableMinutes = Math.max(totalMinutes, bookedDurationMinutes);
+
+            const pricePerMinute = vehiclePricePerHour / 60;
+            const actualBillableAmount = Math.ceil(effectiveBillableMinutes * pricePerMinute);
+
+            // 3. Calculate Extra Stats (for record keeping)
+            // Extra minutes only exist if strict usage exceeded booked duration
+            let extraMinutes = Math.max(0, totalMinutes - bookedDurationMinutes);
+            let extraAmount = 0;
+
+            if (extraMinutes > 0) {
+                extraAmount = Math.ceil(extraMinutes * pricePerMinute);
+            }
+
+            // 4. Calculate Final Payments
+            const advancePaid = parseFloat(booking.advance_payment) || 0;
+            const finalBalance = actualBillableAmount - advancePaid;
+
+            // 5. Construct Message
+            let durationText = `${totalHours} hr ${remainingMinutes} mins`;
+            let message = `Ride Completed.\nDuration: ${durationText}.\nActual Cost: ₹${actualBillableAmount}.\nAdvance: ₹${advancePaid}.`;
+
+            if (finalBalance < 0) {
+                message += `\nREFUND: ₹${Math.abs(finalBalance)}`;
+            } else {
+                message += `\nTOTAL PAYABLE: ₹${finalBalance}`;
+            }
+
+            // 6. Update Database
+            // const updatedRemainingAmount = finalBalance > 0 ? finalBalance : 0; // Uncomment after running migration
+            const { error: updateError } = await supabase
+                .from('bookings')
+                .update({
+                    status: 'ride_completed',
+                    ride_end_time: localTimestamp, // UTC ISO
+                    actual_duration_hours: totalHours,
+                    extra_hours: parseFloat((extraMinutes / 60).toFixed(2)), // Store as decimal hours (e.g., 6.0, not 360)
+                    extra_amount: extraAmount,
+                    // Critical: Update total_amount to the Actual Usage Price so records are correct
+                    total_amount: actualBillableAmount,
+                    // remaining_amount: updatedRemainingAmount, // Uncomment after running Add_Missing_Columns.sql migration
+                    updated_at: localTimestamp
+                })
+                .eq('id', booking.id);
+
+            if (updateError) throw updateError;
+
+            // 7. Prepare Response
+            const responseData = {
+                rideStartTime: startTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), // Format for user
+                rideEndTime: endTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+                durationText: durationText,
+                totalHoursUsed: totalHours,
+                totalMinutesUsed: totalMinutes,
+                bookedDuration: bookedDurationHours,
+                extraMinutes: extraMinutes,
+                extraHours: parseFloat((extraMinutes / 60).toFixed(2)), // Decimal hours for display
+                extraAmount: extraAmount,
+                // Payment Details
+                totalBaseAmount: actualBillableAmount, // Now strictly usage based
+                advancePaid: advancePaid,
+                pendingBase: 0, // Deprecated in favor of direct balance
+                totalPayable: finalBalance
+            };
+
+            return res.json({
+                success: true,
+                message: message,
+                type: 'ride_end',
+                data: responseData
+            });
+        }
+
+        // 4. Validation: Already Completed
+        if (booking.status === 'ride_completed' || booking.status === 'completed') {
+            // Instead of error, return success with booking info
+            const total = parseFloat(booking.total_amount) || 0;
+            const advance = parseFloat(booking.advance_payment) || 0;
+            const balance = total - advance;
+
+            return res.json({
+                success: true,
+                message: `Ride already completed for this booking`,
+                type: 'already_completed',
+                data: {
+                    bookingId: booking.booking_id || booking.id,
+                    status: booking.status,
+                    totalAmount: total,
+                    advancePaid: advance,
+                    balance: balance,
+                    rideStartTime: booking.ride_start_time,
+                    rideEndTime: booking.ride_end_time
+                }
+            });
+        }
+
+        // 5. Validation: Other statuses (cancelled, rejected, pending)
+        return res.status(400).json({ error: `Cannot scan QR. Current status: ${booking.status}` });
+
+    } catch (error) {
+        console.error('Error processing QR Scan:', error);
+        res.status(500).json({ error: 'Internal Server Error processing QR' });
+    }
+};
 
 // Dashboard Stats
 const getDashboardStats = async (req, res) => {
@@ -793,7 +950,7 @@ module.exports = {
     deleteBooking,
     updateBooking,
     confirmBooking,
-    rejectBooking,
+
     cancelBookingAdmin,
     markRefundComplete,
     sendSOS,
@@ -809,5 +966,6 @@ module.exports = {
     addVehicle,
     getPolicies,
     manualReminderCheck,
-    cronReminderCheck
+    cronReminderCheck,
+    handleQRScan
 };

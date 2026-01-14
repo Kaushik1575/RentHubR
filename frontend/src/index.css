@@ -1901,6 +1901,18 @@ main.booking-page-main {
     color: #fff;
 }
 
+.status-ride_started {
+    background: linear-gradient(135deg, #4facfe 0%, #00f2fe 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(79, 172, 254, 0.4);
+}
+
+.status-ride_completed {
+    background: linear-gradient(135deg, #43e97b 0%, #38f9d7 100%);
+    color: #fff;
+    box-shadow: 0 2px 8px rgba(67, 233, 123, 0.4);
+}
+
 /* Recent Activity */
 .recent-activity {
     background: #fff;

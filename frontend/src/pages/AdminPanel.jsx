@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 import ConfirmationPopup from '../components/ConfirmationPopup';
+import { Scanner } from '@yudiel/react-qr-scanner';
 
 
 const AdminPanel = () => {
@@ -37,7 +38,8 @@ const AdminPanel = () => {
     const [editBookingData, setEditBookingData] = useState({});
     const [editUserData, setEditUserData] = useState({});
     const [vehicleFormData, setVehicleFormData] = useState({});
-    const [rejectionReason, setRejectionReason] = useState('');
+
+    const [scanInput, setScanInput] = useState('');
     const [popup, setPopup] = useState({
         isOpen: false,
         type: 'error',
@@ -168,19 +170,7 @@ const AdminPanel = () => {
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error confirming' }); }
     };
 
-    const handleRejectBooking = async () => {
-        if (!rejectionReason) return setPopup({ isOpen: true, type: 'error', title: 'Reason Required', message: 'Please provide a reason' });
-        try {
-            await fetch(`/api/admin/bookings/${modal.data.id}/reject`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ reason: rejectionReason })
-            });
-            setModal({ type: null });
-            loadBookings();
-            setPopup({ isOpen: true, type: 'success', title: 'Rejected', message: 'Booking rejected successfully' });
-        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error rejecting' }); }
-    };
+
 
     const handleDeleteBooking = async (id) => {
         try {
@@ -237,6 +227,66 @@ const AdminPanel = () => {
 
     const handleSendSOS = (id) => {
         setModal({ type: 'confirmSOS', data: { id } });
+    };
+
+    // QR Scan Action
+    const handleScanQR = async (e) => {
+        e.preventDefault();
+        try {
+            const res = await fetch('/api/admin/scan-qr', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ bookingId: (typeof scanInput === 'string' ? scanInput : scanInput.text).trim() })
+            });
+            const data = await res.json();
+
+            if (res.ok) {
+                setModal({ type: null });
+                setScanInput('');
+                loadBookings(); // Refresh list
+
+                if (data.type === 'ride_end') {
+                    // Show detailed summary for ride end
+                    const balance = data.data.totalPayable;
+                    const isRefund = balance < 0;
+
+                    const summary = `Ride Ended Successfully!
+--------------------------------
+Date: ${data.data.rideEndTime}
+Status: COMPLETED
+--------------------------------
+Time Used: ${data.data.durationText}
+Actual Amount: ₹${data.data.totalBaseAmount}
+Advance Paid: ₹${data.data.advancePaid}
+--------------------------------
+${isRefund ? `REFUND CUSTOMER: ₹${Math.abs(balance)}` : `COLLECT AMOUNT: ₹${balance}`}
+`;
+                    setPopup({ isOpen: true, type: 'success', title: 'Ride Completed', message: summary });
+                } else if (data.type === 'already_completed') {
+                    // Show info for already completed rides
+                    const balance = data.data.balance;
+                    const isRefund = balance < 0;
+                    const summary = `This ride was already completed.
+--------------------------------
+Booking ID: ${data.data.bookingId}
+Status: ${data.data.status}
+--------------------------------
+Total Amount: ₹${data.data.totalAmount}
+Advance Paid: ₹${data.data.advancePaid}
+${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
+`;
+                    setPopup({ isOpen: true, type: 'success', title: 'Already Completed', message: summary });
+                } else {
+                    // Ride Start or others
+                    setPopup({ isOpen: true, type: 'success', title: 'Success', message: data.message });
+                }
+            } else {
+                setPopup({ isOpen: true, type: 'error', title: 'Scan Failed', message: data.error || 'Failed to process QR code' });
+            }
+        } catch (e) {
+            console.error(e);
+            setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Network or Server Error' });
+        }
     };
 
     // Vehicle Actions
@@ -366,8 +416,8 @@ const AdminPanel = () => {
                                             <div className="activity-icon-wrapper">
                                                 {act.type === 'confirmed' ? <i className="fas fa-check-circle"></i> :
                                                     act.type === 'cancelled' ? <i className="fas fa-times-circle"></i> :
-                                                        act.type === 'rejected' ? <i className="fas fa-ban"></i> :
-                                                            <i className="fas fa-plus-circle"></i>}
+
+                                                        <i className="fas fa-plus-circle"></i>}
                                             </div>
                                             <div className="activity-content">
                                                 <span className="activity-desc">{act.description}</span>
@@ -431,11 +481,18 @@ const AdminPanel = () => {
                                         <option value="">All</option>
                                         <option value="pending">Pending</option>
                                         <option value="confirmed">Confirmed</option>
+                                        <option value="ride_started">Ride Started</option>
+                                        <option value="ride_completed">Ride Completed</option>
                                         <option value="cancelled">Cancelled</option>
-                                        <option value="rejected">Rejected</option>
+
                                     </select>
                                 </div>
                                 <div><label>Start Date:</label><input type="date" value={bookingsDateFilter} onChange={e => setBookingsDateFilter(e.target.value)} /></div>
+                                <div style={{ display: 'flex', alignItems: 'flex-end' }}>
+                                    <button className="action-btn" style={{ background: '#333', color: '#fff' }} onClick={() => { setScanInput(''); setModal({ type: 'scanQR' }); }}>
+                                        <i className="fas fa-qrcode"></i> Scan QR
+                                    </button>
+                                </div>
                             </div>
                             <div className="table-container">
                                 <table id="bookings-table">
@@ -449,9 +506,9 @@ const AdminPanel = () => {
                                                 <td>{b.start_date}</td>
                                                 <td>{b.duration} hrs</td>
                                                 <td>₹{b.total_amount}</td>
-                                                <td><span className={`status-badge status-${(b.status || 'pending').toLowerCase()}`}>{b.status}</span></td>
+                                                <td><span className={`status-badge status-${(b.status || 'pending').toLowerCase()}`}>{b.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span></td>
                                                 <td>
-                                                    {(b.status === 'cancelled' || b.status === 'rejected') ? (
+                                                    {(b.status === 'cancelled') ? (
                                                         <div className="refund-info">
                                                             <p><strong>Refund:</strong> ₹{b.refund_amount}</p>
                                                             <p><strong>Status:</strong> {b.refund_status}</p>
@@ -496,17 +553,28 @@ const AdminPanel = () => {
                                                         {b.status === 'pending' && (
                                                             <>
                                                                 <button className="action-btn btn-confirm" onClick={() => handleConfirmBooking(b.id)}>Confirm</button>
-                                                                <button className="action-btn btn-reject" onClick={() => { setModal({ type: 'rejectBooking', data: b }); setRejectionReason(''); }}>Reject</button>
+
                                                             </>
                                                         )}
-                                                        {(['confirmed', 'cancelled', 'rejected'].includes(b.status)) && (
+                                                        {(['confirmed', 'cancelled', 'ride_started', 'ride_completed', 'completed'].includes(b.status)) && (
                                                             <>
                                                                 <button className="action-btn btn-edit" onClick={() => { setEditBookingData(b); setModal({ type: 'editBooking' }); }}><i className="fas fa-edit"></i> Edit</button>
                                                                 <button className="action-btn btn-delete" onClick={() => { setModal({ type: 'deleteBooking', data: b }) }}><i className="fas fa-trash"></i> Delete</button>
                                                             </>
                                                         )}
-                                                        {b.status === 'confirmed' && <button className="action-btn btn-sos" onClick={() => handleSendSOS(b.id)}><i className="fas fa-exclamation-triangle"></i> SOS</button>}
-                                                        {(['cancelled', 'rejected'].includes(b.status) && b.refund_status === 'processing') &&
+                                                        {(() => {
+                                                            // Case-insensitive check for SOS button visibility
+                                                            const s = (b.status || '').toLowerCase();
+                                                            if (s === 'confirmed' || s === 'ride_started') {
+                                                                return (
+                                                                    <button className="action-btn btn-sos" onClick={() => handleSendSOS(b.id)}>
+                                                                        <i className="fas fa-exclamation-triangle"></i> SOS
+                                                                    </button>
+                                                                );
+                                                            }
+                                                            return null;
+                                                        })()}
+                                                        {(['cancelled'].includes(b.status) && b.refund_status === 'processing') &&
                                                             <button className="action-btn btn-confirm-refund" onClick={() => handleRefundComplete(b.id)}><i className="fas fa-check"></i> Ref. Done</button>
                                                         }
                                                     </div>
@@ -684,6 +752,90 @@ const AdminPanel = () => {
 
                             <p style={{ marginTop: '15px' }}><strong>Status:</strong> <span className={`status-badge status-${(modal.data.status || 'pending').toLowerCase()}`}>{modal.data.status}</span></p>
 
+
+                            {/* Ride Summary (Visible for Active & Completed Rides) */}
+                            {(modal.data.status === 'ride_started' || modal.data.status === 'ride_completed' || modal.data.status === 'completed') && (
+                                <div style={{ marginTop: '20px', padding: '15px', background: '#f0f9ff', borderRadius: '8px', border: '1px solid #b3e5fc' }}>
+                                    <h4 style={{ margin: '0 0 10px 0', borderBottom: '1px solid #b3e5fc', paddingBottom: '5px' }}>Ride Summary</h4>
+
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', fontSize: '0.9em', marginBottom: '10px' }}>
+                                        <div>
+                                            <strong>Ride Start:</strong><br />
+                                            {formatDate(modal.data.ride_start_time || modal.data.updated_at)}
+                                        </div>
+                                        {/* Show End Time only if completed */}
+                                        {(modal.data.status === 'ride_completed' || modal.data.status === 'completed') ? (
+                                            <div>
+                                                <strong>Ride End:</strong><br />
+                                                {formatDate(modal.data.ride_end_time)}
+                                            </div>
+                                        ) : (
+                                            <div>
+                                                <strong>Ride End:</strong><br />
+                                                <span style={{ color: '#ff9800', fontStyle: 'italic' }}>IN PROGRESS...</span>
+                                            </div>
+                                        )}
+                                    </div>
+
+                                    {/* FULL PAYMENT SUMMARY - ONLY FOR COMPLETED RIDES */}
+                                    {(modal.data.status === 'ride_completed' || modal.data.status === 'completed') && (
+                                        <>
+                                            {(modal.data.extra_amount > 0) && (
+                                                <p style={{ color: '#d32f2f', fontWeight: 'bold' }}>
+                                                    ⚠️ Overdue Charge: ₹{modal.data.extra_amount}<br />
+                                                    <span style={{ fontSize: '0.8em', fontWeight: 'normal', color: '#555' }}>
+                                                        {(() => {
+                                                            const extraHours = modal.data.extra_hours || 0;
+                                                            const hours = Math.floor(extraHours);
+                                                            const minutes = Math.round((extraHours - hours) * 60);
+                                                            return `(${hours} hrs / ${minutes} mins)`;
+                                                        })()}
+                                                    </span>
+                                                </p>
+                                            )}
+
+                                            <div style={{ marginTop: '10px', paddingTop: '10px', borderTop: '1px dashed #bbb' }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px' }}>
+                                                    <span>Actual Billable Amount:</span>
+                                                    <span>₹{modal.data.total_amount}</span>
+                                                </div>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '5px', color: '#4caf50' }}>
+                                                    <span>Advance Paid:</span>
+                                                    <span>- ₹{modal.data.advance_payment}</span>
+                                                </div>
+
+                                                {/* Logic for Balance */}
+                                                {(() => {
+                                                    const total = parseFloat(modal.data.total_amount) || 0;
+                                                    const advance = parseFloat(modal.data.advance_payment) || 0;
+                                                    // Backend updates 'total_amount' to the full Actual Billable Amount upon ride completion
+                                                    const balance = total - advance;
+
+                                                    const isRefund = balance < 0;
+
+                                                    return (
+                                                        <div style={{
+                                                            display: 'flex',
+                                                            justifyContent: 'space-between',
+                                                            paddingTop: '10px',
+                                                            marginTop: '10px',
+                                                            borderTop: '2px solid #333',
+                                                            fontSize: '1.2em',
+                                                            fontWeight: 'bold'
+                                                        }}>
+                                                            <span>{isRefund ? 'REFUND CUSTOMER:' : 'TOTAL PAYABLE:'}</span>
+                                                            <span style={{ color: isRefund ? '#d32f2f' : '#1976d2' }}>
+                                                                ₹{Math.abs(balance)}
+                                                            </span>
+                                                        </div>
+                                                    );
+                                                })()}
+                                            </div>
+                                        </>
+                                    )}
+                                </div>
+                            )}
+
                             {(modal.data.status === 'cancelled' || modal.data.status === 'rejected') && (
                                 <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '10px' }}>
                                     <p><strong>Refund Amount:</strong> ₹{modal.data.refund_amount}</p>
@@ -738,6 +890,97 @@ const AdminPanel = () => {
                         <h2>Reject Booking</h2>
                         <textarea style={{ width: '100%', minHeight: '100px' }} placeholder="Reason for rejection" value={rejectionReason} onChange={e => setRejectionReason(e.target.value)}></textarea>
                         <button className="action-btn btn-reject" style={{ marginTop: '10px' }} onClick={handleRejectBooking}>Submit</button>
+                    </div>
+                </div>
+            )}
+
+            {modal.type === 'scanQR' && (
+                <div className="modal">
+                    <div className="modal-content" style={{ maxWidth: '500px', width: '90%' }}>
+                        <span className="close-button" onClick={() => setModal({ type: null })}>&times;</span>
+                        <h2>Scan QR Code</h2>
+
+                        <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '15px' }}>
+                            <div className="tabs" style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    onClick={() => setScanInput('') /* clear input on switch if needed, or keep mode state */}
+                                    style={{ padding: '8px 16px', borderRadius: '20px', border: 'none', background: '#007bff', color: 'white', cursor: 'pointer', opacity: scanInput === 'camera' ? 1 : 0.6 }}
+                                >
+                                    <i className="fas fa-camera"></i> Camera
+                                </button>
+                                <button
+                                    onClick={() => {/* managed via input focus usually, but here we just show both or toggle. Let's just show camera area */ }}
+                                    style={{ padding: '8px 16px', borderRadius: '20px', border: 'none', background: '#333', color: 'white', cursor: 'pointer' }}
+                                >
+                                    Manual Input
+                                </button>
+                            </div>
+                        </div>
+
+                        <div style={{ background: '#000', borderRadius: '8px', overflow: 'hidden', marginBottom: '15px', position: 'relative', minHeight: '300px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                            <Scanner
+                                onScan={(result) => {
+                                    if (result && result.length > 0) {
+                                        const rawValue = result[0].rawValue;
+                                        setScanInput(rawValue);
+                                        // Feedback logic here if needed
+                                    }
+                                }}
+                                onError={(error) => console.log(error?.message)}
+                                components={{
+                                    audio: false,
+                                    onOff: true,
+                                    torch: true,
+                                    zoom: true,
+                                    finder: true
+                                }}
+                                styles={{
+                                    container: { width: '100%', height: '100%' },
+                                    video: { width: '100%', height: '100%', objectFit: 'cover' }
+                                }}
+                                allowMultiple={true}
+                                scanDelay={500}
+                            />
+                            {!scanInput && <div style={{ position: 'absolute', bottom: '20px', left: 0, right: 0, color: 'white', opacity: 0.8, pointerEvents: 'none', textAlign: 'center', zIndex: 10, fontWeight: 'bold' }}>Scanning...</div>}
+                        </div>
+
+                        <p style={{ marginBottom: '10px', color: '#666', textAlign: 'center' }}>Scan the QR code or enter Booking ID below.</p>
+                        <form onSubmit={handleScanQR}>
+                            <div style={{ display: 'flex', gap: '8px' }}>
+                                <input
+                                    type="text"
+                                    className="form-control"
+                                    placeholder="Booking ID (e.g. RH...)"
+                                    value={typeof scanInput === 'object' ? scanInput.text : scanInput}
+                                    onChange={e => setScanInput(e.target.value)}
+                                    autoFocus
+                                    required
+                                    style={{
+                                        fontSize: '1.2rem',
+                                        padding: '12px',
+                                        textAlign: 'center',
+                                        letterSpacing: '1px',
+                                        fontWeight: 'bold',
+                                        border: '2px solid #ddd'
+                                    }}
+                                />
+                                {scanInput && (
+                                    <button
+                                        type="button"
+                                        onClick={() => setScanInput('')}
+                                        style={{
+                                            background: '#ddd', border: 'none', borderRadius: '4px', cursor: 'pointer', padding: '0 15px', fontSize: '1.2rem', color: '#555'
+                                        }}
+                                        title="Clear"
+                                    >
+                                        &times;
+                                    </button>
+                                )}
+                            </div>
+                            <div style={{ marginTop: '15px', display: 'flex', justifyContent: 'flex-end' }}>
+                                <button type="submit" className="action-btn btn-confirm" style={{ width: '100%', padding: '12px', fontSize: '1.1rem' }}>Process Scan</button>
+                            </div>
+                        </form>
                     </div>
                 </div>
             )}
