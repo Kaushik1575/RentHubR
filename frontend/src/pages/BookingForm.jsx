@@ -173,7 +173,7 @@ const BookingForm = () => {
 
             // 2. Open Razorpay
             const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_Rt1Yi4MzcnFzwi", // Use env var in real app
+                key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_RvUJ27UN65SU8w", // Use env var in real app
                 amount: orderData.amount,
                 currency: orderData.currency,
                 name: "RentHub",

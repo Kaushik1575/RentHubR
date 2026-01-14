@@ -49,7 +49,7 @@ const Contact = () => {
                         <i className="fas fa-map-marker-alt" style={{ fontSize: '1.5rem', color: '#2ecc71' }}></i>
                         <div>
                             <h3>Address</h3>
-                            <p>Gohria Square ,BBSR</p>
+                            <p>Gohria  ,BBSR</p>
                             <p>Odisha 756001</p>
                         </div>
                     </div>
@@ -71,7 +71,7 @@ const Contact = () => {
                         <i className="fas fa-envelope" style={{ fontSize: '1.5rem', color: '#2ecc71' }}></i>
                         <div>
                             <h3>Email</h3>
-                            <p>info@RentHub.com</p>
+                            <p>renthub.otp@gmail.com</p>
                             <p>support@RentHub.com</p>
                         </div>
                     </div>

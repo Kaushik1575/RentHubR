@@ -11,9 +11,10 @@ router.put('/bookings/:id', verifyAdminToken, adminController.updateBooking);
 
 // Booking actions
 router.post('/bookings/:id/confirm', verifyAdminToken, adminController.confirmBooking);
-router.post('/bookings/:id/reject', verifyAdminToken, adminController.rejectBooking);
+
 router.post('/bookings/:id/cancel', verifyAdminToken, adminController.cancelBookingAdmin);
 router.post('/bookings/:id/refund-complete', verifyAdminToken, adminController.markRefundComplete);
+router.post('/scan-qr', verifyAdminToken, adminController.handleQRScan);
 
 // SOS
 router.post('/send-sos', verifyAdminToken, adminController.sendSOS);

@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
+import OTPInput from '../components/OTPInput';
 
 const RegisterUser = () => {
     const navigate = useNavigate();
@@ -10,8 +11,11 @@ const RegisterUser = () => {
         phoneNumber: '',
         password: '',
         confirmPassword: '',
-        otp: ''
+        otp: '',
+        mobileOtp: ''
     });
+    const [emailVerified, setEmailVerified] = useState(false);
+    const [mobileVerified, setMobileVerified] = useState(false);
     const [popup, setPopup] = useState({
         isOpen: false,
         type: 'error',
@@ -19,7 +23,9 @@ const RegisterUser = () => {
         message: ''
     });
     const [showOtpInput, setShowOtpInput] = useState(false);
+    const [showMobileOtpInput, setShowMobileOtpInput] = useState(false);
     const [isSendingOtp, setIsSendingOtp] = useState(false);
+    const [isSendingMobileOtp, setIsSendingMobileOtp] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
@@ -28,6 +34,8 @@ const RegisterUser = () => {
     };
 
     const handleSendOtp = async () => {
+        setFormData(prev => ({ ...prev, otp: '' }));
+        setEmailVerified(false);
         if (!formData.email) return setPopup({ isOpen: true, type: 'error', title: 'Email Required', message: 'Please enter your email first' });
         setIsSendingOtp(true);
         try {
@@ -39,7 +47,7 @@ const RegisterUser = () => {
             const j = await r.json();
             if (r.ok) {
                 setShowOtpInput(true);
-                setPopup({ isOpen: true, type: 'success', title: 'OTP Sent', message: j.message || 'OTP sent to your email' });
+                setPopup({ isOpen: true, type: 'success', title: 'Email OTP Sent', message: j.message || 'OTP sent to your email' });
             } else {
                 setPopup({ isOpen: true, type: 'error', title: 'Error', message: j.error || 'Failed to send OTP' });
             }
@@ -47,6 +55,54 @@ const RegisterUser = () => {
             setPopup({ isOpen: true, type: 'error', title: 'Network Error', message: 'Could not send OTP, please try again later' });
         } finally {
             setIsSendingOtp(false);
+        }
+    };
+
+    const handleSendMobileOtp = async () => {
+        setFormData(prev => ({ ...prev, mobileOtp: '' }));
+        setMobileVerified(false);
+        if (!formData.phoneNumber) return setPopup({ isOpen: true, type: 'error', title: 'Phone Number Required', message: 'Please enter your phone number first' });
+        setIsSendingMobileOtp(true);
+        try {
+            const r = await fetch('/api/register/send-mobile-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ phoneNumber: formData.phoneNumber })
+            });
+            const j = await r.json();
+            if (r.ok) {
+                setShowMobileOtpInput(true);
+                setPopup({ isOpen: true, type: 'success', title: 'Mobile OTP Sent', message: j.message || 'OTP sent to your mobile' });
+            } else {
+                setPopup({ isOpen: true, type: 'error', title: 'Error', message: j.error || 'Failed to send OTP' });
+            }
+        } catch (err) {
+            setPopup({ isOpen: true, type: 'error', title: 'Network Error', message: 'Could not send OTP, please try again later' });
+        } finally {
+            setIsSendingMobileOtp(false);
+        }
+    };
+
+
+
+    const verifyOtp = async (type, otpValue) => {
+        const identifier = type === 'email' ? formData.email : formData.phoneNumber;
+        try {
+            const r = await fetch('/api/register/verify-otp', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ type, identifier, otp: otpValue })
+            });
+            const j = await r.json();
+            if (r.ok) {
+                if (type === 'email') setEmailVerified(true);
+                else setMobileVerified(true);
+                setFormData(prev => ({ ...prev, [type === 'email' ? 'otp' : 'mobileOtp']: otpValue }));
+            } else {
+                setPopup({ isOpen: true, type: 'error', title: 'Invalid OTP', message: j.error });
+            }
+        } catch (err) {
+            console.error(err);
         }
     };
 
@@ -78,7 +134,12 @@ const RegisterUser = () => {
         }
 
         if (!formData.otp) {
-            setPopup({ isOpen: true, type: 'error', title: 'OTP Required', message: 'Please verify your email with OTP before submitting.' });
+            setPopup({ isOpen: true, type: 'error', title: 'Email OTP Required', message: 'Please verify your email with OTP before submitting.' });
+            return;
+        }
+
+        if (!formData.mobileOtp) {
+            setPopup({ isOpen: true, type: 'error', title: 'Mobile OTP Required', message: 'Please verify your mobile number with OTP before submitting.' });
             return;
         }
 
@@ -140,23 +201,65 @@ const RegisterUser = () => {
                             </div>
                             <div>
                                 <button type="button" onClick={handleSendOtp} disabled={isSendingOtp} className="btn btn-verify" style={{ marginTop: '22px', padding: '0.6rem 0.9rem', background: '#2ecc71', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                                    {isSendingOtp ? 'Sending...' : 'Verify Email'}
+                                    {isSendingOtp ? 'Sending...' : 'Send OTP'}
                                 </button>
                             </div>
                         </div>
 
                         {showOtpInput && (
                             <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                <label htmlFor="otp" style={{ display: 'block', marginBottom: '0.5rem' }}>Enter OTP</label>
-                                <input type="text" id="otp" value={formData.otp} onChange={handleChange} placeholder="6-digit OTP" maxLength="6" style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }} />
-                                <small style={{ display: 'block', color: '#555', marginTop: '6px' }}>An OTP will expire in 10 minutes.</small>
+                                <label style={{ display: 'block', marginBottom: '1rem', textAlign: 'center', fontWeight: '600' }}>Enter Email OTP</label>
+                                {emailVerified ? (
+                                    <div style={{ textAlign: 'center', color: '#2ecc71', fontWeight: 'bold', padding: '10px', border: '1px solid #2ecc71', borderRadius: '8px', background: '#eafaf1' }}>
+                                        ✅ Email Verified Successfully!
+                                    </div>
+                                ) : (
+                                    <>
+                                        <OTPInput
+                                            length={6}
+                                            value={formData.otp}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, otp: val }))}
+                                            onComplete={(val) => verifyOtp('email', val)}
+                                        />
+                                        <small style={{ display: 'block', color: '#555', marginTop: '10px', textAlign: 'center' }}>OTP will expire in 10 minutes.</small>
+                                    </>
+                                )}
                             </div>
                         )}
 
-                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                            <label htmlFor="phoneNumber" style={{ display: 'block', marginBottom: '0.5rem' }}>Phone Number</label>
-                            <input type="tel" id="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="Phone Number" required style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }} />
+                        <div className="form-group" style={{ marginBottom: '1.5rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
+                            <div style={{ flex: 1 }}>
+                                <label htmlFor="phoneNumber" style={{ display: 'block', marginBottom: '0.5rem' }}>Phone Number</label>
+                                <input type="tel" id="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="9876543210 or +919876543210" required style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }} />
+                                <small style={{ display: 'block', color: '#888', marginTop: '4px', fontSize: '0.85rem' }}>Enter 10-digit mobile number</small>
+                            </div>
+                            <div>
+                                <button type="button" onClick={handleSendMobileOtp} disabled={isSendingMobileOtp} className="btn btn-verify" style={{ marginTop: '22px', padding: '0.6rem 0.9rem', background: '#2ecc71', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
+                                    {isSendingMobileOtp ? 'Sending...' : 'Send OTP'}
+                                </button>
+                            </div>
                         </div>
+
+                        {showMobileOtpInput && (
+                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
+                                <label style={{ display: 'block', marginBottom: '1rem', textAlign: 'center', fontWeight: '600' }}>Enter Mobile OTP</label>
+                                {mobileVerified ? (
+                                    <div style={{ textAlign: 'center', color: '#2ecc71', fontWeight: 'bold', padding: '10px', border: '1px solid #2ecc71', borderRadius: '8px', background: '#eafaf1' }}>
+                                        ✅ Mobile Number Verified Successfully!
+                                    </div>
+                                ) : (
+                                    <>
+                                        <OTPInput
+                                            length={6}
+                                            value={formData.mobileOtp}
+                                            onChange={(val) => setFormData(prev => ({ ...prev, mobileOtp: val }))}
+                                            onComplete={(val) => verifyOtp('mobile', val)}
+                                        />
+                                        <small style={{ display: 'block', color: '#555', marginTop: '10px', textAlign: 'center' }}>OTP will expire in 5 minutes.</small>
+                                    </>
+                                )}
+                            </div>
+                        )}
 
                         <div className="form-group" style={{ marginBottom: '1.5rem' }}>
                             <label htmlFor="password" style={{ display: 'block', marginBottom: '0.5rem' }}>Password</label>

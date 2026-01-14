@@ -2,7 +2,7 @@
     "rewrites": [
         {
             "source": "/api/:match*",
-            "destination": "https://renthubr-1.onrender.com/api/:match*"
+            "destination": "https://renthubr.onrender.com/api/:match*"
         },
         {
             "source": "/(.*)",

@@ -3,8 +3,11 @@ const router = express.Router();
 const authController = require('../controllers/auth.controller');
 
 // User Registration
+// User Registration
 router.post('/register/send-otp', authController.registerSendOtp);
 router.post('/register/user', authController.registerUser);
+router.post('/register/send-mobile-otp', authController.registerSendMobileOtp);
+router.post('/register/verify-otp', authController.verifyOtp);
 
 // Admin Registration
 router.post('/register/admin', authController.registerAdmin);
