@@ -97,125 +97,174 @@ const Login = () => {
         }
     };
 
+    const isUser = activeTab === 'user';
+    const primaryColor = isUser ? '#2ecc71' : '#0097a7';
+    const bgGradient = isUser
+        ? 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)'
+        : 'linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%)';
+
     return (
         <div className="login-container" style={{
             minHeight: '100vh',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            background: "linear-gradient(rgba(0,0,0,0.5), rgba(0,0,0,0.5)), url('https://images.unsplash.com/photo-1485965120184-e220f721d03e?ixlib=rb-1.2.1&auto=format&fit=crop&w=1950&q=80')",
-            backgroundSize: 'cover',
-            backgroundPosition: 'center',
-            padding: '2rem'
+            background: bgGradient,
+            transition: 'background 0.5s ease',
+            padding: '20px',
+            fontFamily: "'Segoe UI', sans-serif"
         }}>
             <div className="login-box" style={{
                 background: 'white',
-                padding: '2rem',
-                borderRadius: '10px',
-                boxShadow: '0 0 20px rgba(0,0,0,0.2)',
+                padding: '40px',
+                borderRadius: '16px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
                 width: '100%',
-                maxWidth: '400px'
+                maxWidth: '480px',
+                transition: 'all 0.3s ease'
             }}>
-                <div className="login-tabs" style={{ display: 'flex', marginBottom: '2rem', borderBottom: '2px solid #eee' }}>
+                <div style={{ marginBottom: '30px' }}>
+                    <h2 style={{ textAlign: 'center', color: isUser ? '#27ae60' : '#00695c', fontSize: '28px', fontWeight: 'bold', margin: '0 0 10px 0' }}>
+                        {isUser ? 'Welcome Back' : 'Admin Portal'}
+                    </h2>
+                    <p style={{ textAlign: 'center', color: '#78909c', margin: 0 }}>Login to your account</p>
+                </div>
+
+                {/* Modern Tabs */}
+                <div className="login-tabs" style={{
+                    display: 'flex', background: '#f5f5f5', borderRadius: '12px', padding: '6px', marginBottom: '30px'
+                }}>
                     <div
-                        className={`login-tab ${activeTab === 'user' ? 'active' : ''}`}
                         onClick={() => setActiveTab('user')}
                         style={{
-                            flex: 1, padding: '1rem', textAlign: 'center', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease',
-                            color: activeTab === 'user' ? '#2ecc71' : '#666',
-                            borderBottom: activeTab === 'user' ? '2px solid #2ecc71' : 'none',
-                            marginBottom: activeTab === 'user' ? '-2px' : '0'
+                            flex: 1, padding: '12px', textAlign: 'center', cursor: 'pointer', fontWeight: '600', borderRadius: '10px',
+                            transition: 'all 0.3s ease', fontSize: '15px',
+                            background: isUser ? '#fff' : 'transparent',
+                            color: isUser ? '#2ecc71' : '#9e9e9e',
+                            boxShadow: isUser ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'
                         }}
                     >
-                        User Login
+                        User
                     </div>
                     <div
-                        className={`login-tab ${activeTab === 'admin' ? 'active' : ''}`}
                         onClick={() => setActiveTab('admin')}
                         style={{
-                            flex: 1, padding: '1rem', textAlign: 'center', cursor: 'pointer', fontWeight: 'bold', transition: 'all 0.3s ease',
-                            color: activeTab === 'admin' ? '#2ecc71' : '#666',
-                            borderBottom: activeTab === 'admin' ? '2px solid #2ecc71' : 'none',
-                            marginBottom: activeTab === 'admin' ? '-2px' : '0'
+                            flex: 1, padding: '12px', textAlign: 'center', cursor: 'pointer', fontWeight: 'bold', borderRadius: '10px',
+                            transition: 'all 0.3s ease', fontSize: '15px',
+                            background: !isUser ? '#fff' : 'transparent',
+                            color: !isUser ? '#0097a7' : '#9e9e9e',
+                            boxShadow: !isUser ? '0 2px 8px rgba(0,0,0,0.1)' : 'none'
                         }}
                     >
-                        Admin Login
+                        Admin
                     </div>
                 </div>
 
                 {/* User Login Form */}
                 {activeTab === 'user' && (
-                    <form onSubmit={handleUserLogin} className="login-form active">
-                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Email</label>
+                    <form onSubmit={handleUserLogin} style={{ animation: 'fadeIn 0.4s' }}>
+                        <div className="form-group" style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontSize: '16px', fontWeight: '700' }}>Email Address</label>
                             <input
-                                type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} required
-                                style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }}
+                                type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} required placeholder="name@example.com"
+                                style={{
+                                    width: '100%', padding: '14px', border: '1px solid #e0e0e0', borderRadius: '10px', fontSize: '16px', fontWeight: '500', outline: 'none', transition: 'border-color 0.2s'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = primaryColor}
+                                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
                             />
                         </div>
-                        <div className="form-group password-group" style={{ marginBottom: '1.5rem', position: 'relative' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Password</label>
-                            <input
-                                type={showUserPassword ? "text" : "password"}
-                                value={userPassword} onChange={(e) => setUserPassword(e.target.value)} required
-                                style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }}
-                            />
-                            <i
-                                className={`fas ${showUserPassword ? 'fa-eye-slash' : 'fa-eye'}`}
-                                onClick={() => setShowUserPassword(!showUserPassword)}
-                                style={{ position: 'absolute', right: '1rem', top: '2.2rem', cursor: 'pointer', color: '#666' }}
-                            ></i>
+                        <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontSize: '16px', fontWeight: '700' }}>Password</label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showUserPassword ? "text" : "password"}
+                                    value={userPassword} onChange={(e) => setUserPassword(e.target.value)} required placeholder="Enter password"
+                                    style={{
+                                        width: '100%', padding: '14px', border: '1px solid #e0e0e0', borderRadius: '10px', fontSize: '16px', fontWeight: '500', outline: 'none'
+                                    }}
+                                    onFocus={(e) => e.target.style.borderColor = primaryColor}
+                                    onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                                />
+                                <i
+                                    className={`fas ${showUserPassword ? 'fa-eye-slash' : 'fa-eye'}`}
+                                    onClick={() => setShowUserPassword(!showUserPassword)}
+                                    style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#bdc3c7', fontSize: '18px' }}
+                                ></i>
+                            </div>
                         </div>
-                        <div style={{ textAlign: 'right', marginBottom: '1rem', marginTop: '-0.5rem' }}>
-                            <Link to="/forgot-password" style={{ color: '#666', fontSize: '0.9rem', textDecoration: 'none' }}>Forgot Password?</Link>
+                        <div style={{ textAlign: 'right', marginBottom: '24px' }}>
+                            <Link to="/forgot-password" style={{ color: '#7f8c8d', fontSize: '14px', textDecoration: 'none', fontWeight: '500' }}>Forgot Password?</Link>
                         </div>
-                        <button type="submit" className="login-btn" style={{
-                            width: '100%', padding: '1rem', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1rem', cursor: 'pointer'
-                        }}>Login as User</button>
-                        <div className="register-link" style={{ textAlign: 'center', marginTop: '1rem' }}>
-                            Don't have an account? <Link to="/register-user" style={{ color: '#2ecc71' }}>Register here</Link>
+                        <button type="submit" style={{
+                            width: '100%', padding: '16px', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '700', cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(46, 204, 113, 0.3)', transition: 'transform 0.2s'
+                        }}
+                            onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+                            onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+                        >Login as User</button>
+                        <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '15px', color: '#7f8c8d' }}>
+                            Don't have an account? <Link to="/register-user" style={{ color: '#2ecc71', fontWeight: '700', textDecoration: 'none' }}>Register</Link>
                         </div>
                     </form>
                 )}
 
                 {/* Admin Login Form */}
                 {activeTab === 'admin' && (
-                    <form onSubmit={handleAdminLogin} className="login-form active">
-                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Email</label>
+                    <form onSubmit={handleAdminLogin} style={{ animation: 'fadeIn 0.4s' }}>
+                        <div className="form-group" style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#263238', fontSize: '16px', fontWeight: '700' }}>Email Address</label>
                             <input
-                                type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} required
-                                style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }}
+                                type="email" value={adminEmail} onChange={(e) => setAdminEmail(e.target.value)} required placeholder="admin@renthub.com"
+                                style={{
+                                    width: '100%', padding: '14px', border: '1px solid #cfd8dc', borderRadius: '10px', fontSize: '16px', fontWeight: '500', outline: 'none'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = primaryColor}
+                                onBlur={(e) => e.target.style.borderColor = '#cfd8dc'}
                             />
                         </div>
-                        <div className="form-group password-group" style={{ marginBottom: '1.5rem', position: 'relative' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Password</label>
+                        <div className="form-group" style={{ marginBottom: '20px' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#263238', fontSize: '16px', fontWeight: '700' }}>Admin ID</label>
                             <input
-                                type={showAdminPassword ? "text" : "password"}
-                                value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} required
-                                style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }}
-                            />
-                            <i
-                                className={`fas ${showAdminPassword ? 'fa-eye-slash' : 'fa-eye'}`}
-                                onClick={() => setShowAdminPassword(!showAdminPassword)}
-                                style={{ position: 'absolute', right: '1rem', top: '2.2rem', cursor: 'pointer', color: '#666' }}
-                            ></i>
-                        </div>
-                        <div style={{ textAlign: 'right', marginBottom: '1rem', marginTop: '-0.5rem' }}>
-                            <Link to="/forgot-password" style={{ color: '#666', fontSize: '0.9rem', textDecoration: 'none' }}>Forgot Password?</Link>
-                        </div>
-                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', color: '#333' }}>Admin ID</label>
-                            <input
-                                type="text" value={adminId} onChange={(e) => setAdminId(e.target.value)} required
-                                style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }}
+                                type="text" value={adminId} onChange={(e) => setAdminId(e.target.value)} required placeholder="Employee ID"
+                                style={{
+                                    width: '100%', padding: '14px', border: '1px solid #cfd8dc', borderRadius: '10px', fontSize: '16px', fontWeight: '500', outline: 'none'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = primaryColor}
+                                onBlur={(e) => e.target.style.borderColor = '#cfd8dc'}
                             />
                         </div>
-                        <button type="submit" className="login-btn" style={{
-                            width: '100%', padding: '1rem', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1rem', cursor: 'pointer'
-                        }}>Login as Admin</button>
-                        <div className="register-link" style={{ textAlign: 'center', marginTop: '1rem' }}>
-                            Need admin access? <Link to="/register-admin" style={{ color: '#2ecc71' }}>Register here</Link>
+                        <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
+                            <label style={{ display: 'block', marginBottom: '8px', color: '#263238', fontSize: '16px', fontWeight: '700' }}>Password</label>
+                            <div style={{ position: 'relative' }}>
+                                <input
+                                    type={showAdminPassword ? "text" : "password"}
+                                    value={adminPassword} onChange={(e) => setAdminPassword(e.target.value)} required placeholder="Enter password"
+                                    style={{
+                                        width: '100%', padding: '14px', border: '1px solid #cfd8dc', borderRadius: '10px', fontSize: '16px', fontWeight: '500', outline: 'none'
+                                    }}
+                                    onFocus={(e) => e.target.style.borderColor = primaryColor}
+                                    onBlur={(e) => e.target.style.borderColor = '#cfd8dc'}
+                                />
+                                <i
+                                    className={`fas ${showAdminPassword ? 'fa-eye-slash' : 'fa-eye'}`}
+                                    onClick={() => setShowAdminPassword(!showAdminPassword)}
+                                    style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#90a4ae', fontSize: '18px' }}
+                                ></i>
+                            </div>
+                        </div>
+                        <div style={{ textAlign: 'right', marginBottom: '24px' }}>
+                            <Link to="/forgot-password" style={{ color: '#78909c', fontSize: '14px', textDecoration: 'none', fontWeight: '500' }}>Forgot Password?</Link>
+                        </div>
+                        <button type="submit" style={{
+                            width: '100%', padding: '16px', background: '#0097a7', color: 'white', border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '700', cursor: 'pointer',
+                            boxShadow: '0 4px 12px rgba(0, 151, 167, 0.3)', transition: 'transform 0.2s'
+                        }}
+                            onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
+                            onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+                        >Login as Admin</button>
+                        <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '15px', color: '#78909c' }}>
+                            Need admin access? <Link to="/register-admin" style={{ color: '#0097a7', fontWeight: '700', textDecoration: 'none' }}>Register</Link>
                         </div>
                     </form>
                 )}
@@ -239,6 +288,9 @@ const Login = () => {
                 title={popup.title}
                 message={popup.message}
             />
+            <style>{`
+                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+            `}</style>
         </div>
     );
 };
