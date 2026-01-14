@@ -186,30 +186,67 @@ const Navbar = () => {
             {/* Register Modal */}
             {showRegisterModal && (
                 <div style={{
-                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(5px)',
+                    position: 'fixed', top: 0, left: 0, width: '100%', height: '100%', background: 'rgba(20, 30, 40, 0.7)', backdropFilter: 'blur(8px)',
                     zIndex: 2000, display: 'flex', justifyContent: 'center', alignItems: 'center', animation: 'fadeIn 0.2s'
                 }} onClick={() => setShowRegisterModal(false)}>
                     <div style={{
-                        background: 'white', padding: '40px', borderRadius: '24px', width: '90%', maxWidth: '380px', textAlign: 'center', position: 'relative',
-                        boxShadow: '0 20px 60px rgba(0,0,0,0.2)', transform: 'translateY(0)', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
+                        background: 'white', padding: '40px', borderRadius: '30px', width: '90%', maxWidth: '400px', textAlign: 'center', position: 'relative',
+                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', transform: 'translateY(0)', animation: 'slideUp 0.3s cubic-bezier(0.16, 1, 0.3, 1)'
                     }} onClick={e => e.stopPropagation()}>
                         <button onClick={() => setShowRegisterModal(false)} style={{
-                            position: 'absolute', top: '16px', right: '16px', background: '#f5f5f5', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontSize: '20px', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'background 0.2s'
-                        }} onMouseOver={e => e.target.style.background = '#e0e0e0'} onMouseOut={e => e.target.style.background = '#f5f5f5'}>&times;</button>
+                            position: 'absolute', top: '20px', right: '20px', background: '#f1f2f6', border: 'none', width: '36px', height: '36px', borderRadius: '50%', cursor: 'pointer', fontSize: '20px', color: '#666', display: 'flex', alignItems: 'center', justifyContent: 'center', transition: 'all 0.2s'
+                        }} onMouseOver={e => { e.target.style.background = '#e1e2e6'; e.target.style.transform = 'rotate(90deg)'; }} onMouseOut={e => { e.target.style.background = '#f1f2f6'; e.target.style.transform = 'rotate(0deg)'; }}>&times;</button>
 
-                        <h2 style={{ margin: '0 0 10px 0', fontSize: '28px', color: '#2c3e50', fontWeight: '800' }}>Join RentHub</h2>
-                        <p style={{ margin: '0 0 30px 0', color: '#7f8c8d', fontSize: '16px' }}>Choose your account type to continue</p>
+                        <h2 style={{
+                            margin: '0 0 10px 0', fontSize: '32px', fontWeight: '900',
+                            background: 'linear-gradient(135deg, #2ecc71 0%, #0097a7 100%)',
+                            WebkitBackgroundClip: 'text',
+                            WebkitTextFillColor: 'transparent',
+                            letterSpacing: '-0.5px'
+                        }}>Join RentHub</h2>
+                        <p style={{ margin: '0 0 35px 0', color: '#95a5a6', fontSize: '16px', fontWeight: '500' }}>Choose your account type to continue</p>
 
-                        <div style={{ display: 'flex', flexDirection: 'column', gap: '16px' }}>
-                            <button onClick={() => { setShowRegisterModal(false); navigate('/register-user'); }} style={modalBtnStyle('#2ecc71')}>
-                                <span style={{ fontSize: '24px', background: '#e8f5e9', padding: '8px', borderRadius: '8px' }}>👤</span>
-                                <span style={{ flex: 1, textAlign: 'left' }}>Create User Account</span>
-                                <span style={{ opacity: 0.5 }}>→</span>
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '20px' }}>
+                            {/* User Button */}
+                            <button onClick={() => { setShowRegisterModal(false); navigate('/register-user'); }} style={{
+                                width: '100%', padding: '15px 20px', border: 'none', borderRadius: '20px', cursor: 'pointer',
+                                background: 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)',
+                                color: 'white', display: 'flex', alignItems: 'center', gap: '15px', position: 'relative', overflow: 'hidden',
+                                boxShadow: '0 10px 25px rgba(46, 204, 113, 0.3)', transition: 'transform 0.2s, box-shadow 0.2s'
+                            }}
+                                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 15px 30px rgba(46, 204, 113, 0.4)'; }}
+                                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(46, 204, 113, 0.3)'; }}
+                            >
+                                <div style={{
+                                    width: '45px', height: '45px', background: 'rgba(255,255,255,0.2)', borderRadius: '14px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px'
+                                }}>👤</div>
+                                <div style={{ textAlign: 'left', flex: 1 }}>
+                                    <div style={{ fontSize: '18px', fontWeight: '800' }}>User Account</div>
+                                    <div style={{ fontSize: '13px', opacity: 0.9, fontWeight: '500' }}>For renting vehicles</div>
+                                </div>
+                                <div style={{ fontSize: '20px', opacity: 0.8 }}>→</div>
                             </button>
-                            <button onClick={() => { setShowRegisterModal(false); navigate('/register-admin'); }} style={modalBtnStyle('#0097a7')}>
-                                <span style={{ fontSize: '24px', background: '#e0f2f1', padding: '8px', borderRadius: '8px' }}>🛡️</span>
-                                <span style={{ flex: 1, textAlign: 'left' }}>Create Admin Account</span>
-                                <span style={{ opacity: 0.5 }}>→</span>
+
+                            {/* Admin Button */}
+                            <button onClick={() => { setShowRegisterModal(false); navigate('/register-admin'); }} style={{
+                                width: '100%', padding: '15px 20px', border: 'none', borderRadius: '20px', cursor: 'pointer',
+                                background: 'linear-gradient(135deg, #00BCD4 0%, #0097A7 100%)',
+                                color: 'white', display: 'flex', alignItems: 'center', gap: '15px', position: 'relative', overflow: 'hidden',
+                                boxShadow: '0 10px 25px rgba(0, 188, 212, 0.3)', transition: 'transform 0.2s, box-shadow 0.2s'
+                            }}
+                                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 15px 30px rgba(0, 188, 212, 0.4)'; }}
+                                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(0, 188, 212, 0.3)'; }}
+                            >
+                                <div style={{
+                                    width: '45px', height: '45px', background: 'rgba(255,255,255,0.2)', borderRadius: '14px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px'
+                                }}>🛡️</div>
+                                <div style={{ textAlign: 'left', flex: 1 }}>
+                                    <div style={{ fontSize: '18px', fontWeight: '800' }}>Admin Account</div>
+                                    <div style={{ fontSize: '13px', opacity: 0.9, fontWeight: '500' }}>For managing inventory</div>
+                                </div>
+                                <div style={{ fontSize: '20px', opacity: 0.8 }}>→</div>
                             </button>
                         </div>
                     </div>
@@ -237,7 +274,7 @@ const Navbar = () => {
                     .mobile-only { display: none !important; }
                 }
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-                @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+                @keyframes slideUp { from { transform: translateY(30px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
             `}</style>
         </>
     );
@@ -259,22 +296,5 @@ const mobileLinkStyle = {
     fontSize: '20px',
     padding: '10px 0'
 };
-
-const modalBtnStyle = (color) => ({
-    width: '100%',
-    padding: '16px 20px',
-    background: 'white',
-    border: `2px solid ${color}20`,
-    color: '#2c3e50',
-    borderRadius: '16px',
-    fontSize: '16px',
-    fontWeight: '700',
-    cursor: 'pointer',
-    display: 'flex',
-    alignItems: 'center',
-    gap: '16px',
-    transition: 'all 0.2s',
-    boxShadow: '0 4px 10px rgba(0,0,0,0.03)'
-});
 
 export default Navbar;
