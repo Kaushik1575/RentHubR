@@ -1,6 +1,7 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
+import OTPInput from '../components/OTPInput';
 
 const RegisterAdmin = () => {
     const navigate = useNavigate();
@@ -106,90 +107,162 @@ const RegisterAdmin = () => {
     };
 
     return (
-        <div className="auth-page gradient-reg" style={{
-            background: '#e0f7fa',
+        <div className="auth-page" style={{
+            background: 'linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%)',
             minHeight: '100vh',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
+            padding: '20px',
             fontFamily: "'Segoe UI', sans-serif"
         }}>
-            <div className="register-container" style={{
-                maxWidth: '400px',
-                margin: '60px auto',
-                background: '#fff',
-                borderRadius: '12px',
-                boxShadow: '0 4px 24px rgba(0,0,0,0.10)',
-                padding: '32px 28px 24px 28px',
-                width: '90%'
+            <div className="auth-container" style={{
+                maxWidth: '850px',
+                width: '100%',
+                backgroundColor: '#ffffff',
+                borderRadius: '16px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                padding: '40px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+                textAlign: 'left'
             }}>
-                <h2 style={{ textAlign: 'center', marginBottom: '24px', color: '#00796b' }}>Register as Admin</h2>
-                <form onSubmit={handleSubmit}>
-                    <div className="form-group" style={{ marginBottom: '18px' }}>
-                        <label htmlFor="adminName" style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Admin Name</label>
-                        <input type="text" id="adminName" value={formData.adminName} onChange={handleChange} placeholder="Admin Name" required style={{ width: '100%', padding: '10px 12px', border: '1px solid #b2dfdb', borderRadius: '6px', fontSize: '1rem' }} />
+                <div className="auth-header" style={{ textAlign: 'center', marginBottom: '10px' }}>
+                    <h2 style={{ fontSize: '28px', color: '#00695c', fontWeight: 'bold', margin: '0 0 8px 0' }}>Register as Admin</h2>
+                    <p style={{ color: '#546e7a', margin: 0 }}>Create a new administrative account</p>
+                </div>
+
+                <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
+
+                    {/* Admin Name & ID */}
+                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                        <label htmlFor="adminName" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#263238', fontSize: '16px' }}>Admin Name</label>
+                        <input type="text" id="adminName" value={formData.adminName} onChange={handleChange} placeholder="Full Name" required
+                            style={{
+                                width: '100%', padding: '12px', border: '1px solid #cfd8dc', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none', transition: 'border-color 0.2s'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = '#00897b'}
+                            onBlur={(e) => e.target.style.borderColor = '#cfd8dc'}
+                        />
+                    </div>
+                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                        <label htmlFor="adminId" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#263238', fontSize: '16px' }}>Admin ID</label>
+                        <input type="text" id="adminId" value={formData.adminId} onChange={handleChange} placeholder="Employee ID" required
+                            style={{
+                                width: '100%', padding: '12px', border: '1px solid #cfd8dc', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = '#00897b'}
+                            onBlur={(e) => e.target.style.borderColor = '#cfd8dc'}
+                        />
                     </div>
 
-                    <div className="form-group" style={{ marginBottom: '18px' }}>
-                        <label htmlFor="adminId" style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Admin ID</label>
-                        <input type="text" id="adminId" value={formData.adminId} onChange={handleChange} placeholder="Admin ID" required style={{ width: '100%', padding: '10px 12px', border: '1px solid #b2dfdb', borderRadius: '6px', fontSize: '1rem' }} />
-                    </div>
-
-                    <div className="form-group" style={{ marginBottom: '18px', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                        <div style={{ flex: 1 }}>
-                            <label htmlFor="email" style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Email Address</label>
-                            <input type="email" id="email" value={formData.email} onChange={handleChange} placeholder="Email Address" required style={{ width: '100%', padding: '10px 12px', border: '1px solid #b2dfdb', borderRadius: '6px', fontSize: '1rem' }} />
-                        </div>
-                        <div>
-                            <button type="button" onClick={handleSendOtp} disabled={isSendingOtp} className="btn btn-verify" style={{ marginTop: '22px', padding: '0.6rem 0.9rem', background: '#0097a7', color: '#fff', border: 'none', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                {isSendingOtp ? 'Sending...' : 'Verify Email'}
+                    {/* Email Group */}
+                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                        <label htmlFor="email" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#263238', fontSize: '16px' }}>Email Address</label>
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <input type="email" id="email" value={formData.email} onChange={handleChange} placeholder="admin@renthub.com" required
+                                style={{ flex: 1, padding: '12px', border: '1px solid #cfd8dc', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none' }}
+                                onFocus={(e) => e.target.style.borderColor = '#00897b'}
+                                onBlur={(e) => e.target.style.borderColor = '#cfd8dc'}
+                            />
+                            <button type="button" onClick={handleSendOtp} disabled={isSendingOtp} className="btn-verify"
+                                style={{
+                                    padding: '0 20px', background: '#00897b', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600',
+                                    whiteSpace: 'nowrap', opacity: isSendingOtp ? 0.7 : 1, transition: 'background 0.3s'
+                                }}>
+                                {isSendingOtp ? 'Sending...' : 'Send OTP'}
                             </button>
                         </div>
+                        {showOtpInput && (
+                            <div style={{ marginTop: '12px', animation: 'fadeIn 0.3s' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', fontSize: '13px', color: '#546e7a' }}>Enter OTP:</label>
+                                <OTPInput
+                                    length={6}
+                                    value={formData.otp}
+                                    onChange={(val) => setFormData(prev => ({ ...prev, otp: val }))}
+                                />
+                                <small style={{ display: 'block', color: '#78909c', fontSize: '12px', marginTop: '6px' }}>Valid for 10 minutes</small>
+                            </div>
+                        )}
                     </div>
 
-                    {showOtpInput && (
-                        <div className="form-group" style={{ marginBottom: '18px' }}>
-                            <label htmlFor="otp" style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Enter OTP</label>
-                            <input type="text" id="otp" value={formData.otp} onChange={handleChange} placeholder="6-digit OTP" maxLength="6" style={{ width: '100%', padding: '10px 12px', border: '1px solid #b2dfdb', borderRadius: '6px', fontSize: '1rem' }} />
-                            <small style={{ display: 'block', color: '#555', marginTop: '6px' }}>An OTP will expire in 10 minutes.</small>
-                        </div>
-                    )}
+                    {/* Security Code */}
+                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                        <label htmlFor="securityCode" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#263238', fontSize: '16px' }}>Security Access Code</label>
+                        <input type="text" id="securityCode" value={formData.securityCode} onChange={handleChange} placeholder="Enter Admin Security Code" required
+                            style={{
+                                width: '100%', padding: '12px', border: '1px solid #cfd8dc', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = '#00897b'}
+                            onBlur={(e) => e.target.style.borderColor = '#cfd8dc'}
+                        />
+                    </div>
 
-                    <div className="form-group" style={{ marginBottom: '18px' }}>
-                        <label htmlFor="password" style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Password</label>
+                    {/* Passwords */}
+                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                        <label htmlFor="password" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#263238', fontSize: '16px' }}>Password</label>
                         <div style={{ position: 'relative' }}>
-                            <input type={showPassword ? 'text' : 'password'} id="password" value={formData.password} onChange={handleChange} placeholder="Password" required style={{ width: '100%', padding: '10px 12px', border: '1px solid #b2dfdb', borderRadius: '6px', fontSize: '1rem' }} />
-                            <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '10px', top: '12px', cursor: 'pointer', color: '#666' }}></i>
-                        </div>
-                        <div style={{ marginTop: '8px', fontSize: '0.9rem', color: '#555' }}>
-                            <strong>Password must include:</strong>
-                            <ul style={{ margin: '6px 0 0 18px' }}>
-                                <li style={{ color: passwordChecks.length ? '#2ecc71' : '#d32f2f' }}>At least 8 characters</li>
-                                <li style={{ color: passwordChecks.upper ? '#2ecc71' : '#d32f2f' }}>At least one uppercase letter (A-Z)</li>
-                                <li style={{ color: passwordChecks.lower ? '#2ecc71' : '#d32f2f' }}>At least one lowercase letter (a-z)</li>
-                                <li style={{ color: passwordChecks.digit ? '#2ecc71' : '#d32f2f' }}>At least one digit (0-9)</li>
-                                <li style={{ color: passwordChecks.special ? '#2ecc71' : '#d32f2f' }}>At least one special character</li>
-                            </ul>
+                            <input type={showPassword ? 'text' : 'password'} id="password" value={formData.password} onChange={handleChange} placeholder="Create Password" required
+                                style={{ width: '100%', padding: '12px', border: '1px solid #cfd8dc', borderRadius: '8px', fontSize: '14px', outline: 'none' }}
+                                onFocus={(e) => e.target.style.borderColor = '#00897b'}
+                                onBlur={(e) => e.target.style.borderColor = '#cfd8dc'}
+                            />
+                            <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowPassword(!showPassword)}
+                                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#90a4ae' }}></i>
                         </div>
                     </div>
 
-                    <div className="form-group" style={{ marginBottom: '18px' }}>
-                        <label htmlFor="confirmPassword" style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Confirm Password</label>
+                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                        <label htmlFor="confirmPassword" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#263238', fontSize: '16px' }}>Confirm Password</label>
                         <div style={{ position: 'relative' }}>
-                            <input type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm Password" required style={{ width: '100%', padding: '10px 12px', border: '1px solid #b2dfdb', borderRadius: '6px', fontSize: '1rem' }} />
-                            <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '10px', top: '12px', cursor: 'pointer', color: '#666' }}></i>
+                            <input type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm Password" required
+                                style={{ width: '100%', padding: '12px', border: '1px solid #cfd8dc', borderRadius: '8px', fontSize: '14px', outline: 'none' }}
+                                onFocus={(e) => e.target.style.borderColor = '#00897b'}
+                                onBlur={(e) => e.target.style.borderColor = '#cfd8dc'}
+                            />
+                            <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#90a4ae' }}></i>
                         </div>
                     </div>
 
-                    <div className="form-group" style={{ marginBottom: '18px' }}>
-                        <label htmlFor="securityCode" style={{ display: 'block', marginBottom: '6px', fontWeight: '500' }}>Security Code</label>
-                        <input type="text" id="securityCode" value={formData.securityCode} onChange={handleChange} placeholder="Security Code" required style={{ width: '100%', padding: '10px 12px', border: '1px solid #b2dfdb', borderRadius: '6px', fontSize: '1rem' }} />
+                    {/* Password Rules - Compact Horizontal */}
+                    <div style={{ gridColumn: '1 / -1', background: '#f0f2f5', padding: '12px', borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: '#607d8b' }}>
+                        <span style={{ color: passwordChecks.length ? '#00897b' : 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {passwordChecks.length ? '✓' : '○'} 8+ Chars
+                        </span>
+                        <span style={{ color: passwordChecks.upper ? '#00897b' : 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {passwordChecks.upper ? '✓' : '○'} Uppercase
+                        </span>
+                        <span style={{ color: passwordChecks.lower ? '#00897b' : 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {passwordChecks.lower ? '✓' : '○'} Lowercase
+                        </span>
+                        <span style={{ color: passwordChecks.digit ? '#00897b' : 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {passwordChecks.digit ? '✓' : '○'} Number
+                        </span>
+                        <span style={{ color: passwordChecks.special ? '#00897b' : 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {passwordChecks.special ? '✓' : '○'} Symbol
+                        </span>
                     </div>
 
-                    <button type="submit" className="btn-primary" style={{ width: '100%', background: '#0097a7', color: '#fff', border: 'none', padding: '12px', borderRadius: '6px', fontSize: '1.1rem', fontWeight: '600', cursor: 'pointer', marginTop: '10px' }}>Register</button>
+                    {/* Submit */}
+                    <button type="submit" className="btn-primary"
+                        style={{
+                            gridColumn: '1 / -1', width: '100%', padding: '14px', background: '#00796b', color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600', cursor: 'pointer', marginTop: '10px',
+                            boxShadow: '0 4px 12px rgba(0, 121, 107, 0.25)', transition: 'transform 0.2s'
+                        }}
+                        onMouseOver={(e) => e.target.style.transform = 'translateY(-1px)'}
+                        onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
+                    >
+                        Register as Admin
+                    </button>
                 </form>
-                <p style={{ textAlign: 'center', marginTop: '15px' }}>Already have an account? <Link to="/login" style={{ color: '#00796b', textDecoration: 'none', fontWeight: '600' }}>Login</Link></p>
-                <p style={{ textAlign: 'center', marginTop: '10px' }}>Register as <Link to="/register-user" style={{ color: '#00796b', textDecoration: 'none', fontWeight: '600' }}>User</Link></p>
+
+                <div style={{ textAlign: 'center', fontSize: '14px', color: '#546e7a', marginTop: '10px' }}>
+                    Already have an account? <Link to="/login" style={{ color: '#00897b', fontWeight: '600', textDecoration: 'none', marginLeft: '4px' }}>Login</Link>
+                    <span style={{ margin: '0 8px' }}>|</span>
+                    <Link to="/register-user" style={{ color: '#455a64', textDecoration: 'none' }}>Register as User</Link>
+                </div>
             </div>
 
             <StatusPopup
@@ -204,6 +277,14 @@ const RegisterAdmin = () => {
                 title={popup.title}
                 message={popup.message}
             />
+            <style>{`
+                @media (max-width: 768px) {
+                    .auth-container { padding: 24px !important; }
+                    form { grid-template-columns: 1fr !important; gap: 16px !important; }
+                    .form-group { grid-column: span 1 !important; }
+                }
+                 @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
+            `}</style>
         </div >
     );
 };

@@ -170,127 +170,167 @@ const RegisterUser = () => {
     };
 
     return (
-        <div className="auth-page gradient-reg" style={{
-            background: 'linear-gradient(180deg, #A18CD1 0%, #FBC2EB 100%)',
+        <div className="auth-page" style={{
+            background: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
             minHeight: '100vh',
             display: 'flex',
             alignItems: 'center',
-            justifyContent: 'center'
+            justifyContent: 'center',
+            padding: '20px',
+            fontFamily: "'Inter', sans-serif"
         }}>
             <div className="auth-container" style={{
-                maxWidth: '500px',
-                width: '90%',
-                margin: '2rem auto',
-                padding: '2.5rem',
-                backgroundColor: '#fff',
-                borderRadius: '15px',
-                boxShadow: '0 10px 30px rgba(0,0,0,0.1)'
+                maxWidth: '850px',
+                width: '100%',
+                backgroundColor: '#ffffff',
+                borderRadius: '16px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
+                padding: '40px',
+                display: 'flex',
+                flexDirection: 'column',
+                gap: '20px',
+                textAlign: 'left'
             }}>
-                <div className="auth-form">
-                    <h2 style={{ textAlign: 'center', marginBottom: '2rem', color: '#333' }}>Register as User</h2>
-                    <form onSubmit={handleSubmit}>
-                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                            <label htmlFor="fullName" style={{ display: 'block', marginBottom: '0.5rem' }}>Full Name</label>
-                            <input type="text" id="fullName" value={formData.fullName} onChange={handleChange} placeholder="Full Name" required style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }} />
-                        </div>
+                <div className="auth-header" style={{ textAlign: 'center', marginBottom: '10px' }}>
+                    <h2 style={{ fontSize: '28px', color: '#2c3e50', fontWeight: 'bold', margin: '0 0 8px 0' }}>Create Account</h2>
+                    <p style={{ color: '#7f8c8d', margin: 0 }}>Join RentHub today</p>
+                </div>
 
-                        <div className="form-group" style={{ marginBottom: '1.5rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <div style={{ flex: 1 }}>
-                                <label htmlFor="email" style={{ display: 'block', marginBottom: '0.5rem' }}>Email Address</label>
-                                <input type="email" id="email" value={formData.email} onChange={handleChange} placeholder="Email Address" required style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }} />
-                            </div>
-                            <div>
-                                <button type="button" onClick={handleSendOtp} disabled={isSendingOtp} className="btn btn-verify" style={{ marginTop: '22px', padding: '0.6rem 0.9rem', background: '#2ecc71', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                                    {isSendingOtp ? 'Sending...' : 'Send OTP'}
-                                </button>
-                            </div>
-                        </div>
+                <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
 
+                    {/* Full Name: Full Width */}
+                    <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                        <label htmlFor="fullName" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#2c3e50', fontSize: '16px' }}>Full Name</label>
+                        <input type="text" id="fullName" value={formData.fullName} onChange={handleChange} placeholder="Enter your full name" required
+                            style={{
+                                width: '100%', padding: '12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none', transition: 'border-color 0.2s'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = '#2ecc71'}
+                            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                        />
+                    </div>
+
+                    {/* Email Group */}
+                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                        <label htmlFor="email" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#2c3e50', fontSize: '16px' }}>Email Address</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <input type="email" id="email" value={formData.email} onChange={handleChange} placeholder="name@example.com" required
+                                style={{ flex: 1, padding: '12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none' }}
+                            />
+                            <button type="button" onClick={handleSendOtp} disabled={isSendingOtp} className="btn-verify"
+                                style={{
+                                    padding: '0 16px', background: '#2ecc71', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500',
+                                    opacity: isSendingOtp ? 0.7 : 1, whiteSpace: 'nowrap'
+                                }}>
+                                {isSendingOtp ? '...' : 'Send'}
+                            </button>
+                        </div>
                         {showOtpInput && (
-                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '1rem', textAlign: 'center', fontWeight: '600' }}>Enter Email OTP</label>
+                            <div style={{ marginTop: '12px' }}>
                                 {emailVerified ? (
-                                    <div style={{ textAlign: 'center', color: '#2ecc71', fontWeight: 'bold', padding: '10px', border: '1px solid #2ecc71', borderRadius: '8px', background: '#eafaf1' }}>
-                                        ✅ Email Verified Successfully!
-                                    </div>
+                                    <div style={{ color: '#27ae60', fontSize: '13px', fontWeight: '500' }}>✓ Email Verified</div>
                                 ) : (
-                                    <>
-                                        <OTPInput
-                                            length={6}
-                                            value={formData.otp}
-                                            onChange={(val) => setFormData(prev => ({ ...prev, otp: val }))}
-                                            onComplete={(val) => verifyOtp('email', val)}
-                                        />
-                                        <small style={{ display: 'block', color: '#555', marginTop: '10px', textAlign: 'center' }}>OTP will expire in 10 minutes.</small>
-                                    </>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        <OTPInput length={6} value={formData.otp} onChange={(val) => setFormData(prev => ({ ...prev, otp: val }))} onComplete={(val) => verifyOtp('email', val)} />
+                                        <small style={{ color: '#95a5a6', fontSize: '11px' }}>Check your email inbox</small>
+                                    </div>
                                 )}
                             </div>
                         )}
+                    </div>
 
-                        <div className="form-group" style={{ marginBottom: '1.5rem', display: 'flex', gap: '8px', alignItems: 'center' }}>
-                            <div style={{ flex: 1 }}>
-                                <label htmlFor="phoneNumber" style={{ display: 'block', marginBottom: '0.5rem' }}>Phone Number</label>
-                                <input type="tel" id="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="9876543210 or +919876543210" required style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }} />
-                                <small style={{ display: 'block', color: '#888', marginTop: '4px', fontSize: '0.85rem' }}>Enter 10-digit mobile number</small>
-                            </div>
-                            <div>
-                                <button type="button" onClick={handleSendMobileOtp} disabled={isSendingMobileOtp} className="btn btn-verify" style={{ marginTop: '22px', padding: '0.6rem 0.9rem', background: '#2ecc71', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer' }}>
-                                    {isSendingMobileOtp ? 'Sending...' : 'Send OTP'}
-                                </button>
-                            </div>
+                    {/* Phone Group */}
+                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                        <label htmlFor="phoneNumber" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#2c3e50', fontSize: '16px' }}>Phone Number</label>
+                        <div style={{ display: 'flex', gap: '8px' }}>
+                            <input type="tel" id="phoneNumber" value={formData.phoneNumber} onChange={handleChange} placeholder="Mobile Number" required
+                                style={{ flex: 1, padding: '12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none' }}
+                            />
+                            <button type="button" onClick={handleSendMobileOtp} disabled={isSendingMobileOtp} className="btn-verify"
+                                style={{
+                                    padding: '0 16px', background: '#2ecc71', color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '500',
+                                    opacity: isSendingMobileOtp ? 0.7 : 1, whiteSpace: 'nowrap'
+                                }}>
+                                {isSendingMobileOtp ? '...' : 'Send'}
+                            </button>
                         </div>
-
                         {showMobileOtpInput && (
-                            <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                                <label style={{ display: 'block', marginBottom: '1rem', textAlign: 'center', fontWeight: '600' }}>Enter Mobile OTP</label>
+                            <div style={{ marginTop: '12px' }}>
                                 {mobileVerified ? (
-                                    <div style={{ textAlign: 'center', color: '#2ecc71', fontWeight: 'bold', padding: '10px', border: '1px solid #2ecc71', borderRadius: '8px', background: '#eafaf1' }}>
-                                        ✅ Mobile Number Verified Successfully!
-                                    </div>
+                                    <div style={{ color: '#27ae60', fontSize: '13px', fontWeight: '500' }}>✓ Mobile Verified</div>
                                 ) : (
-                                    <>
-                                        <OTPInput
-                                            length={6}
-                                            value={formData.mobileOtp}
-                                            onChange={(val) => setFormData(prev => ({ ...prev, mobileOtp: val }))}
-                                            onComplete={(val) => verifyOtp('mobile', val)}
-                                        />
-                                        <small style={{ display: 'block', color: '#555', marginTop: '10px', textAlign: 'center' }}>OTP will expire in 5 minutes.</small>
-                                    </>
+                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                        <OTPInput length={6} value={formData.mobileOtp} onChange={(val) => setFormData(prev => ({ ...prev, mobileOtp: val }))} onComplete={(val) => verifyOtp('mobile', val)} />
+                                        <small style={{ color: '#95a5a6', fontSize: '11px' }}>Check your mobile for OTP</small>
+                                    </div>
                                 )}
                             </div>
                         )}
+                    </div>
 
-                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                            <label htmlFor="password" style={{ display: 'block', marginBottom: '0.5rem' }}>Password</label>
-                            <div style={{ position: 'relative' }}>
-                                <input type={showPassword ? 'text' : 'password'} id="password" value={formData.password} onChange={handleChange} placeholder="Password" required style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }} />
-                                <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowPassword(!showPassword)} style={{ position: 'absolute', right: '10px', top: '12px', cursor: 'pointer', color: '#666' }}></i>
-                            </div>
-                            <div style={{ marginTop: '8px', fontSize: '0.9rem', color: '#555' }}>
-                                <strong>Password must include:</strong>
-                                <ul style={{ margin: '6px 0 0 18px' }}>
-                                    <li style={{ color: passwordChecks.length ? '#2ecc71' : '#d32f2f' }}>At least 8 characters</li>
-                                    <li style={{ color: passwordChecks.upper ? '#2ecc71' : '#d32f2f' }}>At least one uppercase letter (A-Z)</li>
-                                    <li style={{ color: passwordChecks.lower ? '#2ecc71' : '#d32f2f' }}>At least one lowercase letter (a-z)</li>
-                                    <li style={{ color: passwordChecks.digit ? '#2ecc71' : '#d32f2f' }}>At least one digit (0-9)</li>
-                                    <li style={{ color: passwordChecks.special ? '#2ecc71' : '#d32f2f' }}>At least one special character</li>
-                                </ul>
-                            </div>
+                    {/* Passwords */}
+                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                        <label htmlFor="password" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#2c3e50', fontSize: '16px' }}>Password</label>
+                        <div style={{ position: 'relative' }}>
+                            <input type={showPassword ? 'text' : 'password'} id="password" value={formData.password} onChange={handleChange} placeholder="Password" required
+                                style={{ width: '100%', padding: '12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none' }}
+                            />
+                            <i className={`fas ${showPassword ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowPassword(!showPassword)}
+                                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#bdc3c7' }}></i>
                         </div>
+                    </div>
 
-                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                            <label htmlFor="confirmPassword" style={{ display: 'block', marginBottom: '0.5rem' }}>Confirm Password</label>
-                            <div style={{ position: 'relative' }}>
-                                <input type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm Password" required style={{ width: '100%', padding: '0.8rem', border: '1px solid #ddd', borderRadius: '5px' }} />
-                                <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowConfirmPassword(!showConfirmPassword)} style={{ position: 'absolute', right: '10px', top: '12px', cursor: 'pointer', color: '#666' }}></i>
-                            </div>
+                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                        <label htmlFor="confirmPassword" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#2c3e50', fontSize: '16px' }}>Confirm Password</label>
+                        <div style={{ position: 'relative' }}>
+                            <input type={showConfirmPassword ? 'text' : 'password'} id="confirmPassword" value={formData.confirmPassword} onChange={handleChange} placeholder="Confirm Password" required
+                                style={{ width: '100%', padding: '12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none' }}
+                            />
+                            <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#bdc3c7' }}></i>
                         </div>
+                    </div>
 
-                        <button type="submit" className="btn btn-primary" style={{ width: '100%', padding: '1rem', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '5px', fontSize: '1.1rem', cursor: 'pointer' }}>Register</button>
-                    </form>
-                    <p style={{ textAlign: 'center', marginTop: '1.5rem', color: '#6c757d' }}>Already have an account? <Link to="/login" style={{ color: '#2ecc71', fontWeight: 'bold' }}>Login</Link></p>
-                    <p style={{ textAlign: 'center', marginTop: '0.5rem', color: '#6c757d' }}>Register as <Link to="/register-admin" style={{ color: '#2ecc71', fontWeight: 'bold' }}>Admin</Link></p>
+                    {/* Password Rules - Compact Horizontal */}
+                    <div style={{ gridColumn: '1 / -1', background: '#f8f9fa', padding: '12px', borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: '#7f8c8d' }}>
+                        <span style={{ color: passwordChecks.length ? '#27ae60' : 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {passwordChecks.length ? '✓' : '○'} 8+ Chars
+                        </span>
+                        <span style={{ color: passwordChecks.upper ? '#27ae60' : 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {passwordChecks.upper ? '✓' : '○'} Uppercase
+                        </span>
+                        <span style={{ color: passwordChecks.lower ? '#27ae60' : 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {passwordChecks.lower ? '✓' : '○'} Lowercase
+                        </span>
+                        <span style={{ color: passwordChecks.digit ? '#27ae60' : 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {passwordChecks.digit ? '✓' : '○'} Number
+                        </span>
+                        <span style={{ color: passwordChecks.special ? '#27ae60' : 'inherit', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                            {passwordChecks.special ? '✓' : '○'} Symbol
+                        </span>
+                    </div>
+
+                    {/* Submit */}
+                    <button type="submit" className="btn btn-primary"
+                        disabled={!emailVerified || !mobileVerified}
+                        style={{
+                            gridColumn: '1 / -1', width: '100%', padding: '14px',
+                            background: (!emailVerified || !mobileVerified) ? '#95a5a6' : '#2ecc71',
+                            color: 'white', border: 'none', borderRadius: '8px', fontSize: '16px', fontWeight: '600',
+                            cursor: (!emailVerified || !mobileVerified) ? 'not-allowed' : 'pointer',
+                            marginTop: '10px',
+                            boxShadow: (!emailVerified || !mobileVerified) ? 'none' : '0 4px 12px rgba(46, 204, 113, 0.25)',
+                            opacity: (!emailVerified || !mobileVerified) ? 0.7 : 1,
+                            transition: 'all 0.3s'
+                        }}>
+                        Create Account
+                    </button>
+                </form>
+
+                <div style={{ textAlign: 'center', fontSize: '14px', color: '#7f8c8d' }}>
+                    Already have an account? <Link to="/login" style={{ color: '#2ecc71', fontWeight: '600', textDecoration: 'none', marginLeft: '4px' }}>Login</Link>
+                    <span style={{ margin: '0 8px' }}>|</span>
+                    <Link to="/register-admin" style={{ color: '#95a5a6', textDecoration: 'none' }}>Register as Admin</Link>
                 </div>
             </div>
 
@@ -306,6 +346,13 @@ const RegisterUser = () => {
                 title={popup.title}
                 message={popup.message}
             />
+            <style>{`
+                @media (max-width: 768px) {
+                    .auth-container { padding: 24px !important; }
+                    form { grid-template-columns: 1fr !important; gap: 16px !important; }
+                    .form-group { grid-column: span 1 !important; }
+                }
+            `}</style>
         </div >
     );
 };
