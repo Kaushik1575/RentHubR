@@ -737,7 +737,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <p><strong>Duration:</strong> {modal.data.duration} hours</p>
                             <p><strong>Total Amount:</strong> ₹{modal.data.total_amount}</p>
                             <p><strong>Advance Payment:</strong> ₹{modal.data.advance_payment}</p>
-                            <p><strong>Remaining Amount:</strong> ₹{modal.data.remaining_amount || (modal.data.total_amount - modal.data.advance_payment)}</p>
+                            <p><strong>Remaining Amount:</strong> ₹{modal.data.total_amount - modal.data.advance_payment}</p>
 
                             {modal.data.transaction_id && (
                                 <p><strong>Transaction ID:</strong> {modal.data.transaction_id}</p>

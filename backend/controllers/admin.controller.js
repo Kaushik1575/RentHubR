@@ -48,7 +48,8 @@ const getAllBookings = async (req, res) => {
             const vehiclePrice = vehicle ? parseFloat(vehicle.price) || 0 : 0;
             const totalAmount = duration * vehiclePrice;
             const advancePayment = parseFloat(booking.advance_payment) || Math.ceil(totalAmount * 0.3);
-            const remainingAmount = totalAmount - advancePayment;
+            const finalTotalAmount = booking.total_amount ? parseFloat(booking.total_amount) : totalAmount;
+            const remainingAmount = finalTotalAmount - advancePayment;
 
             return {
                 id: booking.id,
@@ -63,7 +64,7 @@ const getAllBookings = async (req, res) => {
                 start_time: booking.start_time || 'N/A',
                 duration: duration,
                 // Use DB total_amount if available (captures dynamic billing), else fallback to calculated
-                total_amount: booking.total_amount ? parseFloat(booking.total_amount) : totalAmount,
+                total_amount: finalTotalAmount,
                 advance_payment: advancePayment,
                 remaining_amount: remainingAmount,
                 status: booking.status || 'pending',
@@ -134,8 +135,9 @@ const getBookingById = async (req, res) => {
 
         const duration = parseInt(booking.duration) || 0;
         const vehiclePrice = vehicle ? parseFloat(vehicle.price) || 0 : 0;
-        const totalAmount = duration * vehiclePrice;
-        const advancePayment = parseFloat(booking.advance_payment) || Math.ceil(totalAmount * 0.3);
+        const calculatedTotal = duration * vehiclePrice;
+        const totalAmount = booking.total_amount ? parseFloat(booking.total_amount) : calculatedTotal;
+        const advancePayment = parseFloat(booking.advance_payment) || Math.ceil(calculatedTotal * 0.3);
         const remainingAmount = totalAmount - advancePayment;
 
         const enrichedBooking = {
