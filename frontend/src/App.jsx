@@ -1,5 +1,5 @@
 import { BrowserRouter as Router, Routes, Route, useLocation, useNavigate } from 'react-router-dom';
-import { useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Toaster, toast } from 'react-hot-toast'; // Import Toaster
 import Navbar from './components/Navbar';
 import Footer from './components/Footer';
@@ -16,6 +16,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import TrackBooking from './pages/TrackBooking';
 import SOSActivate from './pages/SOSActivate';
 import GlobalAuthCheck from './components/GlobalAuthCheck';
+import Chatbot from './components/Chatbot';
 import chatbotImg from './assets/chatbot_styled.png'; // Import Chatbot Image
 
 function Layout() {
@@ -23,6 +24,7 @@ function Layout() {
   const isAdmin = location.pathname === '/admin';
   const isSOS = location.pathname === '/sos-activate';
   const navigate = useNavigate();
+  const [isChatOpen, setIsChatOpen] = useState(false);
 
   useEffect(() => {
     const checkAdminRoute = () => {
@@ -86,27 +88,23 @@ function Layout() {
 
       {/* Chatbot Floating Button - Show on ALL pages EXCEPT SOS */}
       {!isSOS && (
-        <div
-          className="chatbot-floating-btn pulse-blue"
-          style={{
-            bottom: location.pathname === '/contact' ? '110px' : '0px'
-          }}
-          onClick={() => toast('Chatbot Under Development', {
-            icon: '🤖',
-            style: {
-              borderRadius: '10px',
-              background: '#333',
-              color: '#fff',
-            },
-          })}
-          title="Click for AI Chat Support"
-        >
-          {/* Speech Bubble on Hover */}
-          <div className="chatbot-speech-bubble">
-            Get Booking Help
+        <>
+          <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
+          <div
+            className="chatbot-floating-btn pulse-blue"
+            style={{
+              bottom: location.pathname === '/contact' ? '110px' : '0px'
+            }}
+            onClick={() => setIsChatOpen(prev => !prev)}
+            title="Click for AI Chat Support"
+          >
+            {/* Speech Bubble on Hover */}
+            <div className="chatbot-speech-bubble">
+              {isChatOpen ? 'Close Chat' : 'Get Booking Help'}
+            </div>
+            <img src={chatbotImg} alt="AI Chatbot" />
           </div>
-          <img src={chatbotImg} alt="AI Chatbot" />
-        </div>
+        </>
       )}
 
       {!isSOS && <Footer />}
