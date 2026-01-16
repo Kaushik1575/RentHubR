@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactMarkdown from 'react-markdown';
 import './Chatbot.css';
 import chatbotImg from '../assets/chatbot_styled.png';
 
@@ -20,7 +21,7 @@ const Chatbot = ({ isOpen, onClose }) => {
         }
     }, [messages, isOpen]);
 
-    const handleSend = () => {
+    const handleSend = async () => {
         if (!inputValue.trim()) return;
 
         const newUserMessage = {
@@ -30,21 +31,119 @@ const Chatbot = ({ isOpen, onClose }) => {
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
-        setMessages(prev => [...prev, newUserMessage]);
+        // Update messages with user's input immediately
+        const updatedMessages = [...messages, newUserMessage];
+        setMessages(updatedMessages);
         setInputValue("");
         setIsTyping(true);
 
-        // Simulate Bot Response
-        setTimeout(() => {
+        try {
+            const response = await fetch('/api/chatbot/chat', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    message: newUserMessage.text,
+                    history: messages // Pass existing history to context
+                })
+            });
+
+            const data = await response.json();
+
+            if (!response.ok) {
+                if (response.status === 429) {
+                    // Specific meaningful error for rate limiting
+                    const errorResponse = {
+                        id: Date.now() + 1,
+                        text: "I'm receiving too many messages right now. Please give me a minute to catch my breath!",
+                        sender: 'bot',
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    };
+                    setMessages(prev => [...prev, errorResponse]);
+                    throw new Error("Rate limit exceeded");
+                }
+                throw new Error(data.error || 'Failed to get response');
+            }
+
+            let replyText = data.reply;
+            let actionMatch = null;
+            let bookingDetails = null;
+
+            // 1. Check for explicit ACTION format
+            const actionRegex = /\|\|\| ACTION: BOOK_VEHICLE (.*?) \|\|\|/s;
+            const match = replyText.match(actionRegex);
+
+            if (match) {
+                actionMatch = match;
+            }
+
+            // 2. Fallback: Check for JSON code block matching pattern
+            if (!actionMatch) {
+                const jsonRegex = /```json\s*({[\s\S]*?"action":\s*"BOOK_VEHICLE"[\s\S]*?})\s*```/s;
+                const jsonMatch = replyText.match(jsonRegex);
+                if (jsonMatch) {
+                    actionMatch = jsonMatch;
+                }
+            }
+
+            if (actionMatch) {
+                try {
+                    let jsonStr = actionMatch[1];
+                    // Cleanup markdown if present
+                    if (jsonStr.includes("```")) {
+                        jsonStr = jsonStr.replace(/```json/g, "").replace(/```/g, "");
+                    }
+
+                    bookingDetails = JSON.parse(jsonStr);
+
+                    // Remove the action part from the visible reply
+                    if (match) {
+                        replyText = replyText.replace(match[0], "").trim();
+                    } else if (replyText.includes("```json")) {
+                        // Strip JSON block
+                        replyText = replyText.replace(/```json[\s\S]*?```/, "").trim();
+                    }
+
+                    // Trigger Redirect
+                    setTimeout(() => {
+                        setMessages(prev => [...prev, {
+                            id: Date.now() + 2,
+                            text: "Great! I have all the details. Redirecting you to the booking page now...",
+                            sender: 'bot',
+                            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                        }]);
+
+                        setTimeout(() => {
+                            const vId = bookingDetails.vehicleId;
+                            const vType = bookingDetails.type;
+                            window.location.href = `/booking-form?vehicleId=${vId}&type=${vType}&startDate=${bookingDetails.startDate}&startTime=${bookingDetails.startTime}&duration=${bookingDetails.duration}`;
+                        }, 2000);
+                    }, 500);
+
+                } catch (e) {
+                    console.error("Failed to parse booking action", e);
+                }
+            }
+
             const botResponse = {
                 id: Date.now() + 1,
-                text: "Thanks for reaching out! Our team is currently enhancing my AI brain. For urgent queries, please use the Contact page or WhatsApp us!",
+                text: replyText,
                 sender: 'bot',
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
             };
             setMessages(prev => [...prev, botResponse]);
+
+        } catch (error) {
+            console.error('Chatbot API Error:', error);
+            const errorResponse = {
+                id: Date.now() + 1,
+                text: "I'm having a bit of trouble connecting to my brain right now. Please try again in a moment!",
+                sender: 'bot',
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+            };
+            setMessages(prev => [...prev, errorResponse]);
+        } finally {
             setIsTyping(false);
-        }, 1500);
+        }
     };
 
     const handleKeyPress = (e) => {
@@ -82,7 +181,12 @@ const Chatbot = ({ isOpen, onClose }) => {
             <div className="chatbot-body">
                 {messages.map((msg) => (
                     <div key={msg.id} className={`message ${msg.sender}`}>
-                        {msg.text}
+                        {/* Render Markdown for bot messages, plain text for user messages to avoid XSS issues/weird format */}
+                        {msg.sender === 'bot' ? (
+                            <ReactMarkdown>{msg.text}</ReactMarkdown>
+                        ) : (
+                            msg.text
+                        )}
                         <span className="message-time">{msg.time}</span>
                     </div>
                 ))}

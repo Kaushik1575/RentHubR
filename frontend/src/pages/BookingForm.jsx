@@ -43,6 +43,20 @@ const BookingForm = () => {
 
     // Initial Load
     useEffect(() => {
+        // Chatbot Auto-Fill: Parse params from URL set by chatbot
+        const urlStartDate = searchParams.get('startDate');
+        const urlStartTime = searchParams.get('startTime');
+        const urlDuration = searchParams.get('duration');
+
+        if (urlStartDate && urlStartTime && urlDuration) {
+            setFormData(prev => ({
+                ...prev,
+                startDate: urlStartDate,
+                startTime: urlStartTime,
+                duration: parseInt(urlDuration) || 2
+            }));
+        }
+
         if (vehicleId && apiType) {
             fetch(`/api/vehicles/${apiType}/${vehicleId}`)
                 .then(res => {
@@ -61,7 +75,66 @@ const BookingForm = () => {
             setPopup({ isOpen: true, type: 'error', title: 'Invalid Vehicle', message: 'Invalid vehicle selection' });
             setTimeout(() => navigate('/'), 2000);
         }
-    }, [vehicleId, apiType, navigate]);
+    }, [vehicleId, apiType, navigate, searchParams]); // Updated dependencies
+
+    // Auto-Trigger Availability Check if data is present (from Chatbot)
+    useEffect(() => {
+        // Only run if not loading, vehicle loaded, and form data is present from URL
+        if (!loading && vehicle && searchParams.get('startDate') && step === 1) {
+            // Check if user is logged in
+            const token = localStorage.getItem('token');
+            if (!token) {
+                setPopup({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Login Required',
+                    message: 'Please login to complete your booking. Redirecting...'
+                });
+                setTimeout(() => navigate('/login'), 2000);
+            } else {
+                // Determine if we should auto-submit availability check
+                // We use a small timeout to let state settle
+                const timer = setTimeout(() => {
+                    // Manually trigger the equivalent of handleCheckAvailability
+                    // We can't call the function directly easily due to event param, so strict logic here
+                    const check = async () => {
+                        setProcessing(true);
+                        try {
+                            const response = await fetch('/api/bookings/check-availability', {
+                                method: 'POST',
+                                headers: {
+                                    'Content-Type': 'application/json',
+                                    'Authorization': `Bearer ${token}`
+                                },
+                                body: JSON.stringify({
+                                    vehicleId,
+                                    startDate: searchParams.get('startDate'), // Use direct URL param to be safe
+                                    startTime: searchParams.get('startTime'),
+                                    duration: searchParams.get('duration')
+                                })
+                            });
+                            const data = await response.json();
+                            if (response.ok) {
+                                setStep(2); // Auto-advancing to payment
+                            } else {
+                                setPopup({
+                                    isOpen: true,
+                                    type: 'error',
+                                    title: 'Not Available',
+                                    message: data.message || 'Vehicle not available.'
+                                });
+                            }
+                        } finally {
+                            setProcessing(false);
+                        }
+                    };
+                    check();
+                }, 500);
+                return () => clearTimeout(timer);
+            }
+        }
+    }, [loading, vehicle, searchParams, step, navigate, vehicleId]);
+
 
     // Set min date to today
     const today = new Date().toISOString().split('T')[0];
@@ -82,7 +155,7 @@ const BookingForm = () => {
 
     // Step 1: Check Availability
     const handleCheckAvailability = async (e) => {
-        e.preventDefault();
+        if (e) e.preventDefault(); // Handle optional event for manual calls
 
         const token = localStorage.getItem('token');
         if (!token) {

@@ -12,6 +12,7 @@ const vehicleRoutes = require('./routes/vehicle.routes');
 const paymentRoutes = require('./routes/payment.routes');
 const sosRoutes = require('./routes/sos.routes');
 const invoiceRoutes = require('./routes/invoice.routes');
+const chatbotRoutes = require('./routes/chatbot.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -30,6 +31,7 @@ app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api', sosRoutes);
+app.use('/api/chatbot', chatbotRoutes);
 
 // Explicitly register cron route to match original path exactly
 const adminController = require('./controllers/admin.controller');
