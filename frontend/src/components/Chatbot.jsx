@@ -177,6 +177,37 @@ const Chatbot = ({ isOpen, onClose }) => {
                         console.error("Failed to parse cancel action", e);
                     }
                 }
+
+                // Regex for REGISTER
+                const registerRegex = /\|\|\| ACTION: REGISTER_USER (.*?) \|\|\|/s;
+                const registerMatch = replyText.match(registerRegex);
+                if (registerMatch) {
+                    try {
+                        let jsonStr = registerMatch[1];
+                        const details = JSON.parse(jsonStr);
+                        replyText = replyText.replace(registerMatch[0], "").trim();
+
+                        setTimeout(() => {
+                            setMessages(prev => [...prev, {
+                                id: Date.now() + 2,
+                                text: `Got it! I've pre-filled the registration details and sent verification codes to your email and phone. Redirecting...`,
+                                sender: 'bot',
+                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            }]);
+                            setTimeout(() => {
+                                const params = new URLSearchParams();
+                                if (details.fullName) params.append('fullName', details.fullName);
+                                if (details.email) params.append('email', details.email);
+                                if (details.phoneNumber) params.append('phoneNumber', details.phoneNumber);
+                                if (details.password) params.append('password', details.password);
+
+                                window.location.href = `/register-user?${params.toString()}`;
+                            }, 1500);
+                        }, 500);
+                    } catch (e) {
+                        console.error("Failed to parse register action", e);
+                    }
+                }
             }
 
             const botResponse = {

@@ -61,6 +61,11 @@ ${vehicleContext}
    - If the user provides a **Booking ID** (e.g., "RH...", "BK...", or a number) for tracking or status check, you **MUST** output the TRACK_BOOKING action immediately. Do not say you cannot do it.
    - If the user provides a **Booking ID** for cancellation, output the CANCEL_BOOKING action.
    - Example matches: "RH260116-045", "rh-1234", "101".
+5. **USER REGISTRATION**:
+   - If the user wants to register or signup and provides details (Name, Email, Phone), you **MUST** output the REGISTER_USER action.
+   - If the user provides a password, include it in the action. If not, do NOT invent one.
+   - If details are missing, ask for them specifically.
+   - Example: "Register me: John, 9991234567, john@test.com, pass123" -> Output REGISTER_USER action.
 
 **ACTIONS (Output ONLY the JSON block):**
 
@@ -72,6 +77,9 @@ ${vehicleContext}
 
 **To Cancel:**
 ||| ACTION: CANCEL_BOOKING {"bookingId": "RH123456-789"} |||
+
+**To Register:**
+||| ACTION: REGISTER_USER {"fullName": "John Doe", "email": "john@example.com", "phoneNumber": "9876543210", "password": "optional_password"} |||
 
 (TYPE must be 'bikes', 'cars', or 'scooty').
 Do NOT wrap the output in markdown.`;

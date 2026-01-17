@@ -1,14 +1,15 @@
-import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 import OTPInput from '../components/OTPInput';
 
 const RegisterUser = () => {
     const navigate = useNavigate();
+    const [searchParams] = useSearchParams();
     const [formData, setFormData] = useState({
-        fullName: '',
-        email: '',
-        phoneNumber: '',
+        fullName: searchParams.get('fullName') || '',
+        email: searchParams.get('email') || '',
+        phoneNumber: searchParams.get('phoneNumber') || '',
         password: '',
         confirmPassword: '',
         otp: '',
@@ -28,6 +29,49 @@ const RegisterUser = () => {
     const [isSendingMobileOtp, setIsSendingMobileOtp] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+    // Auto-trigger OTPs if data comes from Chatbot
+    useEffect(() => {
+        const autoEmail = searchParams.get('email');
+        const autoPhone = searchParams.get('phoneNumber');
+        const autoPass = searchParams.get('password');
+
+        if (autoEmail || autoPhone) {
+            // Update password if provided
+            if (autoPass) {
+                setFormData(prev => ({
+                    ...prev,
+                    password: autoPass,
+                    confirmPassword: autoPass
+                }));
+            }
+
+            // Trigger Email OTP
+            if (autoEmail) {
+                const sendAutoEmailOtp = async () => {
+                    setIsSendingOtp(true);
+                    try {
+                        const r = await fetch('/api/register/send-otp', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ email: autoEmail })
+                        });
+                        if (r.ok) {
+                            setShowOtpInput(true);
+                            setPopup({
+                                isOpen: true,
+                                type: 'success',
+                                title: 'Email Verification',
+                                message: `OTP sent to ${autoEmail}. Please verify it to proceed to Mobile verification.`
+                            });
+                        }
+                    } catch (e) { console.error(e); }
+                    finally { setIsSendingOtp(false); }
+                };
+                sendAutoEmailOtp();
+            }
+        }
+    }, [searchParams]);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -95,9 +139,19 @@ const RegisterUser = () => {
             });
             const j = await r.json();
             if (r.ok) {
-                if (type === 'email') setEmailVerified(true);
-                else setMobileVerified(true);
-                setFormData(prev => ({ ...prev, [type === 'email' ? 'otp' : 'mobileOtp']: otpValue }));
+                if (type === 'email') {
+                    setEmailVerified(true);
+                    setFormData(prev => ({ ...prev, [type === 'email' ? 'otp' : 'mobileOtp']: otpValue }));
+
+                    // Auto-trigger mobile OTP after email success if phone exists
+                    if (formData.phoneNumber) {
+                        setTimeout(() => handleSendMobileOtp(), 100);
+                    }
+                }
+                else {
+                    setMobileVerified(true);
+                    setFormData(prev => ({ ...prev, [type === 'email' ? 'otp' : 'mobileOtp']: otpValue }));
+                }
             } else {
                 setPopup({ isOpen: true, type: 'error', title: 'Invalid OTP', message: j.error });
             }
