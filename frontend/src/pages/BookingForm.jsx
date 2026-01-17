@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { useSearchParams, useNavigate } from 'react-router-dom';
+import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 
 const BookingForm = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
+    const location = useLocation();
 
     const vehicleId = searchParams.get('vehicleId');
     const vehicleType = searchParams.get('type'); // 'cars', 'bikes', 'scooty'
@@ -90,7 +91,7 @@ const BookingForm = () => {
                     title: 'Login Required',
                     message: 'Please login to complete your booking. Redirecting...'
                 });
-                setTimeout(() => navigate('/login'), 2000);
+                setTimeout(() => navigate('/login', { state: { from: location } }), 2000);
             } else {
                 // Determine if we should auto-submit availability check
                 // We use a small timeout to let state settle
@@ -165,7 +166,7 @@ const BookingForm = () => {
                 title: 'Login Required',
                 message: 'You must be logged in to book a vehicle.'
             });
-            setTimeout(() => navigate('/login'), 2000);
+            setTimeout(() => navigate('/login', { state: { from: location } }), 2000);
             return;
         }
 

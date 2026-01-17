@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 
+
 const Home = () => {
     const [bikes, setBikes] = useState([]);
     const [scooters, setScooters] = useState([]);
@@ -89,6 +90,8 @@ const Home = () => {
 
     return (
         <main>
+
+
             <section className="hero">
                 <div className="hero-content">
                     <h1>Your Adventure Starts Here</h1>

@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 
 const Login = () => {
     const [activeTab, setActiveTab] = useState('user');
     const navigate = useNavigate();
+    const location = useLocation();
+    const from = location.state?.from?.pathname ? (location.state.from.pathname + location.state.from.search) : null;
 
     // User Form State
     const [userEmail, setUserEmail] = useState('');
@@ -276,11 +278,21 @@ const Login = () => {
                     setPopup({ ...popup, isOpen: false });
                     if (popup.type === 'success') {
                         if (activeTab === 'user') {
-                            navigate('/');
-                            window.location.reload();
+                            if (from) {
+                                navigate(from, { replace: true });
+                            } else {
+                                navigate('/');
+                            }
+                            // window.location.reload(); // Removed reload to preserve SPA state if possible, or keep if necessary for auth state update. Ideally context should handle it.
+                            // Keeping reload might be safer for "simple" auth implementations, but validation is key.
+                            // If we reload, navigate might be lost? No, navigate happens then reload. 
+                            // Actually, window.location.reload() cancels the navigation if called immediately. 
+                            // Better to trigger a re-render or event. 
+                            // Assuming the app checks localStorage on mount/route change.
+                            setTimeout(() => window.location.reload(), 100);
                         } else {
                             navigate('/admin');
-                            window.location.reload();
+                            setTimeout(() => window.location.reload(), 100);
                         }
                     }
                 }}

@@ -79,11 +79,19 @@ class SupabaseDB {
     }
 
     static async getBookingById(bookingId) {
-        const { data, error } = await supabase
-            .from('bookings')
-            .select('*')
-            .eq('id', bookingId)
-            .single();
+        let query = supabase.from('bookings').select('*, users:user_id(full_name)');
+
+        // If ID looks like BK-XXX or RHXXX, search by booking_id column
+        // Otherwise assume numeric ID
+        const isStringId = typeof bookingId === 'string' && (bookingId.startsWith('BK-') || bookingId.startsWith('RH'));
+
+        if (isStringId) {
+            query = query.eq('booking_id', bookingId);
+        } else {
+            query = query.eq('id', bookingId);
+        }
+
+        const { data, error } = await query.single();
 
         if (error && error.code !== 'PGRST116') throw error;
         return data;

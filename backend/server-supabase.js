@@ -43,7 +43,7 @@ app.get('/api/dashboard-stats', verifyAdminToken, adminController.getDashboardSt
 
 // Restore bookingConfirmation service routes
 const bookingConfirmationRouter = require('./services/bookingConfirmation');
-app.use(bookingConfirmationRouter);
+app.use('/api', bookingConfirmationRouter);
 
 // Frontend Routes (SPA fallback)
 app.get('/sos-activate', (req, res) => {

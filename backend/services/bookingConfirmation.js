@@ -110,7 +110,23 @@ router.get('/trackBooking', async (req, res) => {
         if (!id) return res.status(400).json({ error: 'id required' });
         // Try to fetch booking from supabase
         try {
-            const { data, error } = await supabase.from('bookings').select('id, status, start_date, start_time, duration, vehicle_id, vehicle_type, advance_payment, created_at').eq('id', id).single();
+            console.log(`🔍 [TrackBooking] Request received for ID: '${id}'`);
+            let query = supabase.from('bookings').select('id, status, start_date, start_time, duration, vehicle_id, vehicle_type, advance_payment, created_at, booking_id');
+
+            // Check if input looks like a string booking ID (starts with RH or BK)
+            const idStr = id.toString().trim();
+            if (idStr.toUpperCase().startsWith('RH') || idStr.toUpperCase().startsWith('BK')) {
+                console.log(`   -> Detected STRING ID (RH/BK). Querying 'booking_id' = '${idStr}'`);
+                query = query.eq('booking_id', idStr);
+            } else {
+                console.log(`   -> Detected NUMERIC ID. Querying 'id' = '${idStr}'`);
+                query = query.eq('id', idStr);
+            }
+
+            const { data, error } = await query.single();
+
+            if (data) console.log(`   ✅ Booking Found: ID ${data.id} / ${data.booking_id}`);
+            if (error) console.error(`   ❌ Supabase Error:`, error.message);
             if (error || !data) {
                 return res.json({ id, status: 'unknown', message: 'Booking not found in DB (demo response)' });
             }

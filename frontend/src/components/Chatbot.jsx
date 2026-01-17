@@ -124,6 +124,61 @@ const Chatbot = ({ isOpen, onClose }) => {
                 }
             }
 
+            // 3. New Actions: TRACK and CANCEL
+            if (!actionMatch) {
+                // Regex for TRACK
+                const trackRegex = /\|\|\| ACTION: TRACK_BOOKING (.*?) \|\|\|/s;
+                const trackMatch = replyText.match(trackRegex);
+                if (trackMatch) {
+                    try {
+                        let jsonStr = trackMatch[1];
+                        const details = JSON.parse(jsonStr);
+                        replyText = replyText.replace(trackMatch[0], "").trim();
+
+                        setTimeout(() => {
+                            setMessages(prev => [...prev, {
+                                id: Date.now() + 2,
+                                text: "Let's check the status for you. Redirecting...",
+                                sender: 'bot',
+                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            }]);
+                            setTimeout(() => {
+                                window.location.href = `/track-booking?bookingId=${details.bookingId}`;
+                            }, 1500);
+                        }, 500);
+                    } catch (e) {
+                        console.error("Failed to parse track action", e);
+                    }
+                }
+
+                // Regex for CANCEL
+                const cancelRegex = /\|\|\| ACTION: CANCEL_BOOKING (.*?) \|\|\|/s;
+                const cancelMatch = replyText.match(cancelRegex);
+                if (cancelMatch) {
+                    try {
+                        let jsonStr = cancelMatch[1];
+                        const details = JSON.parse(jsonStr);
+                        replyText = replyText.replace(cancelMatch[0], "").trim();
+
+                        setTimeout(() => {
+                            setMessages(prev => [...prev, {
+                                id: Date.now() + 2,
+                                text: `I'll take you to the cancellation page for Booking #${details.bookingId}. Please review the details there.`,
+                                sender: 'bot',
+                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            }]);
+                            setTimeout(() => {
+                                // Redirect to Track Booking since it handles ID lookup, or My Bookings
+                                // Using Track Booking as it's public/easy
+                                window.location.href = `/track-booking?bookingId=${details.bookingId}&action=cancel`;
+                            }, 1500);
+                        }, 500);
+                    } catch (e) {
+                        console.error("Failed to parse cancel action", e);
+                    }
+                }
+            }
+
             const botResponse = {
                 id: Date.now() + 1,
                 text: replyText,

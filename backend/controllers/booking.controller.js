@@ -382,16 +382,20 @@ const cancelBooking = async (req, res) => {
             .from('bookings')
             .select('*, users:user_id(*)')
             .eq('id', bookingId)
-            .eq('user_id', userId) // Ensure the booking belongs to the user
             .single();
 
         if (fetchError) {
-            console.error('Error fetching booking:', fetchError);
+            console.error('Error fetching booking query:', fetchError);
             return res.status(500).json({ error: 'Error fetching booking details' });
         }
 
         if (!booking) {
-            return res.status(404).json({ error: 'Booking not found or unauthorized' });
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+
+        // Check ownership
+        if (booking.user_id !== userId) {
+            return res.status(403).json({ error: 'Unauthorized: This booking belongs to a different user.' });
         }
 
         if (booking.status !== 'confirmed') {
