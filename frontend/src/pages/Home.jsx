@@ -145,22 +145,22 @@ const Home = () => {
                             <div className="step-icon">
                                 <i className="fas fa-search"></i>
                             </div>
-                            <h3>1. Find Your Ride</h3>
-                            <p>Browse our extensive collection and filter by price, type, or features to find the perfect vehicle for your needs.</p>
+                            <h3>1. Pick Your Ride</h3>
+                            <p>Browse our extensive collection of well-maintained bikes and cars. Filter by price or model to find your best fit.</p>
                         </div>
                         <div className="step-card">
                             <div className="step-icon">
                                 <i className="fas fa-calendar-check"></i>
                             </div>
-                            <h3>2. Book & Pay</h3>
-                            <p>Select your dates, fill out the booking form, and complete the payment securely through our various payment options.</p>
+                            <h3>2. Quick Booking</h3>
+                            <p>Choose your duration, upload your license, and pay securely. No long paperwork, just instant confirmation.</p>
                         </div>
                         <div className="step-card">
                             <div className="step-icon">
                                 <i className="fas fa-road"></i>
                             </div>
-                            <h3>3. Enjoy the Journey</h3>
-                            <p>Pick up your vehicle from the designated location and hit the road. Enjoy your trip with our reliable rentals!</p>
+                            <h3>3. Zoom Away</h3>
+                            <p>Reach the pickup point, verify your ID, and start your journey. Enjoy the freedom of the road!</p>
                         </div>
                     </div>
                 </div>
@@ -175,22 +175,22 @@ const Home = () => {
                             <div className="feature-icon">
                                 <i className="fas fa-motorcycle"></i>
                             </div>
-                            <h3>Wide Vehicle Selection</h3>
-                            <p>From powerful bikes to nimble scooters and comfortable cars, we have a vehicle for every type of adventurer.</p>
+                            <h3>Unbeatable Prices</h3>
+                            <p>Rent high-quality vehicles at the most competitive daily and hourly rates in the city and save more.</p>
                         </div>
                         <div className="feature-card">
                             <div className="feature-icon">
-                                <i className="fas fa-shield-alt"></i>
+                                <i className="fas fa-wallet"></i>
                             </div>
-                            <h3>Trusted & Safe</h3>
-                            <p>All our vehicles are regularly serviced and maintained to ensure you have a safe and worry-free experience.</p>
+                            <h3>Zero Hidden Charges</h3>
+                            <p>Transparency is key. What you see is what you pay—no surprise taxes, insurance fees, or deposits.</p>
                         </div>
                         <div className="feature-card">
                             <div className="feature-icon">
-                                <i className="fas fa-headset"></i>
+                                <i className="fas fa-clock"></i>
                             </div>
-                            <h3>24/7 Support</h3>
-                            <p>Our dedicated support team is available around the clock to assist you with any queries or issues during your rental.</p>
+                            <h3>Flexible Rentals</h3>
+                            <p>Need to extend your trip? No problem. Easily extend your booking on the go with our flexible plans.</p>
                         </div>
                     </div>
                 </div>

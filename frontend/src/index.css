@@ -1,6 +1,6 @@
 :root {
-    --primary-color: #3B82F6;
-    --secondary-color: #1D4ED8;
+    --primary-color: #4facfe;
+    --secondary-color: #00c6ff;
     --dark-color: #2c3e50;
     --light-color: #ecf0f1;
     --danger-color: #e74c3c;
@@ -1642,7 +1642,6 @@ button {
     color: var(--dark-color);
 }
 
-.steps-container,
 .features-container {
     display: flex;
     justify-content: space-around;
@@ -1650,7 +1649,45 @@ button {
     flex-wrap: wrap;
 }
 
-.step-card,
+.steps-container {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    flex-wrap: wrap;
+    position: relative;
+    max-width: 1000px;
+    margin: 0 auto;
+}
+
+/* Process Step Design */
+.step-card {
+    background-color: transparent;
+    padding: 2rem 1rem;
+    border-radius: 0;
+    box-shadow: none;
+    text-align: center;
+    flex: 1;
+    min-width: 250px;
+    position: relative;
+}
+
+/* Add connecting arrows between steps on desktop */
+@media (min-width: 992px) {
+    .step-card:not(:last-child)::after {
+        content: '\f061';
+        /* FontAwesome Arrow Right */
+        font-family: 'Font Awesome 5 Free';
+        font-weight: 900;
+        position: absolute;
+        top: 30%;
+        right: -20px;
+        transform: translateY(-50%);
+        font-size: 1.5rem;
+        color: var(--primary-color);
+        opacity: 0.3;
+    }
+}
+
 .feature-card {
     background-color: var(--white);
     padding: 2.5rem 2rem;
@@ -1666,13 +1703,35 @@ button {
     background-color: #fff;
 }
 
-.step-card:hover,
+.step-card:hover {
+    transform: translateY(-5px);
+}
+
 .feature-card:hover {
     transform: translateY(-10px);
     box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
 }
 
-.step-icon,
+.step-icon {
+    width: 90px;
+    height: 90px;
+    line-height: 90px;
+    border-radius: 50%;
+    background: rgba(79, 172, 254, 0.1);
+    /* Light Primary Color bg */
+    margin: 0 auto 1.5rem auto;
+    font-size: 2.5rem;
+    color: var(--primary-color);
+    transition: all 0.3s ease;
+    display: block;
+}
+
+.step-card:hover .step-icon {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: 0 0 20px rgba(79, 172, 254, 0.4);
+}
+
 .feature-icon {
     font-size: 3rem;
     color: var(--primary-color);
@@ -2881,4 +2940,3 @@ main.booking-page-main {
         padding: 8px 15px;
     }
 }
-
