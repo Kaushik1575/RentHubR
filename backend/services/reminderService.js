@@ -138,22 +138,43 @@ async function checkAndSendReminders() {
         const now = dayjs().tz('Asia/Kolkata');
 
         // Fetch all confirmed bookings that haven't received a reminder yet
-        const { data: bookings, error } = await supabase
-            .from('bookings')
-            .select(`
-                *,
-                users:user_id (
-                    email,
-                    full_name,
-                    phone_number
-                )
-            `)
-            .eq('status', 'confirmed')
-            .or('reminder_sent.is.null,reminder_sent.eq.false');
+        // Fetch all confirmed bookings that haven't received a reminder yet
+        let bookings = [];
+        let fetchError = null;
 
-        if (error) {
-            console.error('❌ Error fetching bookings:', error);
-            return { success: false, error: error.message };
+        // Retry logic for network stability (3 attempts)
+        for (let attempt = 1; attempt <= 3; attempt++) {
+            try {
+                const { data, error } = await supabase
+                    .from('bookings')
+                    .select(`
+                        *,
+                        users:user_id (
+                            email,
+                            full_name,
+                            phone_number
+                        )
+                    `)
+                    .eq('status', 'confirmed')
+                    .or('reminder_sent.is.null,reminder_sent.eq.false');
+
+                if (error) throw error;
+
+                bookings = data;
+                fetchError = null;
+                break; // Success, exit loop
+            } catch (err) {
+                fetchError = err;
+                console.warn(`⚠️ Attempt ${attempt} to fetch bookings failed: ${err.message || err}`);
+                if (attempt < 3) {
+                    await new Promise(resolve => setTimeout(resolve, 2000)); // Wait 2s before retry
+                }
+            }
+        }
+
+        if (fetchError) {
+            console.error('❌ Error fetching bookings after 3 attempts:', fetchError);
+            return { success: false, error: fetchError.message };
         }
 
         if (!bookings || bookings.length === 0) {

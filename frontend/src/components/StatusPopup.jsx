@@ -5,14 +5,15 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, messag
 
     const isSuccess = type === 'success';
     const isConfirm = type === 'confirm';
+    const isInfo = type === 'info';
 
     // Design configuration matching the user's "Login Successful" image
     const config = {
-        icon: isSuccess ? 'fa-check' : (isConfirm ? 'fa-question' : 'fa-exclamation-triangle'),
-        iconColor: isSuccess ? '#4caf50' : (isConfirm ? '#3182ce' : '#f44336'), // Green for success, Blue for confirm, Red for error
-        iconBg: isSuccess ? '#e8f5e9' : (isConfirm ? '#ebf8ff' : '#ffebee'),   // Light backgrounds
-        btnBg: isSuccess ? '#4caf50' : (isConfirm ? '#3182ce' : '#f44336'),     // Button matches icon color
-        defaultTitle: isSuccess ? 'Success' : (isConfirm ? 'Confirmation' : 'Error'),
+        icon: isSuccess ? 'fa-check' : (isConfirm ? 'fa-question' : (isInfo ? 'fa-info' : 'fa-exclamation-triangle')),
+        iconColor: isSuccess ? '#4caf50' : (isConfirm || isInfo ? '#3182ce' : '#f44336'), // Green for success, Blue for confirm/info, Red for error
+        iconBg: isSuccess ? '#e8f5e9' : (isConfirm || isInfo ? '#ebf8ff' : '#ffebee'),   // Light backgrounds
+        btnBg: isSuccess ? '#4caf50' : (isConfirm || isInfo ? '#3182ce' : '#f44336'),     // Button matches icon color
+        defaultTitle: isSuccess ? 'Success' : (isConfirm ? 'Confirmation' : (isInfo ? 'Information' : 'Error')),
         btnText: 'Okay, Got it'
     };
 
@@ -136,7 +137,7 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, messag
                             fontWeight: '600',
                             cursor: 'pointer',
                             transition: 'transform 0.1s ease, box-shadow 0.2s',
-                            boxShadow: `0 4px 12px ${isSuccess ? 'rgba(76, 175, 80, 0.4)' : 'rgba(244, 67, 54, 0.4)'}`
+                            boxShadow: `0 4px 12px ${isSuccess ? 'rgba(76, 175, 80, 0.4)' : (isConfirm || isInfo ? 'rgba(49, 130, 206, 0.4)' : 'rgba(244, 67, 54, 0.4)')}`
                         }}
                         onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
                         onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}

@@ -300,6 +300,7 @@ const loginUser = async (req, res) => {
             adminName: user.admin_name,
             email: user.email,
             phoneNumber: user.phone_number,
+            profilePhoto: user.profile_photo,
             isAdmin: user.is_admin || false
         };
 

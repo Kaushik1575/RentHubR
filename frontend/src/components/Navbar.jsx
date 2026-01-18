@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StatusPopup from './StatusPopup';
+import NavbarProfile from './NavbarProfile';
 
 const Navbar = () => {
     // Mobile menu state
@@ -135,11 +136,7 @@ const Navbar = () => {
                                 </button>
                             </>
                         ) : (
-                            <button onClick={handleLogout} style={{
-                                background: 'transparent', border: '2px solid #e74c3c', color: '#e74c3c', padding: '10px 24px', borderRadius: '50px', fontWeight: '700', cursor: 'pointer', transition: 'all 0.2s'
-                            }} onMouseOver={(e) => { e.target.style.background = '#e74c3c'; e.target.style.color = 'white'; }} onMouseOut={(e) => { e.target.style.background = 'transparent'; e.target.style.color = '#e74c3c'; }}>
-                                Logout
-                            </button>
+                            <NavbarProfile />
                         )}
                     </div>
 
@@ -161,7 +158,12 @@ const Navbar = () => {
                         <Link to="/" onClick={closeMenu} style={mobileLinkStyle}>Home</Link>
                         <Link to="/about" onClick={closeMenu} style={mobileLinkStyle}>About</Link>
                         <Link to="/contact" onClick={closeMenu} style={mobileLinkStyle}>Contact</Link>
-                        {isLoggedIn && <Link to="/my-bookings" onClick={closeMenu} style={mobileLinkStyle}>My Bookings</Link>}
+                        {isLoggedIn && (
+                            <>
+                                <Link to="/profile" onClick={closeMenu} style={mobileLinkStyle}>My Profile</Link>
+                                <Link to="/my-bookings" onClick={closeMenu} style={mobileLinkStyle}>My Bookings</Link>
+                            </>
+                        )}
                         <div style={{ width: '100%', height: '1px', background: '#f0f0f0', margin: '10px 0' }}></div>
                         {!isLoggedIn ? (
                             <>
@@ -177,7 +179,7 @@ const Navbar = () => {
                                 }}>Get Started</button>
                             </>
                         ) : (
-                            <button onClick={handleLogout} style={{ ...mobileLinkStyle, color: '#e74c3c', background: 'none', border: 'none' }}>Logout</button>
+                            <button onClick={confirmLogout} style={{ ...mobileLinkStyle, color: '#e74c3c', background: 'none', border: 'none' }}>Logout</button>
                         )}
                     </div>
                 </div>

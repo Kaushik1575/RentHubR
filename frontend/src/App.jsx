@@ -15,6 +15,7 @@ import AdminPanel from './pages/AdminPanel';
 import ForgotPassword from './pages/ForgotPassword';
 import TrackBooking from './pages/TrackBooking';
 import SOSActivate from './pages/SOSActivate';
+import ProfilePage from './pages/ProfilePage';
 import GlobalAuthCheck from './components/GlobalAuthCheck';
 import Chatbot from './components/Chatbot';
 import chatbotImg from './assets/chatbot_styled.png'; // Import Chatbot Image
@@ -66,6 +67,7 @@ function Layout() {
         <Route path="/about" element={<About />} />
         <Route path="/contact" element={<Contact />} />
         <Route path="/my-bookings" element={<MyBookings />} />
+        <Route path="/profile" element={<ProfilePage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/register-user" element={<RegisterUser />} />
