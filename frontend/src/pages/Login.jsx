@@ -280,19 +280,13 @@ const Login = () => {
                         if (activeTab === 'user') {
                             if (from) {
                                 navigate(from, { replace: true });
+                                window.dispatchEvent(new Event('storage'));
                             } else {
                                 navigate('/');
+                                window.dispatchEvent(new Event('storage'));
                             }
-                            // window.location.reload(); // Removed reload to preserve SPA state if possible, or keep if necessary for auth state update. Ideally context should handle it.
-                            // Keeping reload might be safer for "simple" auth implementations, but validation is key.
-                            // If we reload, navigate might be lost? No, navigate happens then reload. 
-                            // Actually, window.location.reload() cancels the navigation if called immediately. 
-                            // Better to trigger a re-render or event. 
-                            // Assuming the app checks localStorage on mount/route change.
-                            setTimeout(() => window.location.reload(), 100);
                         } else {
                             navigate('/admin');
-                            setTimeout(() => window.location.reload(), 100);
                         }
                     }
                 }}

@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
-import StatusPopup from '../components/StatusPopup'; // Assuming you have this
-
+import StatusPopup from '../components/StatusPopup';
+import ConfirmationPopup from '../components/ConfirmationPopup';
+import RefundDetailsPopup from '../components/RefundDetailsPopup';
 
 const TrackBooking = () => {
     const [bookingId, setBookingId] = useState('');
@@ -11,7 +12,13 @@ const TrackBooking = () => {
     const [searchParams] = useSearchParams();
     const navigate = useNavigate();
     const location = useLocation();
-    const [showCancelConfirm, setShowCancelConfirm] = useState(false);
+
+    // Modal States
+    const [showCancellationModal, setShowCancellationModal] = useState(false);
+    const [showRefundDetailsModal, setShowRefundDetailsModal] = useState(false);
+    const [isCancelling, setIsCancelling] = useState(false);
+
+    // Popup State
     const [popup, setPopup] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
     // Auto-load from URL
@@ -23,13 +30,11 @@ const TrackBooking = () => {
         }
     }, [searchParams]);
 
-    // Auto-trigger cancel if action=cancel is present and result status is confirmed
+    // Auto-trigger cancellation modal if action=cancel matches
     useEffect(() => {
         const action = searchParams.get('action');
         if (action === 'cancel' && result && result.status === 'confirmed') {
-            // Scroll to cancel button or just trigger it
-            handleCancelInitiate();
-            // Optional: Clear params to avoid loop if using same page, but we nav away usually
+            initiateCancelFlow();
         }
     }, [result, searchParams]);
 
@@ -99,7 +104,7 @@ const TrackBooking = () => {
         }
     };
 
-    const handleCancelInitiate = async () => {
+    const initiateCancelFlow = () => {
         const token = localStorage.getItem('token');
         if (!token) {
             setPopup({
@@ -110,67 +115,70 @@ const TrackBooking = () => {
             });
             return;
         }
+        setShowCancellationModal(true);
+    };
 
-        // Attempt to cancel via API to check ownership/status
+    const handleConfirmCancel = async () => {
+        // Calculate logic for frontend refund modal
+        const bookedTime = new Date(result.confirmation_timestamp || result.created_at);
+        const now = new Date();
+        const advancePayment = result.displayAdvancePayment || 0;
+
+        // Hide Confirmation Modal
+        setShowCancellationModal(false);
+
+        if (advancePayment > 0) {
+            // Refund needed
+            setShowRefundDetailsModal(true);
+        } else {
+            // No refund, execute directly
+            await executeCancellation({});
+        }
+    };
+
+    const executeCancellation = async (refundDetailsObj) => {
+        setIsCancelling(true);
+        const token = localStorage.getItem('token');
         try {
-            const bookingId = result.id;
-            const res = await fetch(`/api/bookings/${bookingId}/cancel`, {
+            const res = await fetch(`/api/bookings/${result.id}/cancel`, {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
                     'Content-Type': 'application/json'
                 },
-                body: JSON.stringify({}) // Empty body initially
+                body: JSON.stringify({ refundDetails: refundDetailsObj })
             });
 
             if (res.status === 403) {
-                // Ownership mismatch
                 const data = await res.json();
-                setPopup({
-                    isOpen: true,
-                    type: 'error',
-                    title: 'Access Denied',
-                    message: data.error || 'This booking ID belongs to a different user account.'
-                });
-                return;
+                throw new Error(data.error || 'Access Denied: This booking belongs to another user.');
             }
 
-            if (res.status === 400 && (await res.clone().json()).error?.includes('Refund details')) {
-                // Correct User, but Refund Details needed. Redirect to My Bookings.
-                setPopup({
-                    isOpen: true,
-                    type: 'info',
-                    title: 'Refund Details Required',
-                    message: 'Please complete the cancellation from your dashboard to provide refund details. Redirecting...'
-                });
-                setTimeout(() => {
-                    navigate('/my-bookings');
-                }, 2000);
-                return;
+            if (!res.ok) {
+                const data = await res.json();
+                throw new Error(data.message || 'Cancellation failed');
             }
 
-            if (res.ok) {
-                const data = await res.json();
-                setPopup({
-                    isOpen: true,
-                    type: 'success',
-                    title: 'Cancelled Successfully',
-                    message: `Booking cancelled. Refund Amount: ₹${data.refundAmount || 0}`
-                });
-                // Update UI state
-                setResult(prev => ({ ...prev, status: 'cancelled' }));
-            } else {
-                const data = await res.json();
-                throw new Error(data.error || 'Cancellation failed');
-            }
+            const data = await res.json();
+            setPopup({
+                isOpen: true,
+                type: 'success',
+                title: 'Cancelled Successfully',
+                message: `Booking cancelled. Refund Amount: ₹${data.refundAmount || 0}`
+            });
+            setShowRefundDetailsModal(false);
+            // Refresh details
+            handleCheck();
 
         } catch (err) {
             setPopup({
                 isOpen: true,
                 type: 'error',
-                title: 'Error',
+                title: 'Cancellation Failed',
                 message: err.message
             });
+        } finally {
+            setIsCancelling(false);
         }
     };
 
@@ -178,7 +186,7 @@ const TrackBooking = () => {
         const isLoginRedirect = popup.title === 'Login Required';
         setPopup({ ...popup, isOpen: false });
         if (isLoginRedirect) {
-            navigate('/login', { state: { from: location } });
+            navigate('/login', { state: { from: location } }); // from: { pathname: ... search: ... } works with useLocation logic
         }
     };
 
@@ -268,6 +276,19 @@ const TrackBooking = () => {
                     >
                         {loading ? 'Checking...' : 'Check'}
                     </button>
+                    <button
+                        onClick={() => {
+                            if (!bookingId) return setError('Please enter a Booking ID');
+                            navigate(`/track-booking?bookingId=${bookingId}&action=cancel`);
+                        }}
+                        disabled={loading}
+                        style={{
+                            padding: '12px 24px', background: '#fff', color: '#e74c3c',
+                            border: '1px solid #e74c3c', borderRadius: '6px', cursor: 'pointer', fontWeight: 'bold'
+                        }}
+                    >
+                        Cancel
+                    </button>
                 </div>
 
                 {error && (
@@ -321,6 +342,20 @@ const TrackBooking = () => {
                                     <strong style={{ color: '#e67e22' }}>₹{result.remainingDisplayAmount > 0 ? result.remainingDisplayAmount : 0}</strong>
                                 </div>
                             </div>
+
+                            {/* Refund Details Section */}
+                            {(result.status === 'cancelled' || result.status === 'rejected') && (
+                                <div style={{ marginTop: '10px', padding: '10px', background: '#e8f5e9', borderRadius: '8px', border: '1px solid #c8e6c9', color: '#2e7d32' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                        <span>Refund Amount:</span>
+                                        <strong>₹{result.refund_amount !== undefined && result.refund_amount !== null ? result.refund_amount : (result.displayAdvancePayment || '0')}</strong>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                                        <span>Refund Status:</span>
+                                        <strong>{result.refund_status ? result.refund_status.charAt(0).toUpperCase() + result.refund_status.slice(1) : 'Processing'}</strong>
+                                    </div>
+                                </div>
+                            )}
                         </div>
 
                         <div style={{ marginTop: '1.5rem', display: 'flex', gap: '10px', justifyContent: 'center' }}>
@@ -339,7 +374,7 @@ const TrackBooking = () => {
                             {/* Cancel Button if Confirmed */}
                             {result.status === 'confirmed' && (
                                 <button
-                                    onClick={handleCancelInitiate}
+                                    onClick={initiateCancelFlow}
                                     style={{
                                         display: 'inline-flex', alignItems: 'center', padding: '10px 20px',
                                         background: '#fff', color: '#dc3545', border: '1px solid #dc3545',
@@ -354,6 +389,87 @@ const TrackBooking = () => {
                     </div>
                 )}
             </div>
+
+            {/* Cancellation Modal using ConfirmationPopup */}
+            <ConfirmationPopup
+                isOpen={showCancellationModal}
+                onClose={() => setShowCancellationModal(false)}
+                onConfirm={handleConfirmCancel}
+                title="Cancel Booking"
+                confirmText="Confirm Cancellation"
+                cancelText="Keep Booking"
+                type="danger"
+                isLoading={isCancelling}
+                icon="fa-calendar-times"
+                message={
+                    result && (
+                        <div style={{ textAlign: 'left' }}>
+                            {(() => {
+                                if (result.confirmation_timestamp || result.created_at) {
+                                    const bookedTime = new Date(result.confirmation_timestamp || result.created_at);
+                                    const now = new Date();
+                                    const hoursSinceBooking = (now - bookedTime) / (1000 * 60 * 60);
+                                    const isFullRefund = hoursSinceBooking <= 2;
+                                    const refundPercentage = isFullRefund ? 100 : 70;
+                                    const estimatedRefund = Math.round((result.displayAdvancePayment || 0) * (refundPercentage / 100));
+
+                                    return (
+                                        <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: isFullRefund ? '#e8f5e9' : '#fff3cd', borderRadius: '8px', borderLeft: `4px solid ${isFullRefund ? '#4caf50' : '#ffc107'}` }}>
+                                            <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: isFullRefund ? '#2e7d32' : '#856404' }}>
+                                                ⏰ Booking Time Information
+                                            </h3>
+                                            <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: isFullRefund ? '#2e7d32' : '#856404' }}>
+                                                <strong>Booked on:</strong> {bookedTime.toLocaleString('en-IN', {
+                                                    dateStyle: 'medium',
+                                                    timeStyle: 'short',
+                                                    timeZone: 'Asia/Kolkata'
+                                                })}
+                                            </p>
+                                            <p style={{ margin: '0.3rem 0', fontSize: '0.9rem', color: isFullRefund ? '#2e7d32' : '#856404' }}>
+                                                <strong>Time elapsed:</strong> {hoursSinceBooking.toFixed(1)} hours
+                                            </p>
+                                            <p style={{ margin: '0.5rem 0 0 0', fontSize: '1rem', fontWeight: 'bold', color: isFullRefund ? '#2e7d32' : '#856404' }}>
+                                                💰 Estimated Refund: ₹{estimatedRefund}
+                                            </p>
+                                        </div>
+                                    );
+                                }
+                                return null;
+                            })()}
+
+                            <div style={{ marginBottom: '1.5rem', padding: '1rem', backgroundColor: '#fff3cd', borderRadius: '8px', borderLeft: '4px solid #ffc107', fontSize: '0.9rem' }}>
+                                <h3 style={{ margin: '0 0 0.5rem 0', fontSize: '1rem', color: '#856404' }}>📋 Cancellation & Refund Policy</h3>
+                                <ul style={{ margin: 0, paddingLeft: '1.5rem', color: '#856404' }}>
+                                    <li style={{ marginBottom: '0.3rem' }}>Cancellation within 2 hours: <strong>Full refund</strong></li>
+                                    <li style={{ marginBottom: '0.3rem' }}>Cancellation after 2 hours: <strong>70% refund</strong></li>
+                                    <li style={{ marginBottom: '0.3rem' }}>Automatic refund to original method</li>
+                                    <li style={{ marginBottom: '0.3rem' }}>Timeline: <strong>5-7 business days</strong></li>
+                                </ul>
+                            </div>
+                            <p>Are you sure you want to cancel this booking? This action cannot be undone.</p>
+                        </div>
+                    )}
+            />
+
+            {/* Refund Details Modal */}
+            <RefundDetailsPopup
+                isOpen={showRefundDetailsModal}
+                onClose={() => setShowRefundDetailsModal(false)}
+                onSubmit={(details) => {
+                    // Transform Details for API
+                    const detailsToSend = { method: details.method };
+                    if (details.method === 'upi') {
+                        detailsToSend.upiId = details.upiId;
+                    } else {
+                        detailsToSend.accountHolder = details.accountHolder;
+                        detailsToSend.accountNumber = details.accountNumber;
+                        detailsToSend.ifsc = details.ifsc;
+                    }
+                    executeCancellation(detailsToSend);
+                }}
+                mode="cancellation"
+                isLoading={isCancelling}
+            />
 
             <StatusPopup
                 isOpen={popup.isOpen}
