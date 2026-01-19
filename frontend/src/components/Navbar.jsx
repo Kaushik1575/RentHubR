@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import StatusPopup from './StatusPopup';
 import NavbarProfile from './NavbarProfile';
+import LanguageSelector from './LanguageSelector';
 
 const Navbar = () => {
     // Mobile menu state
@@ -100,6 +101,11 @@ const Navbar = () => {
                         {isLoggedIn && <Link to="/my-bookings" style={linkStyle}>My Bookings</Link>}
                     </div>
 
+                    {/* Language Selector - Desktop */}
+                    <div className="desktop-only" style={{ marginRight: '16px' }}>
+                        <LanguageSelector />
+                    </div>
+
                     {/* Auth Buttons - Far Right */}
                     <div className="desktop-only" style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
                         {!isLoggedIn ? (
@@ -165,6 +171,12 @@ const Navbar = () => {
                             </>
                         )}
                         <div style={{ width: '100%', height: '1px', background: '#f0f0f0', margin: '10px 0' }}></div>
+
+                        {/* Language Selector - Mobile */}
+                        <div style={{ width: '100%', marginBottom: '10px' }}>
+                            <LanguageSelector />
+                        </div>
+
                         {!isLoggedIn ? (
                             <>
                                 <Link to="/login" onClick={closeMenu} style={{
