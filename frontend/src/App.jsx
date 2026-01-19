@@ -19,6 +19,8 @@ import ProfilePage from './pages/ProfilePage';
 import GlobalAuthCheck from './components/GlobalAuthCheck';
 import VehicleDetails from './pages/VehicleDetails';
 import Chatbot from './components/Chatbot';
+import GoogleTranslateLoader from './components/GoogleTranslateLoader';
+import './components/GoogleTranslate.css';
 import chatbotImg from './assets/chatbot_styled.png'; // Import Chatbot Image
 
 function Layout() {
@@ -62,6 +64,7 @@ function Layout() {
 
   return (
     <div className="App">
+      <GoogleTranslateLoader />
       {!isAdmin && !isSOS && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
