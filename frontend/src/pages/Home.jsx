@@ -57,12 +57,16 @@ const Home = () => {
         return (
             <div className="vehicle-card" data-id={vehicle.id} data-type={type}>
                 <div className="card-image-wrapper">
-                    <img src={vehicle.image_url} alt={vehicle.name} />
+                    <Link to={`/vehicle/${type}/${vehicle.id}`}>
+                        <img src={vehicle.image_url} alt={vehicle.name} />
+                    </Link>
                     <span className="rating-badge"><i className="fas fa-star"></i> {rating}</span>
                 </div>
                 <div className="vehicle-details">
                     <div className="vehicle-header">
-                        <h3>{vehicle.name}</h3>
+                        <Link to={`/vehicle/${type}/${vehicle.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                            <h3>{vehicle.name}</h3>
+                        </Link>
                         <span className="engine-badge">{vehicle.engine || 'N/A'}</span>
                     </div>
 
@@ -79,9 +83,38 @@ const Home = () => {
                             <span className="price-value">₹{vehicle.price}</span>
                         </div>
 
-                        <Link to={`/booking-form?vehicleId=${vehicle.id}&type=${type}`} className="rent-btn">
-                            Rent Now <i className="fas fa-arrow-right"></i>
-                        </Link>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
+                            <Link to={`/vehicle/${type}/${vehicle.id}`} className="view-btn" style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '10px',
+                                border: '1px solid #007bff',
+                                borderRadius: '8px',
+                                color: '#007bff',
+                                textDecoration: 'none',
+                                fontWeight: '600',
+                                backgroundColor: 'white',
+                                fontSize: '1rem',
+                                transition: 'all 0.2s ease'
+                            }}>
+                                View
+                            </Link>
+                            <Link to={`/booking-form?vehicleId=${vehicle.id}&type=${type}`} className="rent-btn" style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                padding: '10px',
+                                borderRadius: '8px',
+                                textAlign: 'center',
+                                fontSize: '1rem',
+                                height: 'auto',
+                                width: '100%',
+                                boxSizing: 'border-box'
+                            }}>
+                                Rent Now
+                            </Link>
+                        </div>
                     </div>
                 </div>
             </div>

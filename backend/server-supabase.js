@@ -35,6 +35,8 @@ app.use('/api/payment', paymentRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api', sosRoutes);
 app.use('/api/chatbot', chatbotRoutes);
+const reviewRoutes = require('./routes/review.routes');
+app.use('/api/reviews', reviewRoutes);
 
 // Explicitly register cron route to match original path exactly
 const adminController = require('./controllers/admin.controller');

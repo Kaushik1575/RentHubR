@@ -17,6 +17,7 @@ import TrackBooking from './pages/TrackBooking';
 import SOSActivate from './pages/SOSActivate';
 import ProfilePage from './pages/ProfilePage';
 import GlobalAuthCheck from './components/GlobalAuthCheck';
+import VehicleDetails from './pages/VehicleDetails';
 import Chatbot from './components/Chatbot';
 import chatbotImg from './assets/chatbot_styled.png'; // Import Chatbot Image
 
@@ -76,6 +77,7 @@ function Layout() {
         <Route path="/booking-form" element={<BookingForm />} />
         <Route path="/track-booking" element={<TrackBooking />} />
         <Route path="/sos-activate" element={<SOSActivate />} />
+        <Route path="/vehicle/:type/:id" element={<VehicleDetails />} />
       </Routes>
       {/* WhatsApp Floating Button - Show ONLY on Contact Page */}
       {location.pathname === '/contact' && (
