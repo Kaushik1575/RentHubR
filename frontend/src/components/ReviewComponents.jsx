@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { toast } from 'react-hot-toast';
 
 // Helper to render stars
@@ -119,8 +119,8 @@ export const ReviewForm = ({ vehicleId, vehicleType, onReviewSubmitted, onCancel
 
     const handlePhotoUpload = (e) => {
         const files = Array.from(e.target.files);
-        if (files.length + photos.length > 3) {
-            toast.error("Maximum 3 photos allowed");
+        if (files.length + photos.length > 5) {
+            toast.error("Maximum 5 photos allowed");
             return;
         }
 
@@ -219,7 +219,7 @@ export const ReviewForm = ({ vehicleId, vehicleType, onReviewSubmitted, onCancel
                     accept="image/*"
                     multiple
                     onChange={handlePhotoUpload}
-                    disabled={photos.length >= 3}
+                    disabled={photos.length >= 5}
                     style={{ marginBottom: '0.5rem' }}
                 />
                 <div style={{ display: 'flex', gap: '10px' }}>
@@ -253,5 +253,91 @@ export const ReviewForm = ({ vehicleId, vehicleType, onReviewSubmitted, onCancel
                 </button>
             </div>
         </form>
+    );
+};
+
+export const ImageSliderModal = ({ images, initialIndex, onClose }) => {
+    const [activeIndex, setActiveIndex] = useState(initialIndex);
+
+    const handleNext = (e) => {
+        e.stopPropagation();
+        setActiveIndex((prev) => (prev + 1) % images.length);
+    };
+
+    const handlePrev = (e) => {
+        e.stopPropagation();
+        setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
+    };
+
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') onClose();
+            if (e.key === 'ArrowRight') setActiveIndex((prev) => (prev + 1) % images.length);
+            if (e.key === 'ArrowLeft') setActiveIndex((prev) => (prev - 1 + images.length) % images.length);
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [images.length, onClose]);
+
+    return (
+        <div style={{
+            position: 'fixed', top: 0, left: 0, width: '100%', height: '100%',
+            backgroundColor: 'rgba(0,0,0,0.9)', zIndex: 10000,
+            display: 'flex', alignItems: 'center', justifyContent: 'center',
+            opacity: 1, transition: 'opacity 0.3s ease'
+        }} onClick={onClose}>
+
+            <button onClick={onClose} style={{
+                position: 'absolute', top: '20px', right: '30px',
+                background: 'transparent', border: 'none', color: 'white',
+                fontSize: '2.5rem', cursor: 'pointer', zIndex: 10001,
+                textShadow: '0 0 5px rgba(0,0,0,0.5)'
+            }}>&times;</button>
+
+            {images.length > 1 && (
+                <>
+                    <button onClick={handlePrev} style={{
+                        position: 'absolute', left: '20px',
+                        background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
+                        padding: '20px 15px', fontSize: '2rem', cursor: 'pointer',
+                        borderRadius: '8px', zIndex: 10001,
+                        transition: 'background 0.2s'
+                    }}
+                        onMouseOver={e => e.target.style.background = 'rgba(255,255,255,0.2)'}
+                        onMouseOut={e => e.target.style.background = 'rgba(255,255,255,0.1)'}
+                    >&#10094;</button>
+
+                    <button onClick={handleNext} style={{
+                        position: 'absolute', right: '20px',
+                        background: 'rgba(255,255,255,0.1)', border: 'none', color: 'white',
+                        padding: '20px 15px', fontSize: '2rem', cursor: 'pointer',
+                        borderRadius: '8px', zIndex: 10001,
+                        transition: 'background 0.2s'
+                    }}
+                        onMouseOver={e => e.target.style.background = 'rgba(255,255,255,0.2)'}
+                        onMouseOut={e => e.target.style.background = 'rgba(255,255,255,0.1)'}
+                    >&#10095;</button>
+                </>
+            )}
+
+            <img
+                src={images[activeIndex]}
+                alt={`Slide ${activeIndex}`}
+                style={{
+                    maxWidth: '90%', maxHeight: '90%',
+                    objectFit: 'contain', boxShadow: '0 0 20px rgba(0,0,0,0.5)',
+                    borderRadius: '4px'
+                }}
+                onClick={(e) => e.stopPropagation()}
+            />
+
+            <div style={{
+                position: 'absolute', bottom: '30px', color: 'white',
+                background: 'rgba(0,0,0,0.6)', padding: '6px 14px', borderRadius: '20px',
+                fontSize: '0.9rem', letterSpacing: '1px'
+            }}>
+                {activeIndex + 1} / {images.length}
+            </div>
+        </div>
     );
 };

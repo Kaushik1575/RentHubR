@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { ReviewSummary, ReviewCard, ReviewForm } from '../components/ReviewComponents';
+import { ReviewSummary, ReviewCard, ReviewForm, ImageSliderModal } from '../components/ReviewComponents';
 import { toast } from 'react-hot-toast';
 
 const VehicleDetails = () => {
@@ -14,6 +14,8 @@ const VehicleDetails = () => {
 
     const [loading, setLoading] = useState(true);
     const [showReviewForm, setShowReviewForm] = useState(false);
+    const [isSliderOpen, setIsSliderOpen] = useState(false);
+    const [sliderIndex, setSliderIndex] = useState(0);
 
     // Auth state for delete check
     const userStr = localStorage.getItem('user');
@@ -170,7 +172,15 @@ const VehicleDetails = () => {
                         <h2 style={{ fontSize: '1.8rem', color: '#1a1a1a', margin: 0 }}>Ratings & Reviews</h2>
                         {!showReviewForm && (
                             <button
-                                onClick={() => setShowReviewForm(true)}
+                                onClick={() => {
+                                    const token = localStorage.getItem('token');
+                                    if (!token) {
+                                        toast.error("Please login to rate this vehicle");
+                                        navigate('/login');
+                                        return;
+                                    }
+                                    setShowReviewForm(true);
+                                }}
                                 style={{
                                     padding: '0.8rem 1.5rem',
                                     background: 'white',
@@ -197,9 +207,44 @@ const VehicleDetails = () => {
                         </div>
                     )}
 
+                    {/* Customer Photos Strip */}
+                    {reviews.flatMap(r => r.photos || []).length > 0 && (
+                        <div style={{ marginBottom: '2rem' }}>
+                            <h3 style={{ fontSize: '1.2rem', marginBottom: '1rem', color: '#333' }}>Customer Photos ({reviews.flatMap(r => r.photos || []).length})</h3>
+                            <div style={{ display: 'flex', gap: '12px', overflowX: 'auto', paddingBottom: '10px', scrollBehavior: 'smooth' }}>
+                                {reviews.flatMap(r => r.photos || []).map((photo, index) => (
+                                    <div key={index}
+                                        onClick={() => { setSliderIndex(index); setIsSliderOpen(true); }}
+                                        style={{
+                                            flexShrink: 0, width: '100px', height: '100px',
+                                            cursor: 'pointer', borderRadius: '8px', overflow: 'hidden',
+                                            border: '1px solid #ddd',
+                                            boxShadow: '0 2px 5px rgba(0,0,0,0.1)'
+                                        }}>
+                                        <img src={photo} alt="Customer" style={{ width: '100%', height: '100%', objectFit: 'cover', transition: 'transform 0.2s' }}
+                                            onMouseOver={e => e.target.style.transform = 'scale(1.1)'}
+                                            onMouseOut={e => e.target.style.transform = 'scale(1.0)'}
+                                        />
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+                    )}
+
                     <div style={{ marginBottom: '3rem' }}>
                         <ReviewSummary reviews={reviews} />
                     </div>
+
+
+
+                    {/* Image Slider Modal */}
+                    {isSliderOpen && (
+                        <ImageSliderModal
+                            images={reviews.flatMap(r => r.photos || [])}
+                            initialIndex={sliderIndex}
+                            onClose={() => setIsSliderOpen(false)}
+                        />
+                    )}
 
                     <div style={{ display: 'flex', flexDirection: 'column', gap: '1rem' }}>
                         {reviews.map(review => (
