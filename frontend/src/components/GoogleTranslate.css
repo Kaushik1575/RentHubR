@@ -89,16 +89,25 @@ body {
 /* Mobile specific styling if needed */
 @media (max-width: 900px) {
     .language-selector-container {
-        display: block;
-        width: 100%;
+        display: block !important;
+        width: 100% !important;
+        text-align: center;
+        /* Center the container's content */
     }
 
     .language-select {
-        width: 100%;
-        padding: 10px 15px;
+        width: 100% !important;
+        padding: 12px 15px;
+        /* Slightly larger touch target */
         font-size: 16px;
-        border-radius: 10px;
+        border-radius: 12px;
         background-color: #f8f9fa;
         border: 1px solid #e1e1e1;
+        text-align: center;
+        /* Center text inside select */
+        text-align-last: center;
+        /* For Chrome/modern browsers */
+        background-position: right 15px center;
+        /* Adjust arrow position */
     }
 }
