@@ -25,6 +25,30 @@ body {
     box-shadow: none !important;
 }
 
+/* Hide the main Google Translate gadget container but keep it in DOM for script to work */
+.goog-te-gadget {
+    display: block !important;
+    opacity: 0 !important;
+    pointer-events: none !important;
+    height: 0 !important;
+    width: 0 !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    z-index: -10000 !important;
+}
+
+.goog-te-banner-frame {
+    display: none !important;
+}
+
+#google_translate_element {
+    width: 0px !important;
+    height: 0px !important;
+    overflow: hidden !important;
+    position: absolute !important;
+    z-index: -10000 !important;
+}
+
 /* Custom Language Selector Styling */
 .language-selector-container {
     position: relative;
@@ -64,6 +88,11 @@ body {
 
 /* Mobile specific styling if needed */
 @media (max-width: 900px) {
+    .language-selector-container {
+        display: block;
+        width: 100%;
+    }
+
     .language-select {
         width: 100%;
         padding: 10px 15px;
