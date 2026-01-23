@@ -7,7 +7,7 @@ const INITIAL_OPTIONS = [
     "Account and Login",
     "Rent a Vehicle",
     "Booking Status",
-    "Payment Issues",
+    "Cancel Booking",
     "Something else"
 ];
 
@@ -126,9 +126,9 @@ const Chatbot = ({ isOpen, onClose }) => {
         } else if (lowerText.includes("return") || lowerText.includes("exchange")) {
             localResponse = "You can return your vehicle at any authorized RentHub station. Are you facing an issue with a return?";
             localOptions = ["Station Locations", "Overdue Charges", "Go back"];
-        } else if (lowerText.includes("payment")) {
-            localResponse = "We support UPI, Cards, and Netbanking. What seems to be the trouble?";
-            localOptions = ["Refund Status", "Payment Failed", "Go back"];
+        } else if (lowerText === "cancel booking" || lowerText.includes("cancel booking")) {
+            localResponse = "To cancel your booking, please provide your **Booking ID** (e.g., RH...).";
+            localOptions = ["Go back"];
         } else if (lowerText === "go back" || lowerText === "main menu") {
             localResponse = "Sure, what's your question about?";
             localOptions = INITIAL_OPTIONS;
