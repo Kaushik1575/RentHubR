@@ -262,6 +262,15 @@ const BookingForm = () => {
                     email: "user@example.com",
                     contact: "9999999999"
                 },
+                modal: {
+                    ondismiss: function () {
+                        // Handle modal dismissal if needed
+                        setProcessing(false);
+                    },
+                    escape: false,
+                    backdropclose: false,
+                    confirm_close: false
+                },
                 theme: {
                     color: "#3399cc"
                 }
@@ -321,13 +330,18 @@ const BookingForm = () => {
             if (response.ok) {
                 setBookingId(data.id); // Store booking ID
                 setFormattedBookingId(data.booking_id); // Store formatted ID
-                setStep(3); // Move to Success Step
-                setPopup({
-                    isOpen: true,
-                    type: 'success',
-                    title: 'Booking Confirmed!',
-                    message: `Booking ${data.booking_id || `#${data.id}`} successful. Check your email for details.`
-                });
+
+                // CRITICAL FIX: Add delay before changing state to allow Razorpay modal to close properly
+                // This prevents "NotFoundError: Failed to execute 'removeChild' on 'Node'"
+                setTimeout(() => {
+                    setStep(3); // Move to Success Step
+                    setPopup({
+                        isOpen: true,
+                        type: 'success',
+                        title: 'Booking Confirmed!',
+                        message: `Booking ${data.booking_id || `#${data.id}`} successful. Check your email for details.`
+                    });
+                }, 1500);
             } else {
                 // Show detailed error if available
                 const errorMessage = data.details ? `${data.error}: ${data.details}` : (data.error || 'Booking confirmation failed');
@@ -349,7 +363,8 @@ const BookingForm = () => {
 
     return (
         <div style={{ background: '#f8f9fa', minHeight: '100vh', padding: '2rem' }}>
-            <div className="booking-container" style={{
+            {/* Added 'notranslate' class to prevent Google Translate from breaking React DOM updates */}
+            <div className="booking-container notranslate" style={{
                 maxWidth: '800px', margin: '0 auto', background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
             }}>
                 <div className="booking-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #eee' }}>

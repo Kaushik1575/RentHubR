@@ -285,21 +285,73 @@ Do NOT wrap the output in markdown.`;
             });
         }
 
-        // Try to use the latest model available
-        // Switched to 1.5-flash for stability and better rate limits
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        console.log("Initialized Gemini Model: gemini-1.5-flash");
+        // Helper to try models in sequence
+        const modelsToTry = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro", "gemini-pro"];
+        let model;
+        let chat;
+        let lastError;
 
-        const chat = model.startChat({
-            history: formattedHistory,
-            generationConfig: {
-                maxOutputTokens: 400,
-            },
-        });
+        for (const modelName of modelsToTry) {
+            try {
+                console.log(`Trying to initialize model: ${modelName}`);
+                model = genAI.getGenerativeModel({ model: modelName });
 
-        const result = await chat.sendMessage(message);
-        const response = await result.response;
-        const text = response.text();
+                // Start chat session
+                chat = model.startChat({
+                    history: formattedHistory,
+                    generationConfig: {
+                        maxOutputTokens: 400,
+                    },
+                });
+
+                // Test connection with a dummy generation (optional but safer)
+                // actually startChat doesn't validate until sendMessage is called.
+                // so we proceed to sendMessage.
+
+                break; // If startChat doesn't throw (it usually doesn't), we break and try sending.
+                // Re-attempting logic needs to be around sendMessage actually if we want to be robust,
+                // but usually getGenerativeModel is where the config might fail if invalid? 
+                // No, getGenerativeModel is synchronous config. The error happens at usage time.
+            } catch (e) {
+                console.log(`Failed to init ${modelName}:`, e.message);
+                lastError = e;
+            }
+        }
+
+        // We will wrap sendMessage in the retry logic actually, or better:
+        // iterate models AND send message.
+
+        let text;
+        let success = false;
+
+        for (const modelName of modelsToTry) {
+            try {
+                console.log(`Attempting generation with: ${modelName}`);
+                const currentModel = genAI.getGenerativeModel({ model: modelName });
+                const currentChat = currentModel.startChat({
+                    history: formattedHistory,
+                    generationConfig: {
+                        maxOutputTokens: 400,
+                    },
+                });
+
+                const result = await currentChat.sendMessage(message);
+                const response = await result.response;
+                text = response.text();
+
+                console.log(`SUCCESS with ${modelName}`);
+                success = true;
+                break; // Exit loop on success
+            } catch (e) {
+                console.warn(`FAILED with ${modelName}: ${e.message}`);
+                lastError = e;
+                // Continue to next model
+            }
+        }
+
+        if (!success) {
+            throw lastError || new Error("All models failed to generate response.");
+        }
 
         console.log("Gemini Reply:", text); // Debugging
 

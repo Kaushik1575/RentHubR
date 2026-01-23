@@ -1,29 +1,33 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 require("dotenv").config();
 
-async function listModels() {
+async function checkModels() {
     const genAI = new GoogleGenerativeAI(process.env.GEMINI_API_KEY);
+    
+    const models = [
+        "gemini-1.5-flash", 
+        "gemini-1.5-flash-latest",
+        "gemini-1.5-flash-001",
+        "gemini-pro", 
+        "gemini-1.0-pro", 
+        "gemini-1.5-pro"
+    ];
+    
+    console.log("Checking available models...");
 
-    try {
-        console.log("Using API Key:", process.env.GEMINI_API_KEY ? "Present" : "Missing");
-        // For some reason listModels isn't directly exposed on the main class in some versions,
-        // but let's try the model manager if available or just try a lighter call.
-        // Actually, the easiest way to test access is to try a simple generateContent with a known safe model.
-
-        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
-        const result = await model.generateContent("Hello");
-        console.log("Response from gemini-1.5-flash:", result.response.text());
-    } catch (error) {
-        console.error("Error with gemini-1.5-flash:", error.message);
-    }
-
-    try {
-        const model = genAI.getGenerativeModel({ model: "gemini-pro" });
-        const result = await model.generateContent("Hello");
-        console.log("Response from gemini-pro:", result.response.text());
-    } catch (error) {
-        console.error("Error with gemini-pro:", error.message);
+    for (const modelName of models) {
+        try {
+             const model = genAI.getGenerativeModel({ model: modelName });
+             const result = await model.generateContent("Test");
+             console.log(`SUCCESS: ${modelName} is working.`);
+             // We can stop after finding one, or list all working ones. Let's find one and exit.
+             // But actually, finding the *best* one is better. 1.5 flash is preferred if available.
+        } catch (e) {
+             // simplify error message
+             const msg = e.message.split('[404 Not Found]')[1] || e.message;
+             console.log(`FAILED: ${modelName} - ${msg.trim().substring(0, 100)}...`);
+        }
     }
 }
 
-listModels();
+checkModels();
