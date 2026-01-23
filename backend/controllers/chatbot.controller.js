@@ -1,5 +1,7 @@
 const { GoogleGenerativeAI } = require("@google/generative-ai");
 const SupabaseDB = require('../models/supabaseDB');
+const axios = require('axios');
+const { getWeatherOpenMeteo } = require('./weatherHelper');
 
 // Helper to get formatted vehicle list text
 async function getVehicleContext() {
@@ -21,6 +23,172 @@ SCOOTY: ${simplify(scooty || [], 'scooty')}
         console.error("Error fetching vehicle context:", e);
         return "";
     }
+}
+
+// Helper to get weather information for a location
+async function getWeatherInfo(location) {
+    try {
+        let searchQuery = location.trim();
+        const lowerLoc = searchQuery.toLowerCase();
+
+        // 0. Handle Aliases for Better Accuracy
+        if (lowerLoc === 'jammu and kashmir' || lowerLoc === 'jammu kashmir' || lowerLoc === 'j&k' || lowerLoc === 'jk') {
+            searchQuery = "Jammu City, Jammu and Kashmir";
+        } else if (lowerLoc === 'odisha' || lowerLoc === 'orissa') {
+            searchQuery = "Bhubaneswar, Odisha";
+        }
+
+        console.log(`🌤️ Weather Check for: ${searchQuery} (Original: ${location})`);
+
+        // PRIORITY 1: WeatherAPI.com (Use provided key + fallback to env)
+        const weatherApiKey = process.env.WEATHERAPI_KEY || '87f83957353244718cf102212262301';
+
+        if (weatherApiKey) {
+            try {
+                // Retry wrapper for WeatherAPI
+                const fetchFromWeatherApi = async (query) => {
+                    const url = `https://api.weatherapi.com/v1/current.json?key=${weatherApiKey}&q=${encodeURIComponent(query)}&aqi=no`;
+                    const res = await axios.get(url);
+                    return res.data;
+                };
+
+                let data;
+                try {
+                    console.log("  - Trying WeatherAPI.com...");
+                    data = await fetchFromWeatherApi(searchQuery);
+                } catch (firstError) {
+                    // Retry with ", India" if it failed and didn't already have it
+                    if (!searchQuery.toLowerCase().includes("india")) {
+                        console.log("  - Exact match failed. Retrying with ', India'...");
+                        data = await fetchFromWeatherApi(`${searchQuery}, India`);
+                    } else {
+                        throw firstError;
+                    }
+                }
+
+                console.log("✅ Weather data fetched from WeatherAPI.com");
+
+                return {
+                    temp: Math.round(data.current.temp_c),
+                    feelsLike: Math.round(data.current.feelslike_c),
+                    condition: data.current.condition.text.toLowerCase(),
+                    description: data.current.condition.text.toLowerCase(),
+                    humidity: data.current.humidity,
+                    // Return Exact Location: City, Region, Country
+                    location: `${data.location.name}, ${data.location.region}, ${data.location.country}`
+                };
+            } catch (weatherApiError) {
+                console.log("  - WeatherAPI.com failed:", weatherApiError.message);
+                if (weatherApiError.response) {
+                    console.log("    (Error Data):", weatherApiError.response.data);
+                }
+            }
+        }
+
+        // PRIORITY 2: Try Open-Meteo (Free, No Key)
+        console.log("  - Attempting Open-Meteo (Fallback)...");
+        const openMeteoData = await getWeatherOpenMeteo(location);
+        if (openMeteoData) {
+            console.log("✅ Weather data fetched from Open-Meteo");
+            return openMeteoData;
+        }
+
+        // PRIORITY 3: OpenWeatherMap (if key exists)
+        const openWeatherKey = process.env.OPENWEATHER_API_KEY;
+        if (openWeatherKey) {
+            try {
+                const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&appid=${openWeatherKey}&units=metric`;
+                console.log("  - Trying OpenWeatherMap...");
+                const response = await axios.get(url);
+                const data = response.data;
+                return {
+                    temp: Math.round(data.main.temp),
+                    feelsLike: Math.round(data.main.feels_like),
+                    condition: data.weather[0].main.toLowerCase(),
+                    description: data.weather[0].description,
+                    humidity: data.main.humidity,
+                    location: data.name
+                };
+            } catch (e) {
+                console.log("  - OpenWeatherMap failed:", e.message);
+            }
+        }
+
+        console.error("❌ All weather services failed");
+        return null;
+
+    } catch (error) {
+        console.error("❌ Weather Info Error:", error.message);
+        return null;
+    }
+}
+
+// Helper to get weather-based recommendations
+function getWeatherRecommendations(weatherInfo) {
+    if (!weatherInfo) {
+        return "I couldn't fetch the weather information. Please check the location name.";
+    }
+
+    const { temp, feelsLike, condition, description, humidity, location } = weatherInfo;
+
+    let recommendations = `🌤️ **Weather in ${location}**: ${description}, ${temp}°C (feels like ${feelsLike}°C)\n\n`;
+    recommendations += `📦 **What to pack for your ride:**\n`;
+
+    // Temperature-based recommendations
+    if (temp > 30) {
+        recommendations += `\n🔥 **Hot Weather Essentials:**\n`;
+        recommendations += `• Sunscreen (SPF 30+)\n`;
+        recommendations += `• Sunglasses & Cap/Hat\n`;
+        recommendations += `• Water bottle (stay hydrated!)\n`;
+        recommendations += `• Light, breathable clothing\n`;
+        recommendations += `• Cooling towel\n`;
+    } else if (temp < 15) {
+        recommendations += `\n❄️ **Cold Weather Essentials:**\n`;
+        recommendations += `• Warm jacket/windcheater\n`;
+        recommendations += `• Gloves for riding\n`;
+        recommendations += `• Scarf or neck warmer\n`;
+        recommendations += `• Full-sleeve clothes\n`;
+        recommendations += `• Thermal wear (if below 10°C)\n`;
+    } else {
+        recommendations += `\n🌡️ **Pleasant Weather:**\n`;
+        recommendations += `• Light jacket (just in case)\n`;
+        recommendations += `• Comfortable riding clothes\n`;
+        recommendations += `• Sunglasses\n`;
+    }
+
+    // Condition-based recommendations
+    if (condition.includes('rain') || condition.includes('drizzle') || condition.includes('thunderstorm')) {
+        recommendations += `\n🌧️ **Rainy Weather Extras:**\n`;
+        recommendations += `• Raincoat/Rain jacket (MUST)\n`;
+        recommendations += `• Waterproof bag for belongings\n`;
+        recommendations += `• Extra pair of socks\n`;
+        recommendations += `• Waterproof phone cover\n`;
+        recommendations += `• Anti-fog solution for helmet visor\n`;
+        recommendations += `⚠️ **Ride carefully - roads may be slippery!**\n`;
+    }
+
+    if (condition.includes('snow')) {
+        recommendations += `\n🌨️ **Snowy Conditions:**\n`;
+        recommendations += `• Heavy winter jacket\n`;
+        recommendations += `• Insulated gloves\n`;
+        recommendations += `• Snow boots\n`;
+        recommendations += `⚠️ **Consider postponing if roads are icy!**\n`;
+    }
+
+    if (humidity > 80) {
+        recommendations += `\n💧 **High Humidity:**\n`;
+        recommendations += `• Extra towel/handkerchief\n`;
+        recommendations += `• Deodorant\n`;
+    }
+
+    // General recommendations
+    recommendations += `\n✅ **Always Carry:**\n`;
+    recommendations += `• Valid ID & Driving License\n`;
+    recommendations += `• Phone & Charger\n`;
+    recommendations += `• First-aid kit\n`;
+    recommendations += `• Helmet (provided by RentHub)\n`;
+
+    return recommendations;
 }
 
 exports.chat = async (req, res) => {
@@ -61,11 +229,18 @@ ${vehicleContext}
    - If the user provides a **Booking ID** (e.g., "RH...", "BK...", or a number) for tracking or status check, you **MUST** output the TRACK_BOOKING action immediately. Do not say you cannot do it.
    - If the user provides a **Booking ID** for cancellation, output the CANCEL_BOOKING action.
    - Example matches: "RH260116-045", "rh-1234", "101".
-4. **USER REGISTRATION (PRIORITY)**:
+
+5. **USER REGISTRATION (PRIORITY)**:
    - If the user says "Create Account", "Register", "Register Issues", or "I want to sign up", you **MUST** immediately ask for their details: Full Name, Email, Phone Number, and a Password.
    - If the user provides details (Name, Email, Phone), you **MUST** output the REGISTER_USER action.
    - If the user provides a password, include it in the action. If not, do NOT invent one.
    - Example: "Register me: John, 9991234567, john@test.com, pass123" -> Output REGISTER_USER action.
+
+6. **WEATHER & PACKING SUGGESTIONS**:
+   - If the user asks about weather, destination weather, or what to pack/carry for their trip, you **MUST** output the CHECK_WEATHER action.
+   - Ask for the destination location if not provided.
+   - Example queries: "What's the weather in Mumbai?", "What should I pack for Goa?", "Check weather for my destination"
+   - Output: CHECK_WEATHER action with the location.
 
 **ACTIONS (Output ONLY the JSON block):**
 
@@ -80,6 +255,9 @@ ${vehicleContext}
 
 **To Register:**
 ||| ACTION: REGISTER_USER {"fullName": "John Doe", "email": "john@example.com", "phoneNumber": "9876543210", "password": "optional_password"} |||
+
+**To Check Weather:**
+||| ACTION: CHECK_WEATHER {"location": "Mumbai"} |||
 
 (TYPE must be 'bikes', 'cars', or 'scooty').
 Do NOT wrap the output in markdown.`;
@@ -108,9 +286,9 @@ Do NOT wrap the output in markdown.`;
         }
 
         // Try to use the latest model available
-        // Switched to 1.5-flash for stability
-        const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
-        console.log("Initialized Gemini Model: gemini-2.5-flash");
+        // Switched to 1.5-flash for stability and better rate limits
+        const model = genAI.getGenerativeModel({ model: "gemini-1.5-flash" });
+        console.log("Initialized Gemini Model: gemini-1.5-flash");
 
         const chat = model.startChat({
             history: formattedHistory,
@@ -139,5 +317,60 @@ Do NOT wrap the output in markdown.`;
         }
 
         res.status(500).json({ error: "Failed to process your request." });
+    }
+};
+
+// Weather check endpoint
+exports.checkWeather = async (req, res) => {
+    try {
+        const { location } = req.body;
+
+        if (!location) {
+            return res.status(400).json({ error: "Location is required" });
+        }
+
+        const weatherInfo = await getWeatherInfo(location);
+
+        if (!weatherInfo) {
+            // Provide helpful fallback response
+            const fallbackResponse = `I'm having trouble connecting to the weather service right now, but here are **essential packing tips for ${location}**:
+
+📦 **Smart Packing Checklist:**
+
+🌡️ **For Any Weather:**
+• Light jacket or windcheater (versatile for temperature changes)
+• Comfortable riding clothes
+• Sunglasses (UV protection)
+• Water bottle (stay hydrated)
+
+🌧️ **Rain Protection (Just in Case):**
+• Raincoat or rain jacket
+• Waterproof bag for belongings
+• Extra pair of socks
+
+☀️ **Sun Protection:**
+• Sunscreen (SPF 30+)
+• Cap or hat
+• Cooling towel
+
+✅ **Always Carry:**
+• Valid ID & Driving License
+• Phone & Charger
+• First-aid kit
+• Helmet (provided by RentHub)
+
+💡 **Pro Tip:** Check the local weather forecast before your trip for the most accurate conditions!
+
+⚠️ **Note:** Weather service is temporarily unavailable. For real-time weather, please check your weather app or try again in a few minutes.`;
+
+            return res.json({ reply: fallbackResponse });
+        }
+
+        const recommendations = getWeatherRecommendations(weatherInfo);
+        res.json({ reply: recommendations });
+
+    } catch (error) {
+        console.error("Weather Check Error:", error.message);
+        res.status(500).json({ error: "Failed to fetch weather information." });
     }
 };

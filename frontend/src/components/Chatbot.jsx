@@ -8,6 +8,7 @@ const INITIAL_OPTIONS = [
     "Rent a Vehicle",
     "Booking Status",
     "Cancel Booking",
+    "Weather & Packing Tips",
     "Something else"
 ];
 
@@ -128,6 +129,9 @@ const Chatbot = ({ isOpen, onClose }) => {
             localOptions = ["Station Locations", "Overdue Charges", "Go back"];
         } else if (lowerText === "cancel booking" || lowerText.includes("cancel booking")) {
             localResponse = "To cancel your booking, please provide your **Booking ID** (e.g., RH...).";
+            localOptions = ["Go back"];
+        } else if (lowerText === "weather & packing tips" || lowerText.includes("weather") || lowerText.includes("packing")) {
+            localResponse = "I can help you check the weather and suggest what to pack! 🌤️\n\nPlease tell me your **destination location** (e.g., Mumbai, Goa, Delhi).";
             localOptions = ["Go back"];
         } else if (lowerText === "go back" || lowerText === "main menu") {
             localResponse = "Sure, what's your question about?";
@@ -316,7 +320,46 @@ const Chatbot = ({ isOpen, onClose }) => {
                         console.error("Failed to parse register action", e);
                     }
                 }
+
+                // Regex for WEATHER CHECK
+                const weatherRegex = /\|\|\| ACTION: CHECK_WEATHER (.*?) \|\|\|/s;
+                const weatherMatch = replyText.match(weatherRegex);
+                if (weatherMatch) {
+                    try {
+                        let jsonStr = weatherMatch[1];
+                        const details = JSON.parse(jsonStr);
+                        replyText = replyText.replace(weatherMatch[0], "").trim();
+
+                        // Call weather API
+                        fetch('/api/chatbot/weather', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({ location: details.location })
+                        })
+                            .then(res => res.json())
+                            .then(weatherData => {
+                                setMessages(prev => [...prev, {
+                                    id: Date.now() + 3,
+                                    text: weatherData.reply || weatherData.error || "Unable to fetch weather information.",
+                                    sender: 'bot',
+                                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                }]);
+                            })
+                            .catch(err => {
+                                console.error("Weather API Error:", err);
+                                setMessages(prev => [...prev, {
+                                    id: Date.now() + 3,
+                                    text: "Sorry, I couldn't fetch the weather information right now. Please try again later.",
+                                    sender: 'bot',
+                                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                                }]);
+                            });
+                    } catch (e) {
+                        console.error("Failed to parse weather action", e);
+                    }
+                }
             }
+
 
             const botResponse = {
                 id: Date.now() + 1,
