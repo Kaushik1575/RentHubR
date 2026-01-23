@@ -394,6 +394,10 @@ const cancelBooking = async (req, res) => {
         }
 
         // Check ownership
+        console.log('--- SECURITY CHECK ---');
+        console.log('Booking Owner:', booking.user_id);
+        console.log('Current User :', userId);
+
         if (booking.user_id !== userId) {
             return res.status(403).json({ error: 'Unauthorized: This booking belongs to a different user.' });
         }

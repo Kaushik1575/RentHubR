@@ -278,13 +278,18 @@ const Login = () => {
                     setPopup({ ...popup, isOpen: false });
                     if (popup.type === 'success') {
                         if (activeTab === 'user') {
+                            // Check for 'redirect' query param
+                            const params = new URLSearchParams(window.location.search);
+                            const redirectUrl = params.get('redirect');
+
                             if (from) {
                                 navigate(from, { replace: true });
-                                window.dispatchEvent(new Event('storage'));
+                            } else if (redirectUrl) {
+                                navigate(redirectUrl);
                             } else {
                                 navigate('/');
-                                window.dispatchEvent(new Event('storage'));
                             }
+                            window.dispatchEvent(new Event('storage'));
                         } else {
                             navigate('/admin');
                         }

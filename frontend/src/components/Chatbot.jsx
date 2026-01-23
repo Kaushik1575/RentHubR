@@ -3,9 +3,23 @@ import ReactMarkdown from 'react-markdown';
 import './Chatbot.css';
 import chatbotImg from '../assets/chatbot_styled.png';
 
+const INITIAL_OPTIONS = [
+    "Account and Login",
+    "Rent a Vehicle",
+    "Booking Status",
+    "Payment Issues",
+    "Something else"
+];
+
 const Chatbot = ({ isOpen, onClose }) => {
     const [messages, setMessages] = useState([
-        { id: 1, text: "Hello! 👋 I'm RentHub Assistant. How can I help you find the perfect ride today?", sender: 'bot', time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) }
+        {
+            id: 1,
+            text: "Hello! I'm RentHub Support. How can I help you today?",
+            sender: 'bot',
+            time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+            options: INITIAL_OPTIONS
+        }
     ]);
     const [inputValue, setInputValue] = useState("");
     const [isTyping, setIsTyping] = useState(false);
@@ -21,28 +35,132 @@ const Chatbot = ({ isOpen, onClose }) => {
         }
     }, [messages, isOpen]);
 
-    const handleSend = async () => {
-        if (!inputValue.trim()) return;
+    const handleSend = async (manualText = null) => {
+        const textToSend = manualText || inputValue;
+        if (!textToSend.trim()) return;
 
         const newUserMessage = {
             id: Date.now(),
-            text: inputValue,
+            text: textToSend,
             sender: 'user',
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
         };
 
         // Update messages with user's input immediately
-        const updatedMessages = [...messages, newUserMessage];
-        setMessages(updatedMessages);
+        setMessages(prev => [...prev, newUserMessage]);
         setInputValue("");
         setIsTyping(true);
+
+        // --- LOCAL PREDEFINED LOGIC ---
+        // This simulates instant responses for the "Chips" before hitting the heavy AI
+        const lowerText = textToSend.toLowerCase();
+        let localResponse = null;
+        let localOptions = null;
+
+        // 1. Handle "Forgot Password" - Explicit Redirect
+        if (lowerText === "forgot password" || lowerText === "reset password") {
+            setTimeout(() => {
+                setMessages(prev => [...prev, {
+                    id: Date.now() + 1,
+                    text: "I can help with that. Redirecting you to the password reset page...",
+                    sender: 'bot',
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }]);
+                setTimeout(() => window.location.href = '/forgot-password', 1500);
+            }, 500);
+            setIsTyping(false);
+            return;
+        }
+
+        // 2. Handle "My Profile" - Explicit Redirect
+        if (lowerText === "my profile") {
+            const token = localStorage.getItem('token');
+            if (token) {
+                setTimeout(() => {
+                    setMessages(prev => [...prev, {
+                        id: Date.now() + 1,
+                        text: "Great! Taking you to your profile now.",
+                        sender: 'bot',
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    }]);
+                    setTimeout(() => window.location.href = '/profile', 1000);
+                }, 500);
+            } else {
+                setTimeout(() => {
+                    setMessages(prev => [...prev, {
+                        id: Date.now() + 1,
+                        text: "You need to log in to view your profile. I'll take you to the login page, and you'll be redirected back automatically.",
+                        sender: 'bot',
+                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                    }]);
+                    setTimeout(() => window.location.href = '/login?redirect=/profile', 1500);
+                }, 500);
+            }
+            setIsTyping(false);
+            return;
+        }
+
+        // 3. BYPASS: "Create Account" should go to AI, NOT local logic
+        // 3. BYPASS: "Create Account" should go to AI, NOT local logic
+        if (lowerText === "create account" || lowerText === "register") {
+            // Do nothing here, allowing it to fall through to the backend API call below
+        }
+        else if (lowerText.includes("account") || lowerText.includes("login")) {
+            localResponse = "For account related queries, please select one of the options below:";
+            localOptions = ["Forgot Password", "My Profile", "Create Account", "Go back"];
+        } else if (lowerText === "rent a vehicle" || lowerText === "rent a bike") {
+            localResponse = "We have a great collection! Which type of vehicle are you looking for?";
+            localOptions = ["Show Bikes", "Show Cars", "Show Scooty", "Go back"];
+        } else if (lowerText === "show bikes" || lowerText === "bikes") {
+            localResponse = "Here are some of our popular bikes:";
+            localOptions = ["Yamaha R15 V3", "Royal Enfield Classic 350", "KTM Duke 200", "Bajaj Pulsar 150", "Apache RTR 160", "Go back"];
+        } else if (lowerText === "show cars" || lowerText === "cars") {
+            localResponse = "Comfortable cars for your journey:";
+            localOptions = ["Swift Dzire", "Honda City", "Mahindra Thar", "Hyundai Creta", "Tata Nexon", "Go back"];
+        } else if (lowerText === "show scooty" || lowerText === "scooty") {
+            localResponse = "Easy-to-ride scooters for city commute:";
+            localOptions = ["Honda Activa 6G", "TVS Jupiter", "Suzuki Access", "Yamaha Fascino", "Hero Pleasure", "Go back"];
+        } else if (lowerText === "booking status" || lowerText === "check booking") {
+            localResponse = "To check your status, please provide your **Booking ID** (e.g., RH...).";
+            localOptions = ["Go back"];
+        } else if (lowerText.includes("return") || lowerText.includes("exchange")) {
+            localResponse = "You can return your vehicle at any authorized RentHub station. Are you facing an issue with a return?";
+            localOptions = ["Station Locations", "Overdue Charges", "Go back"];
+        } else if (lowerText.includes("payment")) {
+            localResponse = "We support UPI, Cards, and Netbanking. What seems to be the trouble?";
+            localOptions = ["Refund Status", "Payment Failed", "Go back"];
+        } else if (lowerText === "go back" || lowerText === "main menu") {
+            localResponse = "Sure, what's your question about?";
+            localOptions = INITIAL_OPTIONS;
+        }
+
+        // Handle "Create Account" / "Register" specifically to guide the bot
+        // If user creates account, we want the bot to take over, so we DON'T return/intercept here completely,
+        // but we might want to change the text sent to the backend if needed.
+        // For now, let's assume the backend LLM handles "Create Account" well. 
+        // We just renamed "Register Issues" to "Create Account" in the list above.
+
+        if (localResponse) {
+            setTimeout(() => {
+                setMessages(prev => [...prev, {
+                    id: Date.now() + 1,
+                    text: localResponse,
+                    sender: 'bot',
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                    options: localOptions
+                }]);
+                setIsTyping(false);
+            }, 800); // Slight delay for realism
+            return;
+        }
+        // ------------------------------
 
         try {
             const response = await fetch('/api/chatbot/chat', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    message: newUserMessage.text,
+                    message: textToSend,
                     history: messages // Pass existing history to context
                 })
             });
@@ -51,14 +169,6 @@ const Chatbot = ({ isOpen, onClose }) => {
 
             if (!response.ok) {
                 if (response.status === 429) {
-                    // Specific meaningful error for rate limiting
-                    const errorResponse = {
-                        id: Date.now() + 1,
-                        text: "I'm receiving too many messages right now. Please give me a minute to catch my breath!",
-                        sender: 'bot',
-                        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
-                    };
-                    setMessages(prev => [...prev, errorResponse]);
                     throw new Error("Rate limit exceeded");
                 }
                 throw new Error(data.error || 'Failed to get response');
@@ -168,8 +278,6 @@ const Chatbot = ({ isOpen, onClose }) => {
                                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                             }]);
                             setTimeout(() => {
-                                // Redirect to Track Booking since it handles ID lookup, or My Bookings
-                                // Using Track Booking as it's public/easy
                                 window.location.href = `/track-booking?bookingId=${details.bookingId}&action=cancel`;
                             }, 1500);
                         }, 500);
@@ -214,7 +322,8 @@ const Chatbot = ({ isOpen, onClose }) => {
                 id: Date.now() + 1,
                 text: replyText,
                 sender: 'bot',
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                options: null // API responses might not have hardcoded options unless we parse them
             };
             setMessages(prev => [...prev, botResponse]);
 
@@ -224,12 +333,17 @@ const Chatbot = ({ isOpen, onClose }) => {
                 id: Date.now() + 1,
                 text: "I'm having a bit of trouble connecting to my brain right now. Please try again in a moment!",
                 sender: 'bot',
-                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+                options: ["Retry", "Go back"]
             };
             setMessages(prev => [...prev, errorResponse]);
         } finally {
             setIsTyping(false);
         }
+    };
+
+    const handleOptionClick = (option) => {
+        handleSend(option);
     };
 
     const handleKeyPress = (e) => {
@@ -246,34 +360,45 @@ const Chatbot = ({ isOpen, onClose }) => {
                 <div className="chatbot-profile">
                     <div className="chatbot-avatar">
                         <img src={chatbotImg} alt="Bot" />
-                        <div className="online-status"></div>
                     </div>
                     <div className="chatbot-info">
-                        <h3>Bike Rental Assistant</h3>
-                        <p>Online</p>
+                        <h3>RentHub Support</h3>
                     </div>
                 </div>
                 <div className="chatbot-controls">
-                    <button className="control-btn" onClick={onClose} title="Minimize">
-                        <i className="fas fa-minus"></i>
-                    </button>
-                    <button className="control-btn" onClick={onClose} title="Close">
-                        <i className="fas fa-times"></i>
-                    </button>
+                    <div className="control-btn" onClick={onClose} title="Minimize">
+                        <i className="fas fa-chevron-down"></i>
+                    </div>
                 </div>
             </div>
 
             {/* Body */}
             <div className="chatbot-body">
                 {messages.map((msg) => (
-                    <div key={msg.id} className={`message ${msg.sender}`}>
-                        {/* Render Markdown for bot messages, plain text for user messages to avoid XSS issues/weird format */}
-                        {msg.sender === 'bot' ? (
-                            <ReactMarkdown>{msg.text}</ReactMarkdown>
-                        ) : (
-                            msg.text
+                    <div key={msg.id} style={{ display: 'flex', flexDirection: 'column', width: '100%' }}>
+                        <div className={`message ${msg.sender}`}>
+                            {msg.sender === 'bot' ? (
+                                <ReactMarkdown>{msg.text}</ReactMarkdown>
+                            ) : (
+                                msg.text
+                            )}
+                            <span className="message-time">{msg.time}</span>
+                        </div>
+
+                        {/* Options / Chips */}
+                        {msg.options && (
+                            <div className="options-container">
+                                {msg.options.map((opt, idx) => (
+                                    <button
+                                        key={idx}
+                                        className="option-btn"
+                                        onClick={() => handleOptionClick(opt)}
+                                    >
+                                        {opt} <i className="fas fa-chevron-right"></i>
+                                    </button>
+                                ))}
+                            </div>
                         )}
-                        <span className="message-time">{msg.time}</span>
                     </div>
                 ))}
 
@@ -292,14 +417,14 @@ const Chatbot = ({ isOpen, onClose }) => {
                 <input
                     type="text"
                     className="chatbot-input"
-                    placeholder="Ask about bikes, pricing, booking..."
+                    placeholder="Write a message..."
                     value={inputValue}
                     onChange={(e) => setInputValue(e.target.value)}
                     onKeyPress={handleKeyPress}
                 />
                 <button
                     className="send-btn"
-                    onClick={handleSend}
+                    onClick={() => handleSend()}
                     disabled={!inputValue.trim()}
                 >
                     <i className="fas fa-paper-plane"></i>

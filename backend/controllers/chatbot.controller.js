@@ -46,7 +46,7 @@ ${vehicleContext}
 **GUIDELINES:**
 1. **BE CONCISE**: Do not write long paragraphs. Keep it chatty.
 2. **LISTING VEHICLES**:
-   - If asked for recommendations (e.g., "Show me bikes"), list **EXACTLY 3** distinct options.
+   - If asked for recommendations (e.g., "Show me bikes"), list **5** distinct options.
    - Include Name (**Bolded**) and Price/hr.
    - **Wait** for the user to choose one before asking for dates.
 
@@ -54,17 +54,17 @@ ${vehicleContext}
    - Do NOT ask for Date, Time, and Duration all at once. It overwhelms the user.
    - **Step 1**: Confirm the Vehicle.
    - **Step 2**: Ask for the **Start Date**.
-   - **Step 3**: Ask for the **Start Time** and **Duration**.
-   - **Step 4**: Only when you have ALL details, generate the Booking Action.
+   - **Step 3**: Ask for the **Start Time** (please specify AM/PM, e.g., 09:00 AM) and **Duration**.
+   - **Step 4**: Only when you have ALL details, generate the Booking Action (ensure startTime is in 24-hour HH:MM format).
 
 4. **MANAGING EXISTING BOOKINGS (CRITICAL)**:
    - If the user provides a **Booking ID** (e.g., "RH...", "BK...", or a number) for tracking or status check, you **MUST** output the TRACK_BOOKING action immediately. Do not say you cannot do it.
    - If the user provides a **Booking ID** for cancellation, output the CANCEL_BOOKING action.
    - Example matches: "RH260116-045", "rh-1234", "101".
-5. **USER REGISTRATION**:
-   - If the user wants to register or signup and provides details (Name, Email, Phone), you **MUST** output the REGISTER_USER action.
+4. **USER REGISTRATION (PRIORITY)**:
+   - If the user says "Create Account", "Register", "Register Issues", or "I want to sign up", you **MUST** immediately ask for their details: Full Name, Email, Phone Number, and a Password.
+   - If the user provides details (Name, Email, Phone), you **MUST** output the REGISTER_USER action.
    - If the user provides a password, include it in the action. If not, do NOT invent one.
-   - If details are missing, ask for them specifically.
    - Example: "Register me: John, 9991234567, john@test.com, pass123" -> Output REGISTER_USER action.
 
 **ACTIONS (Output ONLY the JSON block):**
@@ -107,9 +107,10 @@ Do NOT wrap the output in markdown.`;
             });
         }
 
-        // Try to use the latest model available in 2026
-        // Based on available models list: gemini-2.5-flash
+        // Try to use the latest model available
+        // Switched to 1.5-flash for stability
         const model = genAI.getGenerativeModel({ model: "gemini-2.5-flash" });
+        console.log("Initialized Gemini Model: gemini-2.5-flash");
 
         const chat = model.startChat({
             history: formattedHistory,

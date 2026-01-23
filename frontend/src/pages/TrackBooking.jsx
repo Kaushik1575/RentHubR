@@ -106,7 +106,9 @@ const TrackBooking = () => {
 
     const initiateCancelFlow = () => {
         const token = localStorage.getItem('token');
-        if (!token) {
+        const user = JSON.parse(localStorage.getItem('user')); // Get user details
+
+        if (!token || !user) {
             setPopup({
                 isOpen: true,
                 type: 'warning',
@@ -115,6 +117,18 @@ const TrackBooking = () => {
             });
             return;
         }
+
+        // Frontend Security Check: Ensure Current User == Booking User
+        if (result.user_id && result.user_id !== user.id) {
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Access Denied',
+                message: 'You can only cancel your own bookings.'
+            });
+            return;
+        }
+
         setShowCancellationModal(true);
     };
 
@@ -192,6 +206,18 @@ const TrackBooking = () => {
 
     const handleDownloadInvoice = async () => {
         const token = localStorage.getItem('token');
+        const user = JSON.parse(localStorage.getItem('user'));
+
+        // Frontend Security Check
+        if (result.user_id && user && result.user_id !== user.id) {
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Access Denied',
+                message: 'You can only download invoices for your own bookings.'
+            });
+            return;
+        }
         if (!token) {
             setPopup({
                 isOpen: true,
