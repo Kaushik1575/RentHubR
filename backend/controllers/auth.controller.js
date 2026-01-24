@@ -189,6 +189,19 @@ const registerUser = async (req, res) => {
 
         const created = await SupabaseDB.createUser(newUser);
 
+        // Handle Referral if code provided
+        const { referralCode } = req.body;
+        if (referralCode) {
+            try {
+                console.log(`Processing referral for New User ${created.id} with Code ${referralCode}`);
+                await SupabaseDB.registerReferral(created.id, referralCode);
+                console.log('Referral processed successfully');
+            } catch (refError) {
+                console.error('Error processing referral:', refError);
+                // Don't fail registration if referral fails
+            }
+        }
+
         // Delete used OTP records
         await supabase.from('password_reset_otps').delete().eq('id', otpRecord.id);
         await supabase.from('mobile_otps').delete().eq('id', mobileOtpRecord.id);

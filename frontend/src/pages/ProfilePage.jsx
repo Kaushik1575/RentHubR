@@ -74,7 +74,7 @@ const ProfilePage = () => {
             const token = localStorage.getItem('token');
             setPopup({ isOpen: true, type: 'info', title: 'Redeeming...', message: 'Please wait while we process your reward.' });
 
-            const res = await fetch('/api/reward/redeem', {
+            const res = await fetch('/api/user/redeem', {
                 method: 'POST',
                 headers: {
                     'Authorization': `Bearer ${token}`,
@@ -280,92 +280,7 @@ const ProfilePage = () => {
                         {/* Divider */}
                         <div style={{ height: '1px', background: '#eee', margin: '30px 0' }}></div>
 
-                        {/* Super Coins Section */}
-                        <div style={{ marginBottom: '30px', padding: '20px', background: 'linear-gradient(135deg, #FFD700 0%, #FDB931 100%)', borderRadius: '16px', color: '#1a1a1a', boxShadow: '0 4px 15px rgba(253, 185, 49, 0.3)' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <div>
-                                    <h3 style={{ margin: '0 0 5px 0', fontSize: '20px', fontWeight: '800' }}>RentHub Super Coins</h3>
-                                    <p style={{ margin: 0, fontSize: '14px', fontWeight: '500' }}>Earn 1 coin for every minute of ride!</p>
-                                </div>
-                                <div style={{ fontSize: '28px', fontWeight: '900', background: 'rgba(255,255,255,0.4)', padding: '5px 15px', borderRadius: '12px' }}>
-                                    {user.super_coins || 0}🪙
-                                </div>
-                            </div>
 
-                            {/* Progress Bar */}
-                            <div style={{ margin: '20px 0' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 'bold', marginBottom: '5px' }}>
-                                    <span>{user.super_coins || 0} / 1000</span>
-                                    <span>{(user.super_coins || 0) >= 1000 ? 'Goal Reached!' : `${1000 - (user.super_coins || 0)} more to go`}</span>
-                                </div>
-                                <div style={{ height: '8px', background: 'rgba(255,255,255,0.3)', borderRadius: '4px', overflow: 'hidden' }}>
-                                    <div style={{
-                                        width: `${Math.min(100, ((user.super_coins || 0) / 1000) * 100)}%`,
-                                        height: '100%',
-                                        background: 'white',
-                                        borderRadius: '4px',
-                                        transition: 'width 1s ease-in-out'
-                                    }}></div>
-                                </div>
-                            </div>
-
-                            <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
-                                <button
-                                    onClick={handleRedeem}
-                                    disabled={!(user.super_coins && user.super_coins >= 1000)}
-                                    style={{
-                                        padding: '10px 20px', borderRadius: '8px', border: 'none',
-                                        background: (!(user.super_coins && user.super_coins >= 1000)) ? 'rgba(0,0,0,0.1)' : 'white',
-                                        color: (!(user.super_coins && user.super_coins >= 1000)) ? '#666' : '#FDB931',
-                                        fontWeight: 'bold', cursor: (!(user.super_coins && user.super_coins >= 1000)) ? 'not-allowed' : 'pointer',
-                                        boxShadow: (!(user.super_coins && user.super_coins >= 1000)) ? 'none' : '0 4px 10px rgba(0,0,0,0.1)'
-                                    }}
-                                >
-                                    Redeem 2-Hour Ride (1000 🪙)
-                                </button>
-
-                                {rewards.length > 0 && (
-                                    <div style={{ fontSize: '13px', fontWeight: '600', background: 'rgba(255,255,255,0.5)', padding: '5px 10px', borderRadius: '10px' }}>
-                                        🎉 {rewards.length} Free Ride(s) Available!
-                                    </div>
-                                )}
-                            </div>
-
-                            {/* List of Available Coupons */}
-                            {rewards.length > 0 && (
-                                <div style={{ marginTop: '20px', borderTop: '1px solid rgba(255,255,255,0.3)', paddingTop: '15px' }}>
-                                    <p style={{ margin: '0 0 10px 0', fontSize: '14px', fontWeight: 'bold', color: '#1a1a1a' }}>Your Coupon Codes (Tap to copy):</p>
-                                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '10px' }}>
-                                        {rewards.map(r => (
-                                            <div key={r.id}
-                                                onClick={() => {
-                                                    navigator.clipboard.writeText(r.coupon_code);
-                                                    setPopup({ isOpen: true, type: 'success', title: 'Copied!', message: `Code ${r.coupon_code} copied to clipboard.` });
-                                                }}
-                                                style={{
-                                                    background: 'white',
-                                                    padding: '8px 15px',
-                                                    borderRadius: '8px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    gap: '8px',
-                                                    cursor: 'pointer',
-                                                    boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-                                                    transition: 'transform 0.1s'
-                                                }}
-                                                onMouseOver={e => e.currentTarget.style.transform = 'translateY(-2px)'}
-                                                onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
-                                            >
-                                                <i className="fas fa-ticket-alt" style={{ color: '#FDB931' }}></i>
-                                                <span style={{ fontWeight: 'bold', color: '#333', letterSpacing: '1px' }}>{r.coupon_code}</span>
-                                                <i className="far fa-copy" style={{ color: '#999', fontSize: '12px', marginLeft: '5px' }}></i>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            )}
-
-                        </div>
 
                         {/* Details Section */}
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '25px' }}>

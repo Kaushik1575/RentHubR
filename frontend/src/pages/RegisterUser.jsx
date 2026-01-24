@@ -13,7 +13,8 @@ const RegisterUser = () => {
         password: '',
         confirmPassword: '',
         otp: '',
-        mobileOtp: ''
+        mobileOtp: '',
+        referralCode: searchParams.get('ref') || ''
     });
     const [emailVerified, setEmailVerified] = useState(false);
     const [mobileVerified, setMobileVerified] = useState(false);
@@ -343,6 +344,14 @@ const RegisterUser = () => {
                             <i className={`fas ${showConfirmPassword ? 'fa-eye-slash' : 'fa-eye'}`} onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                 style={{ position: 'absolute', right: '12px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#bdc3c7' }}></i>
                         </div>
+                    </div>
+
+                    {/* Referral Code (Optional) */}
+                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                        <label htmlFor="referralCode" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#2c3e50', fontSize: '16px' }}>Referral Code (Optional)</label>
+                        <input type="text" id="referralCode" value={formData.referralCode} onChange={handleChange} placeholder="Have a referral code?"
+                            style={{ width: '100%', padding: '12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none', textTransform: 'uppercase' }}
+                        />
                     </div>
 
                     {/* Password Rules - Compact Horizontal */}

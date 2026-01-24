@@ -68,8 +68,9 @@ const BookingForm = () => {
                             isOpen: true,
                             type: 'info', // Using 'info' type for custom styling or just standard
                             title: '🌟 You have Free Rides!',
-                            message: `You have ${data.coins} Super Coins! equivalent to a FREE 2-Hour Ride. Go to your Profile to redeem it now?`,
-                            isNudge: true // Custom flag to handle actions
+                            message: `You have ${data.coins} Super Coins! equivalent to a FREE 2-Hour Ride. Go to Rewards to redeem it now?`,
+                            isNudge: true, // Custom flag to handle actions
+                            onConfirm: () => navigate('/rewards', { state: { returnUrl: location.pathname + location.search } })
                         });
                     }
                 })
@@ -414,7 +415,6 @@ const BookingForm = () => {
                 razorpaySignature: paymentResponse.razorpay_signature,
                 rewardId: selectedReward ? selectedReward.id : null,
                 advancePayment,
-                remainingAmount,
                 remainingAmount,
                 totalAmount: finalTotal
             };
@@ -846,10 +846,10 @@ const BookingForm = () => {
                 customActions={popup.isNudge ? (
                     <div style={{ display: 'flex', gap: '10px', marginTop: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
                         <button
-                            onClick={() => navigate('/profile', { state: { returnUrl: location.pathname + location.search } })}
+                            onClick={() => navigate('/rewards', { state: { returnUrl: location.pathname + location.search } })}
                             style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold', flex: 1, minWidth: '120px' }}
                         >
-                            Go to Profile & Redeem
+                            Go to Rewards & Redeem
                         </button>
                         <button onClick={() => setPopup({ ...popup, isOpen: false })} style={{ padding: '10px 20px', background: '#e2e8f0', color: '#4a5568', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold', flex: 1, minWidth: '120px' }}>
                             Maybe Later

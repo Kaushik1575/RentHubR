@@ -347,6 +347,95 @@ class SupabaseDB {
         if (error) throw error;
         return data;
     }
+
+    // Scratch Card & Referral Operations
+
+    static async getScratchCards(userId) {
+        const { data, error } = await supabase
+            .from('scratch_cards')
+            .select('*')
+            .eq('user_id', userId)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data;
+    }
+
+    static async createScratchCard(userId, prizeType, prizeValue) {
+        const { data, error } = await supabase
+            .from('scratch_cards')
+            .insert([{
+                user_id: userId,
+                prize_type: prizeType,
+                prize_value: prizeValue
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    static async markScratchCardRevealed(cardId) {
+        const { data, error } = await supabase
+            .from('scratch_cards')
+            .update({
+                is_scratched: true,
+                scratched_at: new Date().toISOString()
+            })
+            .eq('id', cardId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    static async setReferralCode(userId, code) {
+        const { data, error } = await supabase
+            .from('users')
+            .update({ referral_code: code })
+            .eq('id', userId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    static async getUserByReferralCode(code) {
+        const { data, error } = await supabase
+            .from('users')
+            .select('id, full_name')
+            .eq('referral_code', code)
+            .single();
+
+        if (error && error.code !== 'PGRST116') throw error;
+        return data;
+    }
+
+    static async registerReferral(newUserId, referrerCode) {
+        // Find referrer
+        const referrer = await this.getUserByReferralCode(referrerCode);
+        if (!referrer) return false;
+
+        // Set referred_by
+        const { error } = await supabase
+            .from('users')
+            .update({ referred_by: referrer.id })
+            .eq('id', newUserId);
+
+        if (error) throw error;
+
+        // Grant scratch cards or coins to Referrer?
+        // Let's grant a scratch card to the referrer!
+        await this.createScratchCard(referrer.id, 'COINS', '100'); // Referrer gets 100 coins
+
+        // New User Bonus: Grant 200 Coins Scratch Card to the Referee (New User)
+        await this.createScratchCard(newUserId, 'COINS', '200');
+
+        return true;
+    }
 }
 
 module.exports = SupabaseDB;

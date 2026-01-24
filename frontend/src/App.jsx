@@ -19,6 +19,7 @@ import SOSActivate from './pages/SOSActivate';
 import ProfilePage from './pages/ProfilePage';
 import GlobalAuthCheck from './components/GlobalAuthCheck';
 import VehicleDetails from './pages/VehicleDetails';
+import RewardsPage from './pages/RewardsPage';
 import Chatbot from './components/Chatbot';
 import GoogleTranslateLoader from './components/GoogleTranslateLoader';
 import './components/GoogleTranslate.css';
@@ -73,6 +74,7 @@ function Layout() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/my-bookings" element={<MyBookings />} />
         <Route path="/profile" element={<ProfilePage />} />
+        <Route path="/rewards" element={<RewardsPage />} />
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/register-user" element={<RegisterUser />} />

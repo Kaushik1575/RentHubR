@@ -142,22 +142,85 @@ const Home = () => {
 
                     {/* Ride & Earn Promo Banner */}
                     {/* Ride & Earn Promo Banner */}
-                    <div className="promo-banner">
-                        <div className="promo-content">
-                            <div className="promo-icon">🪙</div>
-                            <div className="promo-text">
-                                <h3>Ride & Earn Super Coins!</h3>
-                                <p>
-                                    Earn <strong>1 Coin/min</strong>. Collect <strong>1000 Coins</strong> for a <strong>FREE 2-Hour Ride</strong>!
-                                </p>
+                    {/* New Split Promo Section */}
+                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', margin: '40px 0' }}>
+
+                        {/* Card 1: Ride & Earn */}
+                        <Link to="/rewards" style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                background: 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)',
+                                borderRadius: '20px',
+                                padding: '25px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '20px',
+                                boxShadow: '0 10px 25px rgba(255, 152, 0, 0.3)',
+                                transition: 'transform 0.2s',
+                                cursor: 'pointer',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}
+                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'}
+                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                                <div style={{
+                                    background: 'rgba(255,255,255,0.25)',
+                                    borderRadius: '50%',
+                                    width: '70px', height: '70px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '32px',
+                                    backdropFilter: 'blur(5px)',
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                                }}>🪙</div>
+                                <div>
+                                    <h3 style={{ margin: '0 0 5px 0', color: 'white', fontSize: '22px', fontWeight: '800' }}>Ride & Earn</h3>
+                                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.95)', fontSize: '14px', fontWeight: '500' }}>
+                                        Get <strong>1 Coin/min</strong> on every ride.<br />Redeem for Free Rides!
+                                    </p>
+                                </div>
+                                {/* Decorative circle */}
+                                <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '100px', height: '100px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
                             </div>
-                        </div>
-                        <Link
-                            to={localStorage.getItem('token') ? "/profile" : "/login"}
-                            className="promo-btn"
-                        >
-                            Check Balance
                         </Link>
+
+                        {/* Card 2: Refer & Earn */}
+                        <Link to="/rewards" style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
+                                borderRadius: '20px',
+                                padding: '25px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '20px',
+                                boxShadow: '0 10px 25px rgba(102, 126, 234, 0.3)',
+                                transition: 'transform 0.2s',
+                                cursor: 'pointer',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}
+                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'}
+                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                                <div style={{
+                                    background: 'rgba(255,255,255,0.25)',
+                                    borderRadius: '50%',
+                                    width: '70px', height: '70px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '32px',
+                                    backdropFilter: 'blur(5px)',
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                                }}>🗣️</div>
+                                <div>
+                                    <h3 style={{ margin: '0 0 5px 0', color: 'white', fontSize: '22px', fontWeight: '800' }}>Refer & Earn</h3>
+                                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.95)', fontSize: '14px', fontWeight: '500' }}>
+                                        Invite friends & win <strong>Scratch Cards</strong>.<br />Guaranteed Rewards!
+                                    </p>
+                                </div>
+                                {/* Decorative circle */}
+                                <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', width: '120px', height: '120px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
+                            </div>
+                        </Link>
+
                     </div>
 
                     {/* Bikes Section */}
