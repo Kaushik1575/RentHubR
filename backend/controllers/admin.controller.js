@@ -2,7 +2,7 @@ const supabase = require('../config/supabase');
 const SupabaseDB = require('../models/supabaseDB');
 const { getISTTimestamp } = require('../utils/dateUtils');
 const { generateInvoiceBuffer } = require('../utils/invoiceGenerator');
-const { sendEmail, sendRefundCompleteEmail, sendSOSLinkEmail } = require('../config/emailService');
+const { sendEmail, sendRefundCompleteEmail, sendSOSLinkEmail, sendRideCompletedEmail } = require('../config/emailService');
 const { makeBookingConfirmationCall } = require('../config/retellCallService');
 const { sendImmediateReminderIfNeeded, checkAndSendReminders } = require('../services/reminderService');
 const Razorpay = require('razorpay');
@@ -25,6 +25,10 @@ const getAllBookings = async (req, res) => {
                     full_name,
                     email,
                     phone_number
+                ),
+                rewards:reward_id (
+                    coupon_code,
+                    reward_type
                 )
             `)
             .order('id', { ascending: false });
@@ -81,7 +85,14 @@ const getAllBookings = async (req, res) => {
                 ride_end_time: booking.ride_end_time || null,
                 extra_hours: booking.extra_hours || 0,
                 extra_amount: booking.extra_amount || 0,
-                refund_id: booking.refund_id || null
+                refund_id: booking.refund_id || null,
+                ride_end_time: booking.ride_end_time || null,
+                extra_hours: booking.extra_hours || 0,
+                extra_amount: booking.extra_amount || 0,
+                refund_id: booking.refund_id || null,
+                coins_earned: booking.coins_earned || 0,
+                coupon_code: booking.rewards?.coupon_code || null,
+                reward_type: booking.rewards?.reward_type || null
             };
         });
 
@@ -111,6 +122,10 @@ const getBookingById = async (req, res) => {
                     full_name,
                     email,
                     phone_number
+                ),
+                rewards:reward_id (
+                    coupon_code,
+                    reward_type
                 )
             `)
             .eq('id', req.params.id)
@@ -165,7 +180,12 @@ const getBookingById = async (req, res) => {
             confirmation_timestamp: booking.confirmation_timestamp || null,
             cancelled_timestamp: booking.cancelled_timestamp || null,
             transaction_id: booking.transaction_id || 'N/A',
-            refund_id: booking.refund_id || null
+            refund_id: booking.refund_id || null,
+            transaction_id: booking.transaction_id || 'N/A',
+            refund_id: booking.refund_id || null,
+            coins_earned: booking.coins_earned || 0,
+            coupon_code: booking.rewards?.coupon_code || null,
+            reward_type: booking.rewards?.reward_type || null
         };
 
         res.json(enrichedBooking);
@@ -201,7 +221,7 @@ const updateBooking = async (req, res) => {
                 total_amount: totalAmount,
                 advance_payment: advancePayment,
                 remaining_amount: remainingAmount,
-                updated_at: getISTTimestamp()
+                updated_at: new Date().toISOString()
             })
             .eq('id', req.params.id)
             .select()
@@ -252,13 +272,12 @@ const confirmBooking = async (req, res) => {
             vehicle = data;
         }
 
-        const istTimestamp = getISTTimestamp();
         const { data: updatedBooking, error: updateError } = await supabase
             .from('bookings')
             .update({
                 status: 'confirmed',
-                confirmation_timestamp: istTimestamp,
-                updated_at: istTimestamp
+                confirmation_timestamp: new Date().toISOString(),
+                updated_at: new Date().toISOString()
             })
             .eq('id', bookingId)
             .select()
@@ -408,7 +427,7 @@ const cancelBookingAdmin = async (req, res) => {
         const advancePayment = parseFloat(booking.advance_payment) || 100;
         let refundAmount = hoursSinceConfirmation <= 2 ? advancePayment : Math.round(advancePayment * 0.7);
         let deductionAmount = hoursSinceConfirmation > 2 ? Math.round(advancePayment * 0.3) : 0;
-        const localCancelTimestamp = getISTTimestamp();
+        const localCancelTimestamp = new Date().toISOString();
 
         let refundStatus = 'processing';
         let razorpayRefundId = null;
@@ -470,7 +489,7 @@ const markRefundComplete = async (req, res) => {
 
         const { data: booking, error: updateError } = await supabase.from('bookings').update({
             refund_status: 'completed',
-            refund_timestamp: getISTTimestamp(),
+            refund_timestamp: new Date().toISOString(),
             refund_completed_by: adminId
         }).eq('id', bookingId).select('*, users:user_id(email, full_name)').single();
 
@@ -675,20 +694,72 @@ const handleQRScan = async (req, res) => {
                 message += `\nTOTAL PAYABLE: ₹${finalBalance}`;
             }
 
+            // --- Super Coins Logic ---
+            let coinsEarned = 0;
+            try {
+                const settings = await SupabaseDB.getLoyaltySettings();
+                console.log('Loyalty Settings:', settings); // Debug log
+
+                if (settings.system_enabled === 'true') {
+                    const earningRate = parseFloat(settings.earning_rate) || 1;
+
+                    // Use Math.round to handle seconds (e.g., 589.9 mins -> 590 mins)
+                    // uniqueMinutes ensures we don't undercount
+                    const exactMinutes = durationMs / (1000 * 60);
+                    const roundedMinutes = Math.round(exactMinutes);
+
+                    coinsEarned = Math.floor(roundedMinutes * earningRate);
+
+                    console.log(`🪙 Coin Calc: ${exactMinutes.toFixed(2)} mins -> ${roundedMinutes} rounded * ${earningRate} rate = ${coinsEarned} coins`);
+
+                    if (coinsEarned > 0) {
+                        const currentCoins = await SupabaseDB.getUserCoins(booking.user_id);
+                        const newCoinBalance = currentCoins + coinsEarned;
+                        await SupabaseDB.updateUserCoins(booking.user_id, newCoinBalance);
+                        message += `\n🌟 You earned ${coinsEarned} Super Coins!`;
+
+                        // Send Coin Notification Email
+                        try {
+                            // Only if we have user info
+                            if (booking.users && booking.users.email) {
+                                await sendRideCompletedEmail(
+                                    booking.users.email,
+                                    booking.users.full_name || 'Rider',
+                                    {
+                                        bookingId: booking.booking_id || `#${booking.id}`,
+                                        vehicleName: vehicle?.name || booking.vehicle_type,
+                                        totalAmount: finalBalance > 0 ? finalBalance : 0,
+                                        coinsEarned: coinsEarned
+                                    },
+                                    {
+                                        totalCoins: newCoinBalance,
+                                        coinsNeeded: Math.max(0, 1000 - newCoinBalance)
+                                    }
+                                );
+                                console.log('📧 Coin email sent to', booking.users.email);
+                            }
+                        } catch (emailErr) {
+                            console.error('Failed to send coin email:', emailErr);
+                        }
+                    }
+                }
+            } catch (coinError) {
+                console.error('Error crediting coins:', coinError);
+            }
+
             // 6. Update Database
             // const updatedRemainingAmount = finalBalance > 0 ? finalBalance : 0; // Uncomment after running migration
             const { error: updateError } = await supabase
                 .from('bookings')
                 .update({
                     status: 'ride_completed',
-                    ride_end_time: localTimestamp, // UTC ISO
+                    ride_end_time: now.toISOString(), // Store UTC ISO for consistency
                     actual_duration_hours: totalHours,
-                    extra_hours: parseFloat((extraMinutes / 60).toFixed(2)), // Store as decimal hours (e.g., 6.0, not 360)
+                    extra_hours: parseFloat((extraMinutes / 60).toFixed(2)),
                     extra_amount: extraAmount,
-                    // Critical: Update total_amount to the Actual Usage Price so records are correct
                     total_amount: actualBillableAmount,
-                    // remaining_amount: updatedRemainingAmount, // Uncomment after running Add_Missing_Columns.sql migration
-                    updated_at: localTimestamp
+                    updated_at: now.toISOString(),
+                    coins_earned: coinsEarned
                 })
                 .eq('id', booking.id);
 

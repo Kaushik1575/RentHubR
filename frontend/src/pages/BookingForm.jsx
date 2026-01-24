@@ -40,6 +40,43 @@ const BookingForm = () => {
         message: ''
     });
 
+    // Loyalty Rewards
+    const [rewards, setRewards] = useState([]);
+    const [selectedReward, setSelectedReward] = useState(null);
+    const [couponInput, setCouponInput] = useState('');
+
+    useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (token) {
+            // Fetch Rewards
+            fetch('/api/user/rewards', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => res.json())
+                .then(data => setRewards(data.rewards || []))
+                .catch(err => console.error(err));
+
+            // Fetch User Coins for Smart Nudge
+            fetch('/api/user/coins', {
+                headers: { 'Authorization': `Bearer ${token}` }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    // Smart Nudge Logic: If coins >= 1000 and not using a reward yet, and NOT returning from profile with code
+                    if (data.coins >= 1000 && !location.state?.autoApplyCode) {
+                        setPopup({
+                            isOpen: true,
+                            type: 'info', // Using 'info' type for custom styling or just standard
+                            title: '🌟 You have Free Rides!',
+                            message: `You have ${data.coins} Super Coins! equivalent to a FREE 2-Hour Ride. Go to your Profile to redeem it now?`,
+                            isNudge: true // Custom flag to handle actions
+                        });
+                    }
+                })
+                .catch(err => console.error(err));
+        }
+    }, []);
+
     const apiType = getApiType(vehicleType);
 
     // Initial Load
@@ -76,7 +113,15 @@ const BookingForm = () => {
             setPopup({ isOpen: true, type: 'error', title: 'Invalid Vehicle', message: 'Invalid vehicle selection' });
             setTimeout(() => navigate('/'), 2000);
         }
-    }, [vehicleId, apiType, navigate, searchParams]); // Updated dependencies
+
+        // Auto-fill from Profile Return
+        if (location.state?.autoApplyCode) {
+            setCouponInput(location.state.autoApplyCode);
+            // Optionally auto-click apply? For now, just pre-fill is safer/cleaner.
+            // Or better: Simulate apply via effect?
+            // Actually, waiting for user to click Apply is fine, or we can useEffect to apply it.
+        }
+    }, [vehicleId, apiType, navigate, searchParams, location.state]); // Updated dependencies
 
     // Auto-Trigger Availability Check if data is present (from Chatbot)
     useEffect(() => {
@@ -141,14 +186,22 @@ const BookingForm = () => {
     const today = new Date().toISOString().split('T')[0];
 
     // Calculations
+    // Calculations with Reward
     const hourlyRate = vehicle ? (parseFloat(vehicle.price) || 0) : 0;
     const duration = parseInt(formData.duration) || 0;
-    const totalAmount = hourlyRate * duration;
+
+    let baseTotal = hourlyRate * duration;
+    let finalTotal = baseTotal;
+
+    if (selectedReward && selectedReward.reward_type === 'FREE_2_HOUR_RIDE') {
+        const billableHours = Math.max(0, duration - 2);
+        finalTotal = billableHours * hourlyRate;
+    }
 
     // 30% Advance Payment
     const advancePercentage = 30;
-    const advancePayment = Math.ceil((totalAmount * advancePercentage) / 100);
-    const remainingAmount = totalAmount - advancePayment;
+    const advancePayment = Math.ceil((finalTotal * advancePercentage) / 100);
+    const remainingAmount = finalTotal - advancePayment;
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -220,8 +273,21 @@ const BookingForm = () => {
             vehicleId,
             vehicleType: apiType,
             vehicleName: vehicle?.name,
-            ...formData
+            ...formData,
+            rewardId: selectedReward ? selectedReward.id : null,
+            // If strictly 0, send actualAdvancePayment as 0 to avoid validation check fail? 
+            // The controller recalculates anyway.
         };
+
+        // If amount is 0, skip Razorpay
+        if (advancePayment === 0) {
+            await confirmBooking({
+                razorpay_payment_id: 'FREE_RIDE',
+                razorpay_order_id: 'FREE_RIDE',
+                razorpay_signature: 'FREE_RIDE'
+            }, token, bookingPayload); // Pass payload explicitly to merge logic if needed
+            return;
+        }
 
         // Razorpay / booking logic continues here
         try {
@@ -311,9 +377,11 @@ const BookingForm = () => {
                 razorpayPaymentId: paymentResponse.razorpay_payment_id,
                 razorpayOrderId: paymentResponse.razorpay_order_id,
                 razorpaySignature: paymentResponse.razorpay_signature,
+                rewardId: selectedReward ? selectedReward.id : null,
                 advancePayment,
                 remainingAmount,
-                totalAmount
+                remainingAmount,
+                totalAmount: finalTotal
             };
 
             const response = await fetch('/api/bookings', {
@@ -362,13 +430,27 @@ const BookingForm = () => {
     if (loading) return <div style={{ textAlign: 'center', padding: '4rem' }}>Loading...</div>;
 
     return (
-        <div style={{ background: '#f8f9fa', minHeight: '100vh', padding: '2rem' }}>
+        <div style={{
+            background: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
+            minHeight: '100vh',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: '40px 20px',
+            fontFamily: "'Segoe UI', sans-serif"
+        }}>
             {/* Added 'notranslate' class to prevent Google Translate from breaking React DOM updates */}
             <div className="booking-container notranslate" style={{
-                maxWidth: '800px', margin: '0 auto', background: 'white', padding: '2rem', borderRadius: '8px', boxShadow: '0 2px 4px rgba(0,0,0,0.1)'
+                maxWidth: '850px',
+                width: '100%',
+                margin: '0 auto',
+                background: 'white',
+                padding: '40px',
+                borderRadius: '16px',
+                boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
             }}>
                 <div className="booking-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #eee' }}>
-                    <h1 style={{ margin: 0, color: '#333', fontSize: '1.8rem' }}>
+                    <h1 style={{ margin: 0, color: '#2c3e50', fontSize: '1.8rem', fontWeight: 'bold' }}>
                         {step === 1 ? 'Book Vehicle' : step === 2 ? 'Complete Payment' : 'Booking Confirmed'}
                     </h1>
                     <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: '#666', cursor: 'pointer' }}>&times;</button>
@@ -515,7 +597,51 @@ const BookingForm = () => {
                         </div>
 
                         <div className="price-details" style={{ background: '#e3f2fd', padding: '1rem', borderRadius: '4px', margin: '1.5rem 0' }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}><span>Total Amount:</span><strong>₹{totalAmount}</strong></div>
+                            <div style={{ marginBottom: '15px' }}>
+                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1565c0' }}>Have a Coupon Code?</label>
+                                <div style={{ display: 'flex', gap: '10px' }}>
+                                    <input
+                                        type="text"
+                                        placeholder="Enter Coupon Code"
+                                        value={couponInput}
+                                        onChange={(e) => {
+                                            setCouponInput(e.target.value.toUpperCase());
+                                            if (e.target.value === '') setSelectedReward(null);
+                                        }}
+                                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', flex: 1, textTransform: 'uppercase' }}
+                                    />
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            const code = couponInput.trim();
+                                            const reward = rewards.find(r => r.coupon_code === code && !r.is_used);
+
+                                            if (reward) {
+                                                if (reward.reward_type === 'FREE_2_HOUR_RIDE') {
+                                                    setSelectedReward(reward);
+                                                    setPopup({ isOpen: true, type: 'success', title: 'Applied!', message: 'Coupon Applied: Free 2-Hour Ride' });
+                                                } else {
+                                                    setPopup({ isOpen: true, type: 'error', title: 'Invalid', message: 'This coupon is not applicable for this booking.' });
+                                                }
+                                            } else {
+                                                setPopup({ isOpen: true, type: 'error', title: 'Invalid', message: 'Invalid or Used Coupon Code.' });
+                                            }
+                                        }}
+                                        style={{ padding: '10px 15px', background: '#1976d2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                                    >
+                                        Apply
+                                    </button>
+                                </div>
+                                {selectedReward && <small style={{ color: '#2e7d32', fontWeight: 'bold', marginTop: '5px', display: 'block' }}>✅ Coupon '{selectedReward.coupon_code}' Applied!</small>}
+                            </div>
+
+                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
+                                <span>Total Amount:</span>
+                                <strong>
+                                    {selectedReward ? <s style={{ color: '#999', marginRight: '5px' }}>₹{baseTotal}</s> : null}
+                                    ₹{finalTotal}
+                                </strong>
+                            </div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#007bff' }}><span>Advance Pay (30%):</span><strong>₹{advancePayment}</strong></div>
                             <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #bbdefb', paddingTop: '0.5rem' }}><span>Remaining:</span><strong>₹{remainingAmount}</strong></div>
                         </div>
@@ -648,6 +774,20 @@ const BookingForm = () => {
                 type={popup.type}
                 title={popup.title}
                 message={popup.message}
+                // Custom Actions for Smart Nudge
+                customActions={popup.isNudge ? (
+                    <div style={{ display: 'flex', gap: '10px', marginTop: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
+                        <button
+                            onClick={() => navigate('/profile', { state: { returnUrl: location.pathname + location.search } })}
+                            style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold', flex: 1, minWidth: '120px' }}
+                        >
+                            Go to Profile & Redeem
+                        </button>
+                        <button onClick={() => setPopup({ ...popup, isOpen: false })} style={{ padding: '10px 20px', background: '#e2e8f0', color: '#4a5568', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold', flex: 1, minWidth: '120px' }}>
+                            Maybe Later
+                        </button>
+                    </div>
+                ) : null}
             />
         </div>
     );

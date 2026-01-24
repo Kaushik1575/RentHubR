@@ -2940,3 +2940,204 @@ main.booking-page-main {
         padding: 8px 15px;
     }
 }
+/* Status Badges */
+.status-badge {
+    padding: 6px 12px;
+    border-radius: 50px;
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: capitalize;
+    display: inline-block;
+}
+
+.status-confirmed {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.status-pending {
+    background: #fef3c7;
+    color: #92400e;
+}
+
+.status-ride_started {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.status-ride_completed {
+    background: #e0e7ff;
+    color: #3730a3;
+}
+
+.status-cancelled {
+    background: #fee2e2;
+    color: #b91c1c;
+}
+
+.status-rider_not_come {
+    background: #ffedd5;
+    color: #c2410c;
+    border: 1px solid #fb923c;
+}
+
+
+/* Promo Banner Styles */
+.promo-banner {
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    padding: 24px 32px;
+    border-radius: 16px;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    box-shadow: 0 10px 25px rgba(255, 165, 0, 0.25);
+    flex-wrap: wrap;
+    gap: 20px;
+    position: relative;
+    overflow: hidden;
+    border: 1px solid rgba(255, 255, 255, 0.3);
+}
+
+.promo-banner::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle, rgba(255,255,255,0.2) 0%, transparent 60%);
+    pointer-events: none;
+}
+
+.promo-content {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    z-index: 1;
+}
+
+.promo-icon {
+    font-size: 36px;
+    background: #fff;
+    width: 70px;
+    height: 70px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    animation: pulse 2s infinite ease-in-out;
+}
+
+.promo-text h3 {
+    margin: 0 0 6px 0;
+    font-size: 22px;
+    color: #92400e; /* Dark amber */
+    font-weight: 800;
+}
+
+.promo-text p {
+    margin: 0;
+    font-size: 15px;
+    color: #431407;
+}
+
+.promo-btn {
+    background: #ffffff;
+    color: #d97706;
+    padding: 12px 28px;
+    border-radius: 50px;
+    text-decoration: none;
+    font-weight: 700;
+    font-size: 15px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+    transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+    z-index: 1;
+    display: inline-block;
+}
+
+.promo-btn:hover {
+    transform: translateY(-3px) scale(1.02);
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    color: #b45309;
+}
+
+@keyframes pulse {
+    0% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0.7); }
+    70% { transform: scale(1.05); box-shadow: 0 0 0 10px rgba(255, 255, 255, 0); }
+    100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(255, 255, 255, 0); }
+}
+
+@media (max-width: 768px) {
+    .promo-banner {
+        padding: 20px;
+        flex-direction: column;
+        text-align: center;
+    }
+    .promo-content {
+        flex-direction: column;
+        gap: 12px;
+    }
+    .promo-btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+
+/* Modern Auth UI Upgrade */
+.modern-auth-wrapper {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(-45deg, #ee7752, #e73c7e, #23a6d5, #23d5ab);
+    background-size: 400% 400%;
+    animation: gradientBG 15s ease infinite;
+    padding: 20px;
+    font-family: 'Inter', sans-serif;
+}
+
+@keyframes gradientBG {
+    0% { background-position: 0% 50%; }
+    50% { background-position: 100% 50%; }
+    100% { background-position: 0% 50%; }
+}
+
+.modern-auth-card {
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    padding: 40px;
+    border-radius: 24px;
+    box-shadow: 0 20px 40px rgba(0,0,0,0.2);
+    width: 100%;
+    max-width: 480px;
+    border: 1px solid rgba(255, 255, 255, 0.6);
+    position: relative;
+    overflow: hidden;
+}
+
+.modern-auth-card.wide {
+    max-width: 850px;
+}
+
+.modern-auth-header {
+    text-align: center;
+    margin-bottom: 30px;
+}
+
+.modern-auth-header h2 {
+    font-size: 32px;
+    font-weight: 800;
+    background: -webkit-linear-gradient(#23a6d5, #23d5ab);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 8px;
+}
+
+.modern-auth-header p {
+    color: #64748b;
+    font-size: 16px;
+}
+

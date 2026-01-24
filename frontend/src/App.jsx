@@ -12,6 +12,7 @@ import RegisterAdmin from './pages/RegisterAdmin';
 import MyBookings from './pages/MyBookings';
 import BookingForm from './pages/BookingForm';
 import AdminPanel from './pages/AdminPanel';
+import LoyaltySettings from './pages/LoyaltySettings';
 import ForgotPassword from './pages/ForgotPassword';
 import TrackBooking from './pages/TrackBooking';
 import SOSActivate from './pages/SOSActivate';
@@ -76,7 +77,9 @@ function Layout() {
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/register-user" element={<RegisterUser />} />
         <Route path="/register-admin" element={<RegisterAdmin />} />
+        <Route path="/register-admin" element={<RegisterAdmin />} />
         <Route path="/admin" element={<AdminPanel />} />
+        <Route path="/admin/loyalty-settings" element={<LoyaltySettings />} />
         <Route path="/booking-form" element={<BookingForm />} />
         <Route path="/track-booking" element={<TrackBooking />} />
         <Route path="/sos-activate" element={<SOSActivate />} />

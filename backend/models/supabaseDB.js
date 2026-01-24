@@ -220,6 +220,133 @@ class SupabaseDB {
         if (error) throw error;
         return true;
     }
+
+    // Loyalty System Operations
+
+    // Get user coin balance
+    static async getUserCoins(userId) {
+        const { data, error } = await supabase
+            .from('users')
+            .select('super_coins')
+            .eq('id', userId)
+            .single();
+
+        if (error) throw error;
+        return data?.super_coins || 0;
+    }
+
+    // Update user coins (set absolute value)
+    static async updateUserCoins(userId, coins) {
+        const { data, error } = await supabase
+            .from('users')
+            .update({ super_coins: coins })
+            .eq('id', userId)
+            .select('super_coins')
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    // Fetch available (unused) rewards for a user
+    static async getAvailableRewards(userId) {
+        const now = new Date().toISOString();
+        const { data, error } = await supabase
+            .from('rewards')
+            .select('*')
+            .eq('user_id', userId)
+            .eq('is_used', false) // Only fetch unused rewards
+            .gt('expires_at', now)
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data;
+    }
+
+    // Create a new reward (e.g., when redeeming coins)
+    static async createReward(userId, rewardType = 'FREE_2_HOUR_RIDE', validDays = 15, couponCode = null) {
+        const now = new Date();
+        const expiresAt = new Date(now.getTime() + validDays * 24 * 60 * 60 * 1000).toISOString();
+
+        const { data, error } = await supabase
+            .from('rewards')
+            .insert([{
+                user_id: userId,
+                reward_type: rewardType,
+                is_used: false,
+                expires_at: expiresAt,
+                coupon_code: couponCode // Store unique code
+            }])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    // Mark a reward as used (during booking)
+    static async markRewardAsUsed(rewardId) {
+        const { data, error } = await supabase
+            .from('rewards')
+            .update({ is_used: true })
+            .eq('id', rewardId)
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    // Get reward by ID
+    static async getRewardById(rewardId) {
+        const { data, error } = await supabase
+            .from('rewards')
+            .select('*')
+            .eq('id', rewardId)
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
+    // Get Loyalty Settings (Global config)
+    static async getLoyaltySettings() {
+        const { data, error } = await supabase
+            .from('loyalty_settings')
+            .select('*');
+
+        if (error) {
+            // If table doesn't exist yet, return defaults safely
+            if (error.code === '42P01') {
+                return { earning_rate: 1, reward_threshold: 1000, system_enabled: 'true' };
+            }
+            throw error;
+        }
+
+        // Convert array of key-value pairs to object
+        const settings = {};
+        data.forEach(item => {
+            settings[item.key] = item.value;
+        });
+        return settings;
+    }
+
+    static async updateLoyaltySettings(settings) {
+        // Settings is object { key: value }
+        // We need to upsert each key-value pair
+        const upsertData = Object.entries(settings).map(([key, value]) => ({
+            key,
+            value: String(value)
+        }));
+
+        const { data, error } = await supabase
+            .from('loyalty_settings')
+            .upsert(upsertData, { onConflict: 'key' })
+            .select();
+
+        if (error) throw error;
+        return data;
+    }
 }
 
-module.exports = SupabaseDB; 
+module.exports = SupabaseDB;

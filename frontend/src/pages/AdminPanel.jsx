@@ -386,6 +386,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <li><a className={`nav-link ${activeTab === 'bookings' ? 'active' : ''}`} onClick={() => { setActiveTab('bookings'); setIsSidebarOpen(false); }}><i className="fas fa-calendar-check"></i> Bookings</a></li>
                             <li><a className={`nav-link ${activeTab === 'vehicles' ? 'active' : ''}`} onClick={() => { setActiveTab('vehicles'); setIsSidebarOpen(false); }}><i className="fas fa-motorcycle"></i> Vehicles</a></li>
                             <li><a className={`nav-link ${activeTab === 'policies' ? 'active' : ''}`} onClick={() => { setActiveTab('policies'); setIsSidebarOpen(false); }}><i className="fas fa-file-alt"></i> Policies</a></li>
+                            <li><a className={`nav-link`} onClick={() => { navigate('/admin/loyalty-settings'); setIsSidebarOpen(false); }}><i className="fas fa-coins"></i> Loyalty Settings</a></li>
                         </ul>
                     </nav>
                     <div className="sidebar-footer">
@@ -496,7 +497,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             </div>
                             <div className="table-container">
                                 <table id="bookings-table">
-                                    <thead><tr><th>ID</th><th>Customer</th><th>Vehicle</th><th>Start Date</th><th>Duration</th><th>Amount</th><th>Status</th><th>Refund</th><th>Actions</th></tr></thead>
+                                    <thead><tr><th>ID</th><th>Customer</th><th>Vehicle</th><th>Start Date</th><th>Duration</th><th>Amount</th><th>Coins</th><th>Status</th><th>Refund</th><th>Actions</th></tr></thead>
                                     <tbody>
                                         {filteredBookings.map(b => (
                                             <tr key={b.id}>
@@ -506,6 +507,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                 <td>{b.start_date}</td>
                                                 <td>{b.duration} hrs</td>
                                                 <td>₹{b.total_amount}</td>
+                                                <td>
+                                                    {(['completed', 'ride_completed'].includes(b.status)) ? (b.coins_earned || 0) : 0} 🪙
+                                                </td>
                                                 <td><span className={`status-badge status-${(b.status || 'pending').toLowerCase()}`}>{b.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span></td>
                                                 <td>
                                                     {(b.status === 'cancelled') ? (
@@ -737,7 +741,14 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <p><strong>Duration:</strong> {modal.data.duration} hours</p>
                             <p><strong>Total Amount:</strong> ₹{modal.data.total_amount}</p>
                             <p><strong>Advance Payment:</strong> ₹{modal.data.advance_payment}</p>
+                            <p><strong>Advance Payment:</strong> ₹{modal.data.advance_payment}</p>
                             <p><strong>Remaining Amount:</strong> ₹{modal.data.total_amount - modal.data.advance_payment}</p>
+                            <p><strong>Coins Earned:</strong> {(['completed', 'ride_completed'].includes(modal.data.status) ? (modal.data.coins_earned || 0) : 0)} 🪙</p>
+                            {modal.data.coupon_code && (
+                                <p style={{ color: '#2e7d32', fontWeight: 'bold' }}>
+                                    <i className="fas fa-tag"></i> Coupon Used: {modal.data.coupon_code} ({modal.data.reward_type === 'FREE_2_HOUR_RIDE' ? 'Free 2 Hours' : 'Reward'})
+                                </p>
+                            )}
 
                             {modal.data.transaction_id && (
                                 <p><strong>Transaction ID:</strong> {modal.data.transaction_id}</p>

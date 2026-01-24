@@ -140,6 +140,26 @@ const Home = () => {
                         <p className="section-subtitle">Choose from our premium fleet of well-maintained vehicles for a safe and comfortable ride.</p>
                     </div>
 
+                    {/* Ride & Earn Promo Banner */}
+                    {/* Ride & Earn Promo Banner */}
+                    <div className="promo-banner">
+                        <div className="promo-content">
+                            <div className="promo-icon">🪙</div>
+                            <div className="promo-text">
+                                <h3>Ride & Earn Super Coins!</h3>
+                                <p>
+                                    Earn <strong>1 Coin/min</strong>. Collect <strong>1000 Coins</strong> for a <strong>FREE 2-Hour Ride</strong>!
+                                </p>
+                            </div>
+                        </div>
+                        <Link
+                            to={localStorage.getItem('token') ? "/profile" : "/login"}
+                            className="promo-btn"
+                        >
+                            Check Balance
+                        </Link>
+                    </div>
+
                     {/* Bikes Section */}
                     <div className="category-section">
                         <h3 className="category-header">Bikes</h3>
@@ -230,7 +250,7 @@ const Home = () => {
             </section>
 
 
-        </main>
+        </main >
     );
 };
 

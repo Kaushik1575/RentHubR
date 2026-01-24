@@ -1,7 +1,12 @@
 const express = require('express');
 const router = express.Router();
 const adminController = require('../controllers/admin.controller');
+const loyaltyController = require('../controllers/loyalty.controller');
 const { verifyAdminToken } = require('../middleware/authMiddleware');
+
+// Loyalty Settings
+router.get('/loyalty-settings', verifyAdminToken, loyaltyController.getSettings);
+router.put('/loyalty-settings', verifyAdminToken, loyaltyController.updateSettings);
 
 // Bookings
 router.get('/bookings', verifyAdminToken, adminController.getAllBookings);

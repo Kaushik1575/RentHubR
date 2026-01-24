@@ -205,11 +205,25 @@ exports.chat = async (req, res) => {
         // Fetch real-time vehicle context
         const vehicleContext = await getVehicleContext();
 
+        // Fetch User Context (Coins) if authenticated
+        let userContext = "";
+        if (req.user && req.user.id) {
+            try {
+                const coins = await SupabaseDB.getUserCoins(req.user.id);
+                userContext = `\n**USER CONTEXT:**\n- User ID: ${req.user.id}\n- Super Coins Balance: ${coins}\n- Reward Status: ${coins >= 1000 ? "ELIGIBLE for Free 2-Hour Ride (Redeem in Profile)" : `${1000 - coins} coins needed for Free Ride`}\n`;
+            } catch (e) {
+                console.error("Error fetching user coins for chatbot:", e);
+            }
+        } else {
+            userContext = `\n**USER CONTEXT:**\n- User is NOT logged in. If they ask about their coins, ask them to log in first.`;
+        }
+
         let formattedHistory = [];
 
         const systemPrompt = `You are the friendly and helpful AI assistant for RentHub.
 
 ${vehicleContext}
+${userContext}
 
 **GUIDELINES:**
 1. **BE CONCISE**: Do not write long paragraphs. Keep it chatty.
@@ -241,6 +255,12 @@ ${vehicleContext}
    - Ask for the destination location if not provided.
    - Example queries: "What's the weather in Mumbai?", "What should I pack for Goa?", "Check weather for my destination"
    - Output: CHECK_WEATHER action with the location.
+
+7. **SUPER COINS & REWARDS**:
+   - Answer queries like "How many coins do I have?" using USER CONTEXT.
+   - If user asks how to get coins: "You earn 1 Super Coin for every minute of a completed ride."
+   - If user asks about rewards: "Reach 1000 coins to unlock a FREE 2-Hour Ride!"
+   - Give motivational nudges if they are close to 1000.
 
 **ACTIONS (Output ONLY the JSON block):**
 

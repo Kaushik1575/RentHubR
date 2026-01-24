@@ -1,6 +1,6 @@
 import React from 'react';
 
-const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, message, confirmText = 'Yes, Logout', cancelText = 'Cancel' }) => {
+const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, message, confirmText = 'Yes, Logout', cancelText = 'Cancel', customActions }) => {
     if (!isOpen) return null;
 
     const isSuccess = type === 'success';
@@ -85,7 +85,11 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, messag
                 </div>
 
                 {/* Buttons */}
-                {isConfirm ? (
+                {customActions ? (
+                    <div style={{ width: '100%' }}>
+                        {customActions}
+                    </div>
+                ) : isConfirm ? (
                     <div style={{ display: 'flex', gap: '1rem', width: '100%', justifyContent: 'center' }}>
                         <button
                             onClick={onClose}

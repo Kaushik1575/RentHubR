@@ -128,8 +128,8 @@ const createBooking = async (req, res) => {
             key_secret: process.env.RAZORPAY_KEY_SECRET
         });
 
-        // Verify Razorpay Payment if present
-        if (razorpayPaymentId && razorpayOrderId && razorpaySignature) {
+        // Verify Razorpay Payment if present and not a free ride
+        if (razorpayPaymentId && razorpayPaymentId !== 'FREE_RIDE' && razorpayOrderId && razorpaySignature) {
             const shasum = crypto.createHmac('sha256', process.env.RAZORPAY_KEY_SECRET);
             shasum.update(`${razorpayOrderId}|${razorpayPaymentId}`);
             const digest = shasum.digest('hex');
@@ -188,6 +188,65 @@ const createBooking = async (req, res) => {
             return res.status(500).json({ error: 'Failed to generate booking ID. Please try again.' });
         }
 
+        // --- Loyalty Reward Logic ---
+        let finalTotalAmount = totalAmount;
+        let finalAdvancePayment = advancePayment;
+        let usedRewardId = null;
+        let isFreeRide = false;
+
+        if (req.body.rewardId) {
+            try {
+                const reward = await SupabaseDB.getRewardById(req.body.rewardId);
+                // Validate Reward
+                if (reward && reward.user_id === req.user.id && !reward.is_used && new Date(reward.expires_at) > new Date()) {
+                    if (reward.reward_type === 'FREE_2_HOUR_RIDE') {
+                        console.log('🎁 Applying Free 2-Hour Ride Reward');
+                        isFreeRide = true;
+                        usedRewardId = reward.id;
+
+                        // Get vehicle price (needed to recalc)
+                        let vehiclePrice = 0;
+                        if (vehicleType === 'bike') {
+                            const { data } = await supabase.from('bikes').select('price').eq('id', vehicleId).single();
+                            vehiclePrice = parseFloat(data?.price || 0);
+                        } else if (vehicleType === 'car') {
+                            const { data } = await supabase.from('cars').select('price').eq('id', vehicleId).single();
+                            vehiclePrice = parseFloat(data?.price || 0);
+                        } else if (vehicleType === 'scooty') {
+                            const { data } = await supabase.from('scooty').select('price').eq('id', vehicleId).single();
+                            vehiclePrice = parseFloat(data?.price || 0);
+                        }
+
+                        // Recalculate
+                        const billableHours = Math.max(0, duration - 2);
+                        finalTotalAmount = billableHours * vehiclePrice;
+
+                        // If fully free
+                        if (finalTotalAmount === 0) {
+                            finalAdvancePayment = 0;
+                            // Ensure payment verification passes or skip for free ride?
+                            // If fully free, Razorpay ID might be skipped or dummy. 
+                            // But usually, user might pay 0 or small amount? 
+                            // Requirement says "total cost = 0". So verified payment step above might differ?
+                            // However, createBooking is called AFTER payment.
+                            // If total is 0, frontend should bypass payment gateway.
+                            // So we assume frontend handles 0 payment.
+                        } else {
+                            // If partial, recalc advance
+                            finalAdvancePayment = req.body.actualAdvancePayment || Math.ceil(finalTotalAmount * 0.3);
+                        }
+
+                        // Mark reward as used
+                        await SupabaseDB.markRewardAsUsed(reward.id);
+                    }
+                } else {
+                    console.warn('Invalid or expired reward provided:', req.body.rewardId);
+                }
+            } catch (rewardErr) {
+                console.error('Error processing reward:', rewardErr);
+            }
+        }
+
         const bookingData = {
             booking_id: bookingId,
             user_id: req.user.id,
@@ -197,10 +256,12 @@ const createBooking = async (req, res) => {
             duration,
             status: 'confirmed', // Confirmed since payment is verified
             vehicle_type: vehicleType,
-            transaction_id: req.body.razorpayPaymentId || 'PENDING',
+            transaction_id: req.body.razorpayPaymentId || (finalTotalAmount === 0 ? 'FREE_RIDE' : 'PENDING'),
             confirmation_timestamp: getISTTimestamp(), // Add confirmation timestamp in IST
-            advance_payment: advancePayment, // 30% advance payment
-            total_amount: totalAmount // Store total amount
+            advance_payment: finalAdvancePayment, // 30% advance payment
+            total_amount: finalTotalAmount, // Store total amount
+            reward_id: usedRewardId,
+            is_free_ride: isFreeRide
         };
         console.log('Booking data to insert:', bookingData);
         const { data, error } = await supabase

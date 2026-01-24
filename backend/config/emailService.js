@@ -245,6 +245,81 @@ async function sendSOSAlertEmail(adminEmail, sosData) {
     });
 }
 
+// Send Ride Completed & Coin Earning Email
+async function sendRideCompletedEmail(userEmail, userName, bookingDetails, rewardData) {
+    const { bookingId, vehicleName, totalAmount, coinsEarned } = bookingDetails;
+    const { totalCoins, coinsNeeded } = rewardData;
+
+    const html = `
+        <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #222; max-width: 600px; margin: 0 auto;">
+          <div style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
+            <div style="font-size: 40px; margin-bottom: 10px;">🪙</div>
+            <h1 style="color: #fff; margin: 0; font-size: 28px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">You Earned ${coinsEarned} Super Coins!</h1>
+          </div>
+          
+          <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
+            <p style="font-size: 16px;">Hello <b>${userName}</b>,</p>
+            <p style="font-size: 16px;">Thanks for riding with RentHub! Your ride is complete.</p>
+            
+            <div style="background: #f8fbff; padding: 20px; border-radius: 8px; border: 1px solid #e1e8f0; margin: 20px 0;">
+                <h3 style="margin: 0 0 15px 0; color: #0f4c81; border-bottom: 1px solid #e1e8f0; padding-bottom: 10px;">Ride Summary</h3>
+                <table style="width: 100%; border-collapse: collapse;">
+                    <tr>
+                        <td style="padding: 5px 0; color: #666;">Booking ID:</td>
+                        <td style="padding: 5px 0; font-weight: bold; text-align: right;">${bookingId}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 0; color: #666;">Vehicle:</td>
+                        <td style="padding: 5px 0; font-weight: bold; text-align: right;">${vehicleName}</td>
+                    </tr>
+                    <tr>
+                        <td style="padding: 5px 0; color: #666;">Total Amount:</td>
+                        <td style="padding: 5px 0; font-weight: bold; text-align: right;">₹${totalAmount}</td>
+                    </tr>
+                </table>
+            </div>
+
+            <div style="background: #FFFBE6; padding: 20px; border-radius: 8px; border: 1px solid #FFE58F; margin: 20px 0; text-align: center;">
+                <h3 style="margin: 0 0 10px 0; color: #D48806;">🌟 Super Coin Status</h3>
+                
+                <div style="display: flex; justify-content: space-around; margin: 20px 0;">
+                    <div>
+                        <div style="font-size: 12px; color: #8c8c8c;">EARNED THIS RIDE</div>
+                        <div style="font-size: 24px; font-weight: bold; color: #D48806;">+${coinsEarned}</div>
+                    </div>
+                    <div style="width: 1px; background: #FFE58F;"></div>
+                    <div>
+                        <div style="font-size: 12px; color: #8c8c8c;">TOTAL BALANCE</div>
+                        <div style="font-size: 24px; font-weight: bold; color: #D48806;">${totalCoins} 🪙</div>
+                    </div>
+                </div>
+
+                ${coinsNeeded <= 0
+            ? `<p style="color: #28a745; font-weight: bold; margin: 10px 0;">🎉 Congratulations! You have enough coins for a FREE 2-Hour Ride!</p>
+                       <a href="http://localhost:3000/profile" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Redeem Now</a>`
+            : `<p style="margin: 10px 0; color: #555;">You are only <b>${coinsNeeded} coins</b> away from a FREE Ride!</p>
+                       <div style="background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 10px;">
+                           <div style="background: #D48806; height: 100%; width: ${Math.min(100, (totalCoins / 1000) * 100)}%;"></div>
+                       </div>
+                       <p style="font-size: 12px; color: #888; margin-top: 5px;">Goal: 1000 Coins</p>`
+        }
+            </div>
+
+            <p style="font-size: 14px; color: #666; text-align: center; margin-top: 30px;">
+                Keep riding to earn more! <br>
+                RenderHub - Your Journey, Our Priority.
+            </p>
+          </div>
+        </div>
+    `;
+
+    return sendEmail({
+        to: userEmail,
+        subject: `You Earned ${coinsEarned} Coins! - Booking #${bookingId}`,
+        html: html
+    });
+}
+
 module.exports = {
     generateOTP,
     sendBookingConfirmationEmail,
@@ -253,6 +328,7 @@ module.exports = {
     sendRefundCompleteEmail,
     sendSOSLinkEmail,
     sendSOSAlertEmail,
+    sendRideCompletedEmail,
     sendEmail,
     SENDER_EMAIL
 };

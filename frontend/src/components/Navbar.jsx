@@ -98,7 +98,11 @@ const Navbar = () => {
                         <Link to="/" style={linkStyle}>Home</Link>
                         <Link to="/about" style={linkStyle}>About</Link>
                         <Link to="/contact" style={linkStyle}>Contact</Link>
-                        {isLoggedIn && <Link to="/my-bookings" style={linkStyle}>My Bookings</Link>}
+                        {isLoggedIn && (
+                            <div style={{ position: 'relative' }}>
+                                <Link to="/my-bookings" style={linkStyle}>My Bookings</Link>
+                            </div>
+                        )}
                     </div>
 
                     {/* Language Selector - Desktop */}
@@ -166,7 +170,7 @@ const Navbar = () => {
                         <Link to="/contact" onClick={closeMenu} style={mobileLinkStyle}>Contact</Link>
                         {isLoggedIn && (
                             <>
-                                <Link to="/profile" onClick={closeMenu} style={mobileLinkStyle}>My Profile</Link>
+                                <Link to="/profile" onClick={closeMenu} style={mobileLinkStyle}>My Profile <span style={{ fontSize: '10px', background: '#e74c3c', color: 'white', padding: '2px 6px', borderRadius: '10px', verticalAlign: 'middle', marginLeft: '5px' }}>NEW</span></Link>
                                 <Link to="/my-bookings" onClick={closeMenu} style={mobileLinkStyle}>My Bookings</Link>
                             </>
                         )}

@@ -75,8 +75,33 @@ const verifyAdminToken = async (req, res, next) => {
     }
 };
 
+// Optional Verification
+const optionalVerifyToken = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+        return next();
+    }
+
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        // Only verify against DB if we want strictly active users,
+        // but for read-only optional context, token validity might be enough.
+        // Let's verify DB anyway to be consistent.
+        const { data: user } = await supabase.from('users').select('is_blocked').eq('id', decoded.id).single();
+
+        if (user && !user.is_blocked) {
+            req.user = decoded;
+        }
+        next();
+    } catch {
+        next();
+    }
+};
+
 module.exports = {
     verifyToken,
     verifyAdminToken,
+    optionalVerifyToken,
     JWT_SECRET
 };
