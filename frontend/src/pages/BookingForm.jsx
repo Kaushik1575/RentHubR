@@ -267,6 +267,41 @@ const BookingForm = () => {
     // Step 2: Handle Payment
     const handlePayment = async () => {
         const token = localStorage.getItem('token');
+
+        // Validation: Prevent booking less than 4 hours with free ride coupon
+        if (selectedReward && selectedReward.reward_type === 'FREE_2_HOUR_RIDE' && duration < 4) {
+            setPopup({
+                isOpen: true,
+                type: 'warning',
+                title: '⚠️ Minimum 4 Hours Required',
+                message: 'To use your Free 2-Hour Ride coupon, you must book for at least 4 hours. You\'ll get the first 2 hours FREE and pay for the remaining 2 hours, earning Super Coins on the paid portion!',
+                customActions: (
+                    <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                        <button
+                            onClick={() => {
+                                setFormData({ ...formData, duration: 4 });
+                                setPopup({ ...popup, isOpen: false });
+                            }}
+                            style={{
+                                padding: '12px 30px',
+                                background: '#E57373',
+                                color: 'white',
+                                border: 'none',
+                                borderRadius: '50px',
+                                cursor: 'pointer',
+                                fontWeight: 'bold',
+                                fontSize: '16px'
+                            }}
+                        >
+                            Okay, Got it
+                        </button>
+                    </div>
+                )
+            });
+            setProcessing(false);
+            return;
+        }
+
         setProcessing(true);
 
         const bookingPayload = {
@@ -618,8 +653,41 @@ const BookingForm = () => {
 
                                             if (reward) {
                                                 if (reward.reward_type === 'FREE_2_HOUR_RIDE') {
-                                                    setSelectedReward(reward);
-                                                    setPopup({ isOpen: true, type: 'success', title: 'Applied!', message: 'Coupon Applied: Free 2-Hour Ride' });
+                                                    // Check if duration is less than 4 hours
+                                                    if (formData.duration < 4) {
+                                                        setPopup({
+                                                            isOpen: true,
+                                                            type: 'warning',
+                                                            title: '⚠️ Minimum 4 Hours Required',
+                                                            message: 'To use your Free 2-Hour Ride coupon, you must book for at least 4 hours. You\'ll get the first 2 hours FREE and pay for the remaining 2 hours, earning Super Coins on the paid portion!',
+                                                            customActions: (
+                                                                <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                                                                    <button
+                                                                        onClick={() => {
+                                                                            setFormData({ ...formData, duration: 4 });
+                                                                            setSelectedReward(reward);
+                                                                            setPopup({ isOpen: false });
+                                                                        }}
+                                                                        style={{
+                                                                            padding: '12px 30px',
+                                                                            background: '#E57373',
+                                                                            color: 'white',
+                                                                            border: 'none',
+                                                                            borderRadius: '50px',
+                                                                            cursor: 'pointer',
+                                                                            fontWeight: 'bold',
+                                                                            fontSize: '16px'
+                                                                        }}
+                                                                    >
+                                                                        Okay, Got it
+                                                                    </button>
+                                                                </div>
+                                                            )
+                                                        });
+                                                    } else {
+                                                        setSelectedReward(reward);
+                                                        setPopup({ isOpen: true, type: 'success', title: 'Applied!', message: 'Coupon Applied: Free 2-Hour Ride' });
+                                                    }
                                                 } else {
                                                     setPopup({ isOpen: true, type: 'error', title: 'Invalid', message: 'This coupon is not applicable for this booking.' });
                                                 }

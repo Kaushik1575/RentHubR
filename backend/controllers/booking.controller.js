@@ -247,6 +247,17 @@ const createBooking = async (req, res) => {
             }
         }
 
+        // Generate unique transaction ID for free rides to avoid conflicts
+        let finalTransactionId = req.body.razorpayPaymentId;
+        if (!finalTransactionId) {
+            if (finalTotalAmount === 0) {
+                // Generate unique ID for free rides: FREE_RIDE_[timestamp]_[random]
+                finalTransactionId = `FREE_RIDE_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+            } else {
+                finalTransactionId = 'PENDING';
+            }
+        }
+
         const bookingData = {
             booking_id: bookingId,
             user_id: req.user.id,
@@ -256,7 +267,7 @@ const createBooking = async (req, res) => {
             duration,
             status: 'confirmed', // Confirmed since payment is verified
             vehicle_type: vehicleType,
-            transaction_id: req.body.razorpayPaymentId || (finalTotalAmount === 0 ? 'FREE_RIDE' : 'PENDING'),
+            transaction_id: finalTransactionId,
             confirmation_timestamp: getISTTimestamp(), // Add confirmation timestamp in IST
             advance_payment: finalAdvancePayment, // 30% advance payment
             total_amount: finalTotalAmount, // Store total amount

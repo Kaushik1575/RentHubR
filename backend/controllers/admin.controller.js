@@ -568,12 +568,12 @@ const handleQRScan = async (req, res) => {
 
         // 1. Fetch Booking
         // Try searching by booking_id string first, then fallback to id if numeric
-        let query = supabase.from('bookings').select('*, users:user_id(full_name)').eq('booking_id', bookingId).single();
+        let query = supabase.from('bookings').select('*, users:user_id(full_name, email)').eq('booking_id', bookingId).single();
         let { data: booking, error } = await query;
 
         // If not found by booking_id, and input is numeric, try searching by numeric id
         if (!booking && !Number.isNaN(Number(bookingId))) {
-            const { data: bookingById } = await supabase.from('bookings').select('*, users:user_id(full_name)').eq('id', bookingId).single();
+            const { data: bookingById } = await supabase.from('bookings').select('*, users:user_id(full_name, email)').eq('id', bookingId).single();
             booking = bookingById;
         }
 
