@@ -179,12 +179,18 @@ const registerUser = async (req, res) => {
         if (!valid) return res.status(400).json({ error: 'Password validation failed', details: errors });
 
         const hashedPassword = await bcrypt.hash(password, 10);
+
+        // Get marketing source fields
+        const { hearAboutUs, otherSource } = req.body;
+
         const newUser = {
             full_name: fullName,
             email,
             phone_number: phoneNumber,
             password: hashedPassword,
-            is_admin: false
+            is_admin: false,
+            hear_about_us: hearAboutUs || null,
+            other_source: (hearAboutUs === 'Other' ? otherSource : null)
         };
 
         const created = await SupabaseDB.createUser(newUser);
