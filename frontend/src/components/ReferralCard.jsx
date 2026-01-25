@@ -10,7 +10,34 @@ const ReferralCard = ({ code }) => {
     };
 
     const handleShare = () => {
-        const text = `🌟 Invite to RentHub Premium 🌟\n\nHi! Use my referral code *${code}* to sign up and get *₹200 Coins* instantly! 🎁\n\n👇 Claim here:\n${window.location.origin}/signup?ref=${code}\n\nHappy Riding! 🚗💨`;
+        const text = `🌟 Exclusive Invite: Join RentHub Premium 🌟
+
+Hi Friend! 👋
+
+I've been using RentHub for my rides and it's AMAZING! 
+Want to try it? Use my referral code and get rewarded!
+
+🎁 YOUR WELCOME BONUS:
+━━━━━━━━━━━━━━━━━━━
+✅ ₹200 Bonus Coins (Instant!)
+✅ Earn 1 Coin per minute on rides
+✅ Redeem for FREE rides
+✅ Access to premium bikes, scooters & cars
+
+💰 HOW IT WORKS:
+━━━━━━━━━━━━━━━━━━━
+1️⃣ Sign up using my link
+2️⃣ Enter referral code: ${code}
+3️⃣ Get ₹200 coins credited instantly
+4️⃣ Start booking & earning more!
+
+🔗 CLAIM YOUR BONUS:
+${window.location.origin}/signup?ref=${code}
+
+⏰ Limited time offer - Join now!
+
+Happy Riding! 🚗💨`;
+
         const whatsappUrl = `https://api.whatsapp.com/send?text=${encodeURIComponent(text)}`;
         window.open(whatsappUrl, '_blank');
     };
