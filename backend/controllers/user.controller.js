@@ -25,6 +25,8 @@ exports.updateUserProfile = async (req, res) => {
         const userId = req.user.id;
         const { full_name, phone_number, address, profile_photo, aadhaar_number } = req.body;
 
+        console.log('Update Profile Request:', { userId, body: req.body });
+
         const updateData = {};
         if (full_name !== undefined) updateData.full_name = full_name;
         if (phone_number !== undefined) updateData.phone_number = phone_number;
@@ -33,14 +35,19 @@ exports.updateUserProfile = async (req, res) => {
         // Optionally allow aadhaar update if not verified? For now, allow it.
         if (aadhaar_number !== undefined) updateData.aadhaar_number = aadhaar_number;
 
+        console.log('Update Data:', updateData);
+
         const updatedUser = await SupabaseDB.updateUser(userId, updateData);
+
+        console.log('Updated User:', updatedUser);
 
         const { password, ...userProfile } = updatedUser;
 
         res.json({ success: true, user: userProfile, message: 'Profile updated successfully' });
     } catch (error) {
         console.error('Error updating user profile:', error);
-        res.status(500).json({ success: false, message: 'Server error updating profile' });
+        console.error('Error details:', error.message, error.stack);
+        res.status(500).json({ success: false, message: 'Server error updating profile', error: error.message });
     }
 };
 
