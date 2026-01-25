@@ -20,6 +20,18 @@ const Login = () => {
     const [showUserPassword, setShowUserPassword] = useState(false);
     const [showAdminPassword, setShowAdminPassword] = useState(false);
 
+    // Audio for click sound
+    const playClickSound = () => {
+        // Using a short, reliable pop/click sound from a public CDN
+        const audio = new Audio("https://codeskulptor-demos.commondatastorage.googleapis.com/pang/pop.mp3");
+        audio.volume = 0.5; // Set volume to 50%
+        audio.play().catch(e => console.log('Audio play failed', e));
+    };
+
+    // Robot Check State
+    const [isUserRobotChecked, setIsUserRobotChecked] = useState(false);
+    const [isAdminRobotChecked, setIsAdminRobotChecked] = useState(false);
+
     const [popup, setPopup] = useState({
         isOpen: false,
         type: 'error',
@@ -29,6 +41,10 @@ const Login = () => {
 
     const handleUserLogin = async (e) => {
         e.preventDefault();
+        if (!isUserRobotChecked) {
+            setPopup({ isOpen: true, type: 'error', title: 'Verification Required', message: 'Please confirm you are not a robot' });
+            return;
+        }
         try {
             const response = await fetch('/api/login', {
                 method: 'POST',
@@ -65,6 +81,10 @@ const Login = () => {
 
     const handleAdminLogin = async (e) => {
         e.preventDefault();
+        if (!isAdminRobotChecked) {
+            setPopup({ isOpen: true, type: 'error', title: 'Verification Required', message: 'Please confirm you are not a robot' });
+            return;
+        }
         try {
             const response = await fetch('/api/login/admin', {
                 method: 'POST',
@@ -195,6 +215,58 @@ const Login = () => {
                                 ></i>
                             </div>
                         </div>
+
+                        {/* Robot Check - Professional Style */}
+                        <div style={{
+                            margin: '0 auto 24px',
+                            width: '100%',
+                            maxWidth: '304px',
+                            height: '78px',
+                            background: '#f9f9f9',
+                            border: '1px solid #d3d3d3',
+                            borderRadius: '3px',
+                            boxShadow: '0 0 4px 1px rgba(0,0,0,0.08)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0 12px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div
+                                    onClick={() => {
+                                        playClickSound();
+                                        setIsUserRobotChecked(!isUserRobotChecked);
+                                    }}
+                                    style={{
+                                        position: 'relative',
+                                        width: '24px',
+                                        height: '24px',
+                                        background: '#fff',
+                                        border: '2px solid #c1c1c1',
+                                        borderRadius: '2px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    {isUserRobotChecked && (
+                                        <svg width="30" height="30" viewBox="0 0 48 48" fill="none" style={{ position: 'absolute', top: '-6px', left: '-2px' }}>
+                                            <path d="M20 34L10 24L12.83 21.17L20 28.34L37.17 11.17L40 14L20 34Z" fill="#0F9D58" />
+                                        </svg>
+                                    )}
+                                </div>
+                                <label onClick={() => {
+                                    playClickSound();
+                                    setIsUserRobotChecked(!isUserRobotChecked);
+                                }} style={{ color: '#000', fontFamily: 'Roboto, helvetica, arial, sans-serif', fontSize: '14px', fontWeight: '400', cursor: 'pointer', userSelect: 'none' }}>I'm not a robot</label>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
+                                <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" alt="reCAPTCHA" style={{ width: '32px', height: '32px', opacity: '0.55' }} />
+                                <div style={{ fontSize: '10px', color: '#555', marginTop: '2px', transform: 'scale(0.8)', whiteSpace: 'nowrap' }}>reCAPTCHA</div>
+                                <div style={{ fontSize: '8px', color: '#555', transform: 'scale(0.8)', whiteSpace: 'nowrap', marginTop: '-2px' }}>Privacy - Terms</div>
+                            </div>
+                        </div>
                         <div style={{ textAlign: 'right', marginBottom: '24px' }}>
                             <Link to="/forgot-password" style={{ color: '#7f8c8d', fontSize: '14px', textDecoration: 'none', fontWeight: '500' }}>Forgot Password?</Link>
                         </div>
@@ -255,6 +327,58 @@ const Login = () => {
                                 ></i>
                             </div>
                         </div>
+
+                        {/* Robot Check - Professional Style */}
+                        <div style={{
+                            margin: '0 auto 24px',
+                            width: '100%',
+                            maxWidth: '304px',
+                            height: '78px',
+                            background: '#f9f9f9',
+                            border: '1px solid #d3d3d3',
+                            borderRadius: '3px',
+                            boxShadow: '0 0 4px 1px rgba(0,0,0,0.08)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            padding: '0 12px'
+                        }}>
+                            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                <div
+                                    onClick={() => {
+                                        playClickSound();
+                                        setIsAdminRobotChecked(!isAdminRobotChecked);
+                                    }}
+                                    style={{
+                                        position: 'relative',
+                                        width: '24px',
+                                        height: '24px',
+                                        background: '#fff',
+                                        border: '2px solid #c1c1c1',
+                                        borderRadius: '2px',
+                                        cursor: 'pointer',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center'
+                                    }}
+                                >
+                                    {isAdminRobotChecked && (
+                                        <svg width="30" height="30" viewBox="0 0 48 48" fill="none" style={{ position: 'absolute', top: '-6px', left: '-2px' }}>
+                                            <path d="M20 34L10 24L12.83 21.17L20 28.34L37.17 11.17L40 14L20 34Z" fill="#0F9D58" />
+                                        </svg>
+                                    )}
+                                </div>
+                                <label onClick={() => {
+                                    playClickSound();
+                                    setIsAdminRobotChecked(!isAdminRobotChecked);
+                                }} style={{ color: '#000', fontFamily: 'Roboto, helvetica, arial, sans-serif', fontSize: '14px', fontWeight: '400', cursor: 'pointer', userSelect: 'none' }}>I'm not a robot</label>
+                            </div>
+                            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
+                                <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" alt="reCAPTCHA" style={{ width: '32px', height: '32px', opacity: '0.55' }} />
+                                <div style={{ fontSize: '10px', color: '#555', marginTop: '2px', transform: 'scale(0.8)', whiteSpace: 'nowrap' }}>reCAPTCHA</div>
+                                <div style={{ fontSize: '8px', color: '#555', transform: 'scale(0.8)', whiteSpace: 'nowrap', marginTop: '-2px' }}>Privacy - Terms</div>
+                            </div>
+                        </div>
                         <div style={{ textAlign: 'right', marginBottom: '24px' }}>
                             <Link to="/forgot-password" style={{ color: '#78909c', fontSize: '14px', textDecoration: 'none', fontWeight: '500' }}>Forgot Password?</Link>
                         </div>
@@ -269,8 +393,9 @@ const Login = () => {
                             Need admin access? <Link to="/register-admin" style={{ color: '#0097a7', fontWeight: '700', textDecoration: 'none' }}>Register</Link>
                         </div>
                     </form>
-                )}
-            </div>
+                )
+                }
+            </div >
 
             <StatusPopup
                 isOpen={popup.isOpen}
@@ -309,7 +434,7 @@ const Login = () => {
             <style>{`
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
             `}</style>
-        </div>
+        </div >
     );
 };
 
