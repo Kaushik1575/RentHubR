@@ -79,7 +79,10 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, messag
                     fontSize: '1rem',
                     lineHeight: '1.5',
                     maxWidth: '100%',
-                    whiteSpace: 'pre-wrap' // Allow newlines to render properly
+                    whiteSpace: 'pre-wrap', // Allow newlines to render properly
+                    maxHeight: '60vh',      // Limit height for long content
+                    overflowY: 'auto',      // Enable scrolling
+                    paddingRight: '5px'     // Prevent scrollbar overlap
                 }}>
                     {message}
                 </div>

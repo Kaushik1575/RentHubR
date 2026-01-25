@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
+import TermsPopup from '../components/TermsPopup';
 
 const BookingForm = () => {
     const [searchParams] = useSearchParams();
@@ -39,11 +40,13 @@ const BookingForm = () => {
         title: '',
         message: ''
     });
+    const [showTermsPopup, setShowTermsPopup] = useState(false); // State for custom Terms Popup
 
     // Loyalty Rewards
     const [rewards, setRewards] = useState([]);
     const [selectedReward, setSelectedReward] = useState(null);
     const [couponInput, setCouponInput] = useState('');
+    const [termsAccepted, setTermsAccepted] = useState(false);
 
     useEffect(() => {
         const token = localStorage.getItem('token');
@@ -268,6 +271,16 @@ const BookingForm = () => {
     // Step 2: Handle Payment
     const handlePayment = async () => {
         const token = localStorage.getItem('token');
+
+        if (!termsAccepted) {
+            setPopup({
+                isOpen: true,
+                type: 'warning',
+                title: 'Terms & Conditions',
+                message: 'Please accept the Terms and Conditions to proceed.'
+            });
+            return;
+        }
 
         // Validation: Prevent booking less than 4 hours with free ride coupon
         if (selectedReward && selectedReward.reward_type === 'FREE_2_HOUR_RIDE' && duration < 4) {
@@ -734,6 +747,69 @@ const BookingForm = () => {
                             </div>
                         </div>
 
+                        <div style={{
+                            marginBottom: '1.5rem',
+                            display: 'flex',
+                            alignItems: 'flex-start',
+                            gap: '12px',
+                            background: '#f8f9fa',
+                            padding: '12px',
+                            borderRadius: '8px',
+                            border: '1px solid #eee'
+                        }}>
+                            <input
+                                type="checkbox"
+                                id="termsCheckbox"
+                                checked={termsAccepted}
+                                onChange={(e) => {
+                                    if (e.target.checked) {
+                                        // User trying to check: Show popup first
+                                        // We don't set checked here, we wait for popup 'Accept'
+                                        setShowTermsPopup(true);
+                                    } else {
+                                        // User trying to uncheck: Allow immediately
+                                        setTermsAccepted(false);
+                                    }
+                                }}
+                                style={{
+                                    marginTop: '4px',
+                                    width: '20px',
+                                    height: '20px',
+                                    cursor: 'pointer',
+                                    accentColor: '#d97706'
+                                }}
+                            />
+                            <label
+                                htmlFor="termsCheckbox"
+                                style={{ fontSize: '0.95rem', color: '#555', cursor: 'pointer', lineHeight: '1.5' }}
+                                onClick={(e) => {
+                                    // Handle label click manually to ensure popup opens if not checked
+                                    if (!termsAccepted) {
+                                        e.preventDefault();
+                                        setShowTermsPopup(true);
+                                    }
+                                }}
+                            >
+                                I agree to the <span
+                                    style={{ color: '#d97706', textDecoration: 'underline', fontWeight: 'bold', cursor: 'pointer' }}
+                                >Terms and Conditions</span>. I confirm that I possess a valid driving license.
+                            </label>
+                        </div>
+
+                        {/* Terms Popup */}
+                        <TermsPopup
+                            isOpen={showTermsPopup}
+                            onClose={() => setShowTermsPopup(false)}
+                            onAccept={() => {
+                                setTermsAccepted(true);
+                                setShowTermsPopup(false);
+                            }}
+                            onDecline={() => {
+                                setTermsAccepted(false);
+                                setShowTermsPopup(false);
+                            }}
+                        />
+
                         <button onClick={handlePayment} disabled={processing} style={{ width: '100%', padding: '1rem', background: '#d97706', color: 'white', border: 'none', borderRadius: '4px', fontSize: '1rem', fontWeight: 'bold', cursor: processing ? 'not-allowed' : 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
                             {processing ? 'Processing...' : <><i className="fas fa-lock"></i> Pay ₹{advancePayment} Now</>}
                         </button>
@@ -857,7 +933,7 @@ const BookingForm = () => {
                     </div>
                 ) : null}
             />
-        </div>
+        </div >
     );
 };
 
