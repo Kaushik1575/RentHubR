@@ -407,6 +407,13 @@ const MyBookings = () => {
                                     <strong>Coins Earned:</strong> {booking.coins_earned} <i className="fas fa-coins" style={{ color: '#D4AF37' }}></i>
                                 </p>
                             )}
+                            {booking.rewards && booking.rewards.coupon_code && (
+                                <p style={{ color: '#2e7d32', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
+                                    <i className="fas fa-tag"></i>
+                                    <strong>Coupon Used:</strong> {booking.rewards.coupon_code}
+                                    {booking.rewards.reward_type === 'FREE_2_HOUR_RIDE' && <span style={{ fontSize: '0.8em', fontWeight: 'normal', color: '#666' }}>(Free 2 Hours)</span>}
+                                </p>
+                            )}
 
                             {/* Show booking confirmation time for refund calculation */}
                             {(booking.confirmation_timestamp || booking.created_at) && (

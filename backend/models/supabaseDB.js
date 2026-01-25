@@ -51,7 +51,7 @@ class SupabaseDB {
     static async getBookingsByUser(userId) {
         const { data, error } = await supabase
             .from('bookings')
-            .select('*')
+            .select('*, rewards:reward_id(coupon_code, reward_type)')
             .eq('user_id', userId)
             .order('id', { ascending: false }); // Sort by ID descending (newest first)
 
