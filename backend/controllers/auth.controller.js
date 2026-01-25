@@ -307,8 +307,35 @@ const loginUser = async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
+        // Check for concurrent session
+        // If user already has a session_id and forceLogin is NOT true, warn them
+        const { forceLogin } = req.body;
+        if (user.session_id && !forceLogin) {
+            console.log('⚠️ Concurrent login attempt detected for:', email);
+            return res.status(409).json({
+                error: 'Account already logged in on another device',
+                code: 'CONCURRENT_SESSION'
+            });
+        }
+
+        // Generate new session ID (Using UUID or random string)
+        const newSessionId = require('crypto').randomUUID();
+
+        // Update user with new session ID (this invalidates old sessions if middleware checks it)
+        try {
+            await SupabaseDB.updateUser(user.id, { session_id: newSessionId });
+        } catch (updateErr) {
+            console.warn('⚠️ Could not update session_id (column might be missing), proceeding without session lock:', updateErr.message);
+            // We proceed to allow login even if session lock fails, to avoid blocking users due to schema mismatch
+        }
+
         const token = jwt.sign(
-            { id: user.id, email: user.email, isAdmin: user.is_admin },
+            {
+                id: user.id,
+                email: user.email,
+                isAdmin: user.is_admin,
+                sessionId: newSessionId // Embed session ID in token
+            },
             JWT_SECRET
         );
 
@@ -652,6 +679,29 @@ const debugUser = async (req, res) => {
     }
 };
 
+const logoutUser = async (req, res) => {
+    try {
+        const userId = req.user.id; // From middleware
+        console.log('🚪 Logout: Clearing session for user:', userId);
+
+        // Clear session_id in DB
+        const { error } = await supabase
+            .from('users')
+            .update({ session_id: null })
+            .eq('id', userId);
+
+        if (error) {
+            console.error('Logout DB Error:', error);
+            // Don't fail the logout, just log it
+        }
+
+        res.json({ message: 'Logged out successfully' });
+    } catch (error) {
+        console.error('Logout error:', error);
+        res.status(500).json({ error: 'Logout error' });
+    }
+};
+
 module.exports = {
     registerSendOtp,
     registerSendMobileOtp,
@@ -663,5 +713,6 @@ module.exports = {
     forgotPassword,
     adminForgotPassword,
     resetPassword,
+    logoutUser,
     debugUser
 };

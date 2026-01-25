@@ -12,9 +12,12 @@ router.post('/register/verify-otp', authController.verifyOtp);
 // Admin Registration
 router.post('/register/admin', authController.registerAdmin);
 
+const { verifyToken } = require('../middleware/authMiddleware');
+
 // Logins
 router.post('/login', authController.loginUser);
 router.post('/login/admin', authController.loginAdmin);
+router.post('/logout', verifyToken, authController.logoutUser);
 
 // Password Management
 router.post('/forgot-password', authController.forgotPassword);

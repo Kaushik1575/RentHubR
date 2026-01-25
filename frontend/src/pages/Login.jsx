@@ -39,8 +39,8 @@ const Login = () => {
         message: ''
     });
 
-    const handleUserLogin = async (e) => {
-        e.preventDefault();
+    const handleUserLogin = async (e, forceLogin = false) => {
+        if (e && e.preventDefault) e.preventDefault();
         if (!isUserRobotChecked) {
             setPopup({ isOpen: true, type: 'error', title: 'Verification Required', message: 'Please confirm you are not a robot' });
             return;
@@ -49,9 +49,27 @@ const Login = () => {
             const response = await fetch('/api/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: userEmail, password: userPassword })
+                body: JSON.stringify({ email: userEmail, password: userPassword, forceLogin })
             });
             const data = await response.json();
+
+            if (response.status === 409) {
+                // Concurrent session detected
+                setPopup({
+                    isOpen: true,
+                    type: 'confirm',
+                    title: 'Security Alert',
+                    message: 'Your account is already logged in on another device.\n\nDo you want to force a new login? This will terminate the previous session.',
+                    confirmText: 'Yes, Login',
+                    cancelText: 'No, Cancel',
+                    onConfirm: () => {
+                        setPopup({ ...popup, isOpen: false });
+                        handleUserLogin(null, true); // Retrying with forceLogin = true
+                    }
+                });
+                return;
+            }
+
             if (response.ok) {
                 localStorage.setItem('token', data.token);
                 localStorage.setItem('user', JSON.stringify(data.user));
@@ -430,6 +448,9 @@ const Login = () => {
                 type={popup.type}
                 title={popup.title}
                 message={popup.message}
+                onConfirm={popup.onConfirm}
+                confirmText={popup.confirmText}
+                cancelText={popup.cancelText}
             />
             <style>{`
                 @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }

@@ -23,7 +23,7 @@ const verifyToken = async (req, res, next) => {
         // Check user status in database
         const { data: user, error } = await supabase
             .from('users')
-            .select('is_blocked')
+            .select('is_blocked, session_id')
             .eq('id', decoded.id)
             .single();
 
@@ -35,6 +35,14 @@ const verifyToken = async (req, res, next) => {
         if (user.is_blocked) {
             console.log('VerifyToken: User is blocked');
             return res.status(403).json({ error: 'Account blocked', code: 'USER_BLOCKED' });
+        }
+
+        // Concurrent session check
+        // If both token and DB have session IDs, they MUST match.
+        // If DB session_id changed (by another login), this token is invalid.
+        if (decoded.sessionId && user.session_id && decoded.sessionId !== user.session_id) {
+            console.log('VerifyToken: Session mismatch (Old session terminated)');
+            return res.status(401).json({ error: 'Session expired. Logged in on another device.', code: 'SESSION_TERMINATED' });
         }
 
         req.user = decoded;
