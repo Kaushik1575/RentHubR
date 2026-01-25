@@ -22,6 +22,22 @@ const ProfilePage = () => {
         if (user) fetchRewards();
     }, [user]);
 
+    // Check for tab query parameter and scroll to rewards section
+    useEffect(() => {
+        const params = new URLSearchParams(location.search);
+        const tab = params.get('tab');
+
+        if (tab === 'rewards') {
+            // Wait for page to render, then scroll to rewards section
+            setTimeout(() => {
+                const rewardsSection = document.getElementById('rewards-section');
+                if (rewardsSection) {
+                    rewardsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                }
+            }, 500);
+        }
+    }, [location.search]);
+
     const fetchProfile = async () => {
         setLoading(true);
         try {

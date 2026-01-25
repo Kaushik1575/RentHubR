@@ -278,11 +278,18 @@ const Login = () => {
                     setPopup({ ...popup, isOpen: false });
                     if (popup.type === 'success') {
                         if (activeTab === 'user') {
+                            // Check for sessionStorage redirect (from home page banners)
+                            const sessionRedirect = sessionStorage.getItem('redirectAfterLogin');
+
                             // Check for 'redirect' query param
                             const params = new URLSearchParams(window.location.search);
                             const redirectUrl = params.get('redirect');
 
-                            if (from) {
+                            if (sessionRedirect) {
+                                // Clear the session storage
+                                sessionStorage.removeItem('redirectAfterLogin');
+                                navigate(sessionRedirect);
+                            } else if (from) {
                                 navigate(from, { replace: true });
                             } else if (redirectUrl) {
                                 navigate(redirectUrl);

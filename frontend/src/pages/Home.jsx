@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 
 
 const Home = () => {
@@ -7,6 +7,7 @@ const Home = () => {
     const [scooters, setScooters] = useState([]);
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
+    const navigate = useNavigate();
 
     useEffect(() => {
         const fetchVehicles = async () => {
@@ -33,6 +34,24 @@ const Home = () => {
 
         fetchVehicles();
     }, []);
+
+    // Handle reward banner clicks with login check
+    const handleRewardClick = (e) => {
+        e.preventDefault();
+
+        // Check if user is logged in
+        const token = localStorage.getItem('token');
+
+        if (!token) {
+            // Store intended destination
+            sessionStorage.setItem('redirectAfterLogin', '/rewards');
+            // Redirect to login
+            navigate('/login');
+        } else {
+            // User is logged in, go to rewards page
+            navigate('/rewards');
+        }
+    };
 
     // Scroll Animation Observer
     useEffect(() => {
@@ -146,7 +165,7 @@ const Home = () => {
                     <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', margin: '40px 0' }}>
 
                         {/* Card 1: Ride & Earn */}
-                        <Link to="/rewards" style={{ textDecoration: 'none' }}>
+                        <div onClick={handleRewardClick} style={{ textDecoration: 'none' }}>
                             <div style={{
                                 background: 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)',
                                 borderRadius: '20px',
@@ -181,10 +200,10 @@ const Home = () => {
                                 {/* Decorative circle */}
                                 <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '100px', height: '100px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
                             </div>
-                        </Link>
+                        </div>
 
                         {/* Card 2: Refer & Earn */}
-                        <Link to="/rewards" style={{ textDecoration: 'none' }}>
+                        <div onClick={handleRewardClick} style={{ textDecoration: 'none' }}>
                             <div style={{
                                 background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
                                 borderRadius: '20px',
@@ -219,7 +238,7 @@ const Home = () => {
                                 {/* Decorative circle */}
                                 <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', width: '120px', height: '120px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
                             </div>
-                        </Link>
+                        </div>
 
                     </div>
 
