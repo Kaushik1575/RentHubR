@@ -24,6 +24,7 @@ const RegisterAdmin = () => {
     const [isSendingOtp, setIsSendingOtp] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [isSecurityCodeVerified, setIsSecurityCodeVerified] = useState(false);
 
     const handleChange = (e) => {
         setFormData({ ...formData, [e.target.id]: e.target.value });
@@ -52,6 +53,20 @@ const RegisterAdmin = () => {
         }
     };
 
+    const handleVerifySecurityCode = () => {
+        if (!formData.securityCode) {
+            setPopup({ isOpen: true, type: 'error', title: 'Required', message: 'Please enter security code' });
+            return;
+        }
+        if (formData.securityCode === '1575') {
+            setIsSecurityCodeVerified(true);
+            setPopup({ isOpen: true, type: 'success', title: 'Verified', message: 'Security Code Verified Successfully' });
+        } else {
+            setIsSecurityCodeVerified(false);
+            setPopup({ isOpen: true, type: 'error', title: 'Invalid Code', message: 'Invalid Security Access Code' });
+        }
+    };
+
     const calculatePasswordStrength = (pwd) => {
         return {
             length: pwd.length >= 8,
@@ -68,6 +83,12 @@ const RegisterAdmin = () => {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (!isSecurityCodeVerified) {
+            setPopup({ isOpen: true, type: 'error', title: 'Verification Required', message: 'Please verify the Security Access Code first.' });
+            return;
+        }
+
         if (formData.password !== formData.confirmPassword) {
             setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Passwords do not match' });
             return;
@@ -190,13 +211,45 @@ const RegisterAdmin = () => {
                     {/* Security Code */}
                     <div className="form-group" style={{ gridColumn: '1 / -1' }}>
                         <label htmlFor="securityCode" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#263238', fontSize: '16px' }}>Security Access Code</label>
-                        <input type="text" id="securityCode" value={formData.securityCode} onChange={handleChange} placeholder="Enter Admin Security Code" required
-                            style={{
-                                width: '100%', padding: '12px', border: '1px solid #cfd8dc', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none'
-                            }}
-                            onFocus={(e) => e.target.style.borderColor = '#00897b'}
-                            onBlur={(e) => e.target.style.borderColor = '#cfd8dc'}
-                        />
+                        <div style={{ display: 'flex', gap: '10px' }}>
+                            <input
+                                type="text"
+                                id="securityCode"
+                                value={formData.securityCode}
+                                onChange={(e) => {
+                                    setFormData({ ...formData, securityCode: e.target.value });
+                                    setIsSecurityCodeVerified(false); // Reset verification on change
+                                }}
+                                placeholder="Enter Admin Security Code"
+                                required
+                                readOnly={isSecurityCodeVerified}
+                                style={{
+                                    flex: 1, padding: '12px', border: '1px solid #cfd8dc', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none',
+                                    backgroundColor: isSecurityCodeVerified ? '#e8f5e9' : 'white'
+                                }}
+                                onFocus={(e) => !isSecurityCodeVerified && (e.target.style.borderColor = '#00897b')}
+                                onBlur={(e) => !isSecurityCodeVerified && (e.target.style.borderColor = '#cfd8dc')}
+                            />
+                            <button
+                                type="button"
+                                onClick={handleVerifySecurityCode}
+                                disabled={isSecurityCodeVerified || !formData.securityCode}
+                                className="btn-verify"
+                                style={{
+                                    padding: '0 20px',
+                                    background: isSecurityCodeVerified ? '#4caf50' : '#00897b',
+                                    color: '#fff',
+                                    border: 'none',
+                                    borderRadius: '8px',
+                                    cursor: isSecurityCodeVerified ? 'default' : 'pointer',
+                                    fontWeight: '600',
+                                    whiteSpace: 'nowrap',
+                                    transition: 'background 0.3s',
+                                    opacity: (!formData.securityCode) ? 0.7 : 1
+                                }}>
+                                {isSecurityCodeVerified ? 'Verified ✓' : 'Verify'}
+                            </button>
+                        </div>
                     </div>
 
                     {/* Passwords */}
