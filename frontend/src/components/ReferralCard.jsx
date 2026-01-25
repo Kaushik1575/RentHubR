@@ -32,7 +32,7 @@ Want to try it? Use my referral code and get rewarded!
 4️⃣ Start booking & earning more!
 
 🔗 CLAIM YOUR BONUS:
-${window.location.origin}/signup?ref=${code}
+${window.location.origin}/register-user?ref=${code}
 
 ⏰ Limited time offer - Join now!
 
