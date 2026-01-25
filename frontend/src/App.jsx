@@ -64,6 +64,19 @@ function Layout() {
     checkAdminRoute();
   }, [location.pathname, navigate]);
 
+  // Capture Referral Code from URL
+  useEffect(() => {
+    const params = new URLSearchParams(location.search);
+    const refCode = params.get('ref');
+    if (refCode) {
+      localStorage.setItem('referralCode', refCode);
+      console.log('Referral code captured:', refCode);
+
+      // Optional: Show a subtle toast or just silently store it
+      // toast.success('Referral code applied! Register to claim your bonus.');
+    }
+  }, [location.search]);
+
   return (
     <div className="App">
       <GoogleTranslateLoader />

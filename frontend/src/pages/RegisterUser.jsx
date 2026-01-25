@@ -14,7 +14,7 @@ const RegisterUser = () => {
         confirmPassword: '',
         otp: '',
         mobileOtp: '',
-        referralCode: searchParams.get('ref') || '',
+        referralCode: searchParams.get('ref') || localStorage.getItem('referralCode') || '',
         hearAboutUs: '',
         otherSource: ''
     });
@@ -208,6 +208,9 @@ const RegisterUser = () => {
             });
             const data = await response.json();
             if (response.ok) {
+                // Clear stored referral code
+                localStorage.removeItem('referralCode');
+
                 setPopup({
                     isOpen: true,
                     type: 'success',
