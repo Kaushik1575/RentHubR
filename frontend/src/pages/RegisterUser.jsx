@@ -14,7 +14,9 @@ const RegisterUser = () => {
         confirmPassword: '',
         otp: '',
         mobileOtp: '',
-        referralCode: searchParams.get('ref') || ''
+        referralCode: searchParams.get('ref') || '',
+        hearAboutUs: '',
+        otherSource: ''
     });
     const [emailVerified, setEmailVerified] = useState(false);
     const [mobileVerified, setMobileVerified] = useState(false);
@@ -353,6 +355,71 @@ const RegisterUser = () => {
                             style={{ width: '100%', padding: '12px', border: '1px solid #e0e0e0', borderRadius: '8px', fontSize: '16px', fontWeight: '500', outline: 'none', textTransform: 'uppercase' }}
                         />
                     </div>
+
+                    {/* How did you hear about us? */}
+                    <div className="form-group" style={{ gridColumn: 'span 1' }}>
+                        <label htmlFor="hearAboutUs" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#2c3e50', fontSize: '16px' }}>
+                            How did you hear about us? <span style={{ color: '#e74c3c' }}>*</span>
+                        </label>
+                        <select
+                            id="hearAboutUs"
+                            value={formData.hearAboutUs}
+                            onChange={handleChange}
+                            required
+                            style={{
+                                width: '100%',
+                                padding: '12px',
+                                border: '1px solid #e0e0e0',
+                                borderRadius: '8px',
+                                fontSize: '16px',
+                                fontWeight: '500',
+                                outline: 'none',
+                                backgroundColor: 'white',
+                                cursor: 'pointer'
+                            }}
+                            onFocus={(e) => e.target.style.borderColor = '#2ecc71'}
+                            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                        >
+                            <option value="">Select an option</option>
+                            <option value="Google Search">🔍 Google Search</option>
+                            <option value="Social Media">📱 Social Media (Facebook / Instagram / X)</option>
+                            <option value="Friend Referral">👥 Friend / Family Referral</option>
+                            <option value="WhatsApp/Telegram">💬 WhatsApp / Telegram Group</option>
+                            <option value="Online Advertisement">📢 Advertisement (Online Ads)</option>
+                            <option value="YouTube">📺 YouTube</option>
+                            <option value="Blog/Article">📝 Blog / Article</option>
+                            <option value="Already Knew">✨ Already knew about it</option>
+                            <option value="Other">🔖 Other</option>
+                        </select>
+                    </div>
+
+                    {/* Other Source (Conditional) */}
+                    {formData.hearAboutUs === 'Other' && (
+                        <div className="form-group" style={{ gridColumn: '1 / -1' }}>
+                            <label htmlFor="otherSource" style={{ display: 'block', marginBottom: '8px', fontWeight: '700', color: '#2c3e50', fontSize: '16px' }}>
+                                Please specify <span style={{ color: '#e74c3c' }}>*</span>
+                            </label>
+                            <input
+                                type="text"
+                                id="otherSource"
+                                value={formData.otherSource}
+                                onChange={handleChange}
+                                placeholder="Tell us how you found us..."
+                                required
+                                style={{
+                                    width: '100%',
+                                    padding: '12px',
+                                    border: '1px solid #e0e0e0',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    fontWeight: '500',
+                                    outline: 'none'
+                                }}
+                                onFocus={(e) => e.target.style.borderColor = '#2ecc71'}
+                                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                            />
+                        </div>
+                    )}
 
                     {/* Password Rules - Compact Horizontal */}
                     <div style={{ gridColumn: '1 / -1', background: '#f8f9fa', padding: '12px', borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: '12px', fontSize: '12px', color: '#7f8c8d' }}>
