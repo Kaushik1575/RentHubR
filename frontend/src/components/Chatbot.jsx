@@ -377,10 +377,11 @@ const Chatbot = ({ isOpen, onClose }) => {
             setMessages(prev => [...prev, botResponse]);
 
         } catch (error) {
-            console.error('Chatbot API Error:', error);
+
+            console.error('Chatbot API Error Details:', error); // Expanded logging
             const errorResponse = {
                 id: Date.now() + 1,
-                text: "I'm having a bit of trouble connecting to my brain right now. Please try again in a moment!",
+                text: "I'm having a bit of trouble connecting to my brain right now. Please try again in a moment! (Error: " + error.message + ")",
                 sender: 'bot',
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
                 options: ["Retry", "Go back"]
