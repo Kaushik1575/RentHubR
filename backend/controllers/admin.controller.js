@@ -323,36 +323,125 @@ const confirmBooking = async (req, res) => {
                 const gcalUrl = `${gcalBase}&text=${gcalText}&dates=${gcalDates}&details=${gcalDetails}`;
 
                 const mailHtml = `
-                    <div style="font-family: Arial, sans-serif; color: #222;">
-                      <h2 style="color:#0b5cff;">Hello ${booking.users.full_name},</h2>
-                      <p>Your booking is confirmed! Please find your invoice attached.</p>
-                      <h3>Booking Details</h3>
-                      <table style="width:100%; border-collapse: collapse;">
-                        <tr><td style="padding:6px; border:1px solid #eee;"><b>Booking ID</b></td><td style="padding:6px; border:1px solid #eee;">${bookingId}</td></tr>
-                        <tr><td style="padding:6px; border:1px solid #eee;"><b>Vehicle</b></td><td style="padding:6px; border:1px solid #eee;">${vehicle ? vehicle.name : 'Vehicle'}</td></tr>
-                        <tr><td style="padding:6px; border:1px solid #eee;"><b>Pickup Date & Time</b></td><td style="padding:6px; border:1px solid #eee;">${booking.start_date} ${booking.start_time}</td></tr>
-                        <tr><td style="padding:6px; border:1px solid #eee;"><b>Duration</b></td><td style="padding:6px; border:1px solid #eee;">${duration} hours</td></tr>
-                        <tr><td style="padding:6px; border:1px solid #eee;"><b>Total Amount</b></td><td style="padding:6px; border:1px solid #eee;">₹${totalAmount}</td></tr>
-                        <tr><td style="padding:6px; border:1px solid #eee;"><b>Advance Paid</b></td><td style="padding:6px; border:1px solid #eee;">₹${advancePayment}</td></tr>
-                        <tr><td style="padding:6px; border:1px solid #eee;"><b>Remaining Amount</b></td><td style="padding:6px; border:1px solid #eee;">₹${remainingAmount}</td></tr>
-                      </table>
-                      <p style="margin-top:12px;">
-                        <a href="${gcalUrl}" style="display:inline-block;padding:10px 14px;background:#0b5cff;color:#fff;border-radius:4px;text-decoration:none;">Add to Google Calendar</a>
-                      </p>
-                      <hr style="margin-top:18px;" />
-                      <p style="font-size:12px;color:#666;"><b>Pickup Instructions:</b> Please bring a valid ID and a printed or digital copy of this invoice. If you have any questions, call us.</p>
-                      <p style="font-size:12px;color:#666;">If you find this email in spam, please mark as <b>Not Spam</b> to ensure future delivery.</p>
-                      <footer style="margin-top:18px;padding-top:8px;border-top:1px solid #eee;color:#999;font-size:12px;">
-                        <div>RentHub — Bike & Vehicle Rentals</div>
-                        <div>support@renthub.example | +91 90000 00000</div>
-                        <div>123 RentHub Street, City, Country</div>
-                      </footer>
-                    </div>
+                    <!DOCTYPE html>
+                    <html>
+                    <head>
+                        <meta charset="utf-8">
+                        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+                        <title>Booking Confirmed</title>
+                    </head>
+                    <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                            <tr>
+                                <td style="padding: 20px 0;">
+                                    <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                                        <!-- Header -->
+                                        <tr>
+                                            <td align="center" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); padding: 40px 20px;">
+                                                <div style="font-size: 48px; margin-bottom: 10px;">✅</div>
+                                                <h1 style="color: #ffffff; margin: 0; font-size: 28px; font-weight: bold;">Booking Confirmed!</h1>
+                                                <p style="color: #e0e7ff; margin: 10px 0 0 0; font-size: 16px;">Your ride is ready, ${booking.users.full_name}!</p>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- Main Content -->
+                                        <tr>
+                                            <td style="padding: 40px 30px;">
+                                                <div style="background-color: #f8f9fa; border-left: 5px solid #667eea; padding: 15px; margin-bottom: 25px; border-radius: 4px;">
+                                                    <p style="margin: 0; color: #495057; font-size: 15px;">
+                                                        <strong>Great news!</strong> Your booking has been confirmed by our team. Your invoice is attached to this email.
+                                                    </p>
+                                                </div>
+
+                                                <!-- Booking ID Badge -->
+                                                <div style="text-align: center; margin: 25px 0;">
+                                                    <div style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 24px; border-radius: 50px; font-size: 16px; font-weight: bold; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                                                        📋 Booking ID: ${bookingId}
+                                                    </div>
+                                                </div>
+
+                                                <!-- Booking Details Card -->
+                                                <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 30px;">📝 Booking Details</h3>
+                                                <table width="100%" style="margin-bottom: 25px; background: #f8fbff; border-radius: 8px; overflow: hidden;">
+                                                    <tr style="background: #e3f2fd;">
+                                                        <td style="padding: 12px 15px; color: #1976d2; font-weight: bold; width: 40%;">🚗 Vehicle</td>
+                                                        <td style="padding: 12px 15px; color: #333; font-weight: bold;">${vehicle ? vehicle.name : 'Vehicle'}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 12px 15px; color: #666; border-top: 1px solid #e0e0e0;">📅 Pickup Date</td>
+                                                        <td style="padding: 12px 15px; color: #333; border-top: 1px solid #e0e0e0;">${booking.start_date}</td>
+                                                    </tr>
+                                                    <tr style="background: #f8f9fa;">
+                                                        <td style="padding: 12px 15px; color: #666; border-top: 1px solid #e0e0e0;">🕐 Pickup Time</td>
+                                                        <td style="padding: 12px 15px; color: #333; border-top: 1px solid #e0e0e0;">${booking.start_time}</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 12px 15px; color: #666; border-top: 1px solid #e0e0e0;">⏱️ Duration</td>
+                                                        <td style="padding: 12px 15px; color: #333; border-top: 1px solid #e0e0e0;">${duration} hours</td>
+                                                    </tr>
+                                                </table>
+
+                                                <!-- Payment Summary -->
+                                                <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">💰 Payment Summary</h3>
+                                                <table width="100%" style="margin-bottom: 25px; background: #fff8e1; border-radius: 8px; overflow: hidden; border: 2px solid #ffd54f;">
+                                                    <tr>
+                                                        <td style="padding: 12px 15px; color: #666; width: 40%;">Total Amount</td>
+                                                        <td style="padding: 12px 15px; color: #333; font-size: 18px; font-weight: bold;">₹${totalAmount}</td>
+                                                    </tr>
+                                                    <tr style="background: #fff9c4;">
+                                                        <td style="padding: 12px 15px; color: #666; border-top: 1px solid #ffe082;">Advance Paid</td>
+                                                        <td style="padding: 12px 15px; color: #2e7d32; font-size: 18px; font-weight: bold; border-top: 1px solid #ffe082;">₹${advancePayment} ✓</td>
+                                                    </tr>
+                                                    <tr>
+                                                        <td style="padding: 12px 15px; color: #666; border-top: 2px solid #ffd54f;">Remaining to Pay</td>
+                                                        <td style="padding: 12px 15px; color: #d84315; font-size: 20px; font-weight: bold; border-top: 2px solid #ffd54f;">₹${remainingAmount}</td>
+                                                    </tr>
+                                                </table>
+
+                                                <!-- Action Buttons -->
+                                                <div style="text-align: center; margin: 30px 0;">
+                                                    <a href="${gcalUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px; margin: 5px; box-shadow: 0 4px 12px rgba(102, 126, 234, 0.3);">
+                                                        📅 Add to Calendar
+                                                    </a>
+                                                </div>
+
+                                                <!-- Important Notice -->
+                                                <div style="background-color: #fff3cd; border-left: 5px solid #ffc107; padding: 15px; margin: 25px 0; border-radius: 4px;">
+                                                    <p style="margin: 0 0 10px 0; color: #856404; font-weight: bold; font-size: 15px;">📌 Important Reminders:</p>
+                                                    <ul style="margin: 0; padding-left: 20px; color: #856404;">
+                                                        <li style="margin-bottom: 5px;">Bring a valid ID proof at pickup</li>
+                                                        <li style="margin-bottom: 5px;">Keep your invoice ready (attached)</li>
+                                                        <li style="margin-bottom: 5px;">Pay remaining ₹${remainingAmount} at pickup</li>
+                                                        <li>Arrive 10 minutes early for a smooth experience</li>
+                                                    </ul>
+                                                </div>
+
+                                                <!-- Contact Support -->
+                                                <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
+                                                    <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">Need help or want to make changes?</p>
+                                                    <a href="tel:+919000000000" style="color: #667eea; text-decoration: none; font-weight: bold; font-size: 16px;">📞 Call Support</a>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        
+                                        <!-- Footer -->
+                                        <tr>
+                                            <td style="background-color: #333; color: #fff; padding: 25px; text-align: center; font-size: 14px;">
+                                                <p style="margin: 0 0 10px 0; font-weight: bold;">RentHub - Your Journey, Our Priority</p>
+                                                <p style="margin: 0; color: #999; font-size: 12px;">support@renthub.example | +91 90000 00000</p>
+                                                <p style="margin: 10px 0 0 0; color: #666; font-size: 11px;">If this email is in spam, please mark it as "Not Spam"</p>
+                                            </td>
+                                        </tr>
+                                    </table>
+                                </td>
+                            </tr>
+                        </table>
+                    </body>
+                    </html>
                 `;
 
                 const mailOptions = {
                     to: booking.users.email,
-                    subject: 'Booking Confirmed – RentHub',
                     html: mailHtml,
                     attachments: [
                         { filename: 'booking_invoice.pdf', content: pdfBuffer }
