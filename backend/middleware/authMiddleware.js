@@ -37,20 +37,6 @@ const verifyToken = async (req, res, next) => {
             return res.status(403).json({ error: 'Account blocked', code: 'USER_BLOCKED' });
         }
 
-        // Concurrent session check
-        // If both token and DB have session IDs, they MUST match.
-        // If DB session_id changed (by another login), this token is invalid.
-        if (decoded.sessionId && user.session_id) {
-            if (decoded.sessionId !== user.session_id) {
-                console.log(`❌ Session Mismatch! Token: ${decoded.sessionId}, DB: ${user.session_id}`);
-                return res.status(401).json({ error: 'Session expired. Logged in on another device.', code: 'SESSION_TERMINATED' });
-            } else {
-                // console.log('✅ Session Match');
-            }
-        } else {
-            // console.log('⚠️ Legacy token or no session tracking active');
-        }
-
         req.user = decoded;
         next();
     } catch (error) {

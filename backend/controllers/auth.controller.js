@@ -307,37 +307,11 @@ const loginUser = async (req, res) => {
             return res.status(401).json({ error: 'Invalid email or password' });
         }
 
-        // Check for concurrent session
-        // If user already has a session_id and forceLogin is NOT true, warn them
-        const { forceLogin } = req.body;
-        if (user.session_id && !forceLogin) {
-            console.log(`⚠️ Concurrent login attempt detected for: ${email}. Existing Session: ${user.session_id}`);
-            return res.status(409).json({
-                error: 'Account already logged in on another device',
-                code: 'CONCURRENT_SESSION'
-            });
-        }
-
-        // Generate new session ID (random string timestamp)
-        const newSessionId = Date.now().toString(36) + Math.random().toString(36).substr(2);
-        console.log('🔄 Generated New Session ID:', newSessionId);
-
-        // Update user with new session ID (this invalidates old sessions if middleware checks it)
-        try {
-            console.log(`📝 Updating user ${user.id} session_id...`);
-            const updatedUser = await SupabaseDB.updateUser(user.id, { session_id: newSessionId });
-            console.log('✅ Session_id updated in DB:', updatedUser?.session_id);
-        } catch (updateErr) {
-            console.error('❌ Failed to update session_id:', updateErr);
-            console.warn('⚠️ Proceeding without session lock - Concurrent login protection compromised.');
-        }
-
         const token = jwt.sign(
             {
                 id: user.id,
                 email: user.email,
-                isAdmin: user.is_admin,
-                sessionId: newSessionId // Embed session ID in token
+                isAdmin: user.is_admin
             },
             JWT_SECRET
         );
@@ -684,20 +658,7 @@ const debugUser = async (req, res) => {
 
 const logoutUser = async (req, res) => {
     try {
-        const userId = req.user.id; // From middleware
-        console.log('🚪 Logout: Clearing session for user:', userId);
-
-        // Clear session_id in DB
-        const { error } = await supabase
-            .from('users')
-            .update({ session_id: null })
-            .eq('id', userId);
-
-        if (error) {
-            console.error('Logout DB Error:', error);
-            // Don't fail the logout, just log it
-        }
-
+        // Just send success response, as we are using JWT (client should just delete token)
         res.json({ message: 'Logged out successfully' });
     } catch (error) {
         console.error('Logout error:', error);
