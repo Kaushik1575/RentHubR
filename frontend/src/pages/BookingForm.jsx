@@ -360,6 +360,22 @@ const BookingForm = () => {
             }
             const orderData = await orderRes.json();
 
+            // Retrieve user details for prefill
+            let userDetails = {};
+            try {
+                userDetails = JSON.parse(localStorage.getItem('user') || '{}');
+                console.warn("Existing LocalStorage User:", userDetails); // Debugging (Warn for visibility)
+            } catch (e) {
+                console.warn("Failed to parse user details for Razorpay prefill");
+            }
+
+            const prefillData = {
+                name: userDetails.fullName || userDetails.name || "User Name",
+                email: userDetails.email || "user@example.com",
+                contact: userDetails.phoneNumber || userDetails.phone || userDetails.contact || userDetails.mobile || "9999999999"
+            };
+            console.warn("Razorpay Prefill Data:", prefillData); // Debugging (Warn for visibility)
+
             // 2. Open Razorpay
             const options = {
                 key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_RvUJ27UN65SU8w", // Use env var in real app
@@ -367,16 +383,12 @@ const BookingForm = () => {
                 currency: orderData.currency,
                 name: "RentHub",
                 description: `Advance for ${vehicle.name}`,
-                image: "/photo/logo.png", // Add your logo path
+                image: "https://placehold.co/128x128.png?text=RentHub", // Use HTTPS placeholder to check if it fixes blocking
                 order_id: orderData.id,
                 handler: async function (response) {
                     await confirmBooking(response, token);
                 },
-                prefill: {
-                    name: "User Name", // You could fetch this from user context
-                    email: "user@example.com",
-                    contact: "9999999999"
-                },
+                prefill: prefillData,
                 modal: {
                     ondismiss: function () {
                         // Handle modal dismissal if needed
@@ -525,7 +537,12 @@ const BookingForm = () => {
 
                 {/* Vehicle Summary (Small) */}
                 <div className="vehicle-info" style={{ display: 'flex', gap: '1rem', background: '#f8f9fa', padding: '1rem', borderRadius: '4px', marginBottom: '2rem' }}>
-                    <img src={vehicle.image_url} alt={vehicle.name} style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '4px' }} />
+                    <img
+                        src={vehicle.image_url}
+                        alt={vehicle.name}
+                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/80x80?text=Vehicle'; }}
+                        style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '4px' }}
+                    />
                     <div>
                         <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{vehicle.name}</h3>
                         <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>₹{vehicle.price}/hour • {vehicle.fuel_type}</p>

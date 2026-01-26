@@ -26,92 +26,75 @@ SCOOTY: ${simplify(scooty || [], 'scooty')}
 }
 
 // Helper to get weather information for a location
+const WEATHER_API_BASE_URL = "https://api.weatherapi.com/v1/current.json?key=ffa3e13e30af45349e0164721252308";
+
+const getWeatherDataForCity = async (city) => {
+    try {
+        const response = await axios.get(`${WEATHER_API_BASE_URL}&q=${encodeURIComponent(city)}&aqi=yes`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
+const getWeatherDataForLocation = async (lat, lon) => {
+    try {
+        const response = await axios.get(`${WEATHER_API_BASE_URL}&q=${lat},${lon}&aqi=yes`);
+        return response.data;
+    } catch (error) {
+        throw error;
+    }
+};
+
 async function getWeatherInfo(location) {
     try {
         let searchQuery = location.trim();
         const lowerLoc = searchQuery.toLowerCase();
 
-        // 0. Handle Aliases for Better Accuracy
+        // Handle Aliases
         if (lowerLoc === 'jammu and kashmir' || lowerLoc === 'jammu kashmir' || lowerLoc === 'j&k' || lowerLoc === 'jk') {
             searchQuery = "Jammu City, Jammu and Kashmir";
         } else if (lowerLoc === 'odisha' || lowerLoc === 'orissa') {
             searchQuery = "Bhubaneswar, Odisha";
         }
 
-        console.log(`🌤️ Weather Check for: ${searchQuery} (Original: ${location})`);
+        console.log(`🌤️ Weather Check for: ${searchQuery}`);
 
-        // PRIORITY 1: WeatherAPI.com (Use provided key + fallback to env)
-        const weatherApiKey = process.env.WEATHERAPI_KEY || '87f83957353244718cf102212262301';
-
-        if (weatherApiKey) {
-            try {
-                // Retry wrapper for WeatherAPI
-                const fetchFromWeatherApi = async (query) => {
-                    const url = `https://api.weatherapi.com/v1/current.json?key=${weatherApiKey}&q=${encodeURIComponent(query)}&aqi=no`;
-                    const res = await axios.get(url);
-                    return res.data;
-                };
-
-                let data;
+        let data;
+        try {
+            // Try fetching by city/location string
+            data = await getWeatherDataForCity(searchQuery);
+        } catch (error) {
+            // Retry with ", India" if it failed and didn't already have it
+            if (!searchQuery.toLowerCase().includes("india")) {
+                console.log("  - Exact match failed. Retrying with ', India'...");
                 try {
-                    console.log("  - Trying WeatherAPI.com...");
-                    data = await fetchFromWeatherApi(searchQuery);
-                } catch (firstError) {
-                    // Retry with ", India" if it failed and didn't already have it
-                    if (!searchQuery.toLowerCase().includes("india")) {
-                        console.log("  - Exact match failed. Retrying with ', India'...");
-                        data = await fetchFromWeatherApi(`${searchQuery}, India`);
-                    } else {
-                        throw firstError;
-                    }
-                }
-
-                console.log("✅ Weather data fetched from WeatherAPI.com");
-
-                return {
-                    temp: Math.round(data.current.temp_c),
-                    feelsLike: Math.round(data.current.feelslike_c),
-                    condition: data.current.condition.text.toLowerCase(),
-                    description: data.current.condition.text.toLowerCase(),
-                    humidity: data.current.humidity,
-                    // Return Exact Location: City, Region, Country
-                    location: `${data.location.name}, ${data.location.region}, ${data.location.country}`
-                };
-            } catch (weatherApiError) {
-                console.log("  - WeatherAPI.com failed:", weatherApiError.message);
-                if (weatherApiError.response) {
-                    console.log("    (Error Data):", weatherApiError.response.data);
+                    data = await getWeatherDataForCity(`${searchQuery}, India`);
+                } catch (retryError) {
+                    console.error("  - Retry failed:", retryError.message);
                 }
             }
         }
 
-        // PRIORITY 2: Try Open-Meteo (Free, No Key)
+        if (data) {
+            console.log("✅ Weather data fetched successfully");
+            return {
+                temp: Math.round(data.current.temp_c),
+                feelsLike: Math.round(data.current.feelslike_c),
+                condition: data.current.condition.text.toLowerCase(),
+                description: data.current.condition.text.toLowerCase(),
+                humidity: data.current.humidity,
+                // Return Exact Location: City, Region, Country
+                location: `${data.location.name}, ${data.location.region}, ${data.location.country}`
+            };
+        }
+
+        // PRIORITY 2: Try Open-Meteo (Fallback)
         console.log("  - Attempting Open-Meteo (Fallback)...");
         const openMeteoData = await getWeatherOpenMeteo(location);
         if (openMeteoData) {
             console.log("✅ Weather data fetched from Open-Meteo");
             return openMeteoData;
-        }
-
-        // PRIORITY 3: OpenWeatherMap (if key exists)
-        const openWeatherKey = process.env.OPENWEATHER_API_KEY;
-        if (openWeatherKey) {
-            try {
-                const url = `https://api.openweathermap.org/data/2.5/weather?q=${encodeURIComponent(location)}&appid=${openWeatherKey}&units=metric`;
-                console.log("  - Trying OpenWeatherMap...");
-                const response = await axios.get(url);
-                const data = response.data;
-                return {
-                    temp: Math.round(data.main.temp),
-                    feelsLike: Math.round(data.main.feels_like),
-                    condition: data.weather[0].main.toLowerCase(),
-                    description: data.weather[0].description,
-                    humidity: data.main.humidity,
-                    location: data.name
-                };
-            } catch (e) {
-                console.log("  - OpenWeatherMap failed:", e.message);
-            }
         }
 
         console.error("❌ All weather services failed");
@@ -262,6 +245,10 @@ ${userContext}
    - If user asks about rewards: "Reach 1000 coins to unlock a FREE 2-Hour Ride!"
    - Give motivational nudges if they are close to 1000.
 
+8. **CONTACT SUPPORT / SOMETHING ELSE**:
+   - If the user asks for "Support", "Customer Care", "Phone Number", or says "Something else", you **MUST** output the CALL_SUPPORT action.
+   - Limit: "+919090598756".
+
 **ACTIONS (Output ONLY the JSON block):**
 
 **To Book:**
@@ -278,6 +265,9 @@ ${userContext}
 
 **To Check Weather:**
 ||| ACTION: CHECK_WEATHER {"location": "Mumbai"} |||
+
+**To Call Support:**
+||| ACTION: CALL_SUPPORT {"number": "+919090598756"} |||
 
 (TYPE must be 'bikes', 'cars', or 'scooty').
 Do NOT wrap the output in markdown.`;
@@ -306,7 +296,8 @@ Do NOT wrap the output in markdown.`;
         }
 
         // Helper to try models in sequence
-        const modelsToTry = ["gemini-2.0-flash-exp", "gemini-1.5-flash", "gemini-1.5-flash-latest", "gemini-1.5-pro", "gemini-pro"];
+        // Prioritize 'gemini-flash-latest' as it was verified to work (others hit 429 quota limits or 404)
+        const modelsToTry = ["gemini-flash-latest", "gemini-1.5-flash-latest", "gemini-2.0-flash"];
         let model;
         let chat;
         let lastError;
@@ -385,7 +376,8 @@ Do NOT wrap the output in markdown.`;
         }
 
         if (error.message.includes("404")) {
-            return res.status(404).json({ error: "AI Model not found or configuration error." });
+            // This usually means the API key is valid but the Model ID is wrong OR the API is not enabled for this project.
+            return res.status(503).json({ error: "AI Service Unavailable: Model not found or API not enabled. Please check server logs." });
         }
 
         res.status(500).json({ error: "Failed to process your request." });

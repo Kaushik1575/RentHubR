@@ -133,6 +133,18 @@ const Chatbot = ({ isOpen, onClose }) => {
         } else if (lowerText === "weather & packing tips" || lowerText.includes("weather") || lowerText.includes("packing")) {
             localResponse = "I can help you check the weather and suggest what to pack! 🌤️\n\nPlease tell me your **destination location** (e.g., Mumbai, Goa, Delhi).";
             localOptions = ["Go back"];
+        } else if (lowerText === "something else") {
+            setTimeout(() => {
+                setMessages(prev => [...prev, {
+                    id: Date.now() + 1,
+                    text: "You can reach us directly at +91 9090598756. Opening your dialer now...",
+                    sender: 'bot',
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }]);
+                setTimeout(() => window.location.href = 'tel:+919090598756', 1500);
+            }, 500);
+            setIsTyping(false);
+            return;
         } else if (lowerText === "go back" || lowerText === "main menu") {
             localResponse = "Sure, what's your question about?";
             localOptions = INITIAL_OPTIONS;
@@ -362,6 +374,31 @@ const Chatbot = ({ isOpen, onClose }) => {
                             });
                     } catch (e) {
                         console.error("Failed to parse weather action", e);
+                    }
+                }
+
+                // Regex for CALL SUPPORT
+                const supportRegex = /\|\|\| ACTION: CALL_SUPPORT (.*?) \|\|\|/s;
+                const supportMatch = replyText.match(supportRegex);
+                if (supportMatch) {
+                    try {
+                        let jsonStr = supportMatch[1];
+                        const details = JSON.parse(jsonStr);
+                        replyText = replyText.replace(supportMatch[0], "").trim();
+
+                        setTimeout(() => {
+                            setMessages(prev => [...prev, {
+                                id: Date.now() + 2,
+                                text: "Connecting you to our support team...",
+                                sender: 'bot',
+                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            }]);
+                            setTimeout(() => {
+                                window.location.href = `tel:${details.number}`;
+                            }, 1500);
+                        }, 500);
+                    } catch (e) {
+                        console.error("Failed to parse support action", e);
                     }
                 }
             }

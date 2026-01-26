@@ -21,8 +21,9 @@ import GlobalAuthCheck from './components/GlobalAuthCheck';
 import VehicleDetails from './pages/VehicleDetails';
 import RewardsPage from './pages/RewardsPage';
 import Chatbot from './components/Chatbot';
-import GoogleTranslateLoader from './components/GoogleTranslateLoader';
-import './components/GoogleTranslate.css';
+
+import GoogleTranslateLoader from './components/GoogleTranslateLoader'; // Removed to disable auto-translate
+import './components/GoogleTranslate.css'; // Removed
 import chatbotImg from './assets/chatbot_styled.png'; // Import Chatbot Image
 
 function Layout() {

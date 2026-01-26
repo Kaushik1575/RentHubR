@@ -16,10 +16,13 @@ const LanguageSelector = () => {
 
     useEffect(() => {
         // Initial sync: Try to apply the saved language repeatedly until Google Translate loads
+        // ONLY if the saved language is NOT English
+        const currentLang = localStorage.getItem('user_lang') || 'en';
+        if (currentLang === 'en') return;
+
         const intervalId = setInterval(() => {
             const googleCombo = document.querySelector('.goog-te-combo');
             if (googleCombo) {
-                const currentLang = localStorage.getItem('user_lang') || 'en';
                 if (googleCombo.value !== currentLang) {
                     applyLanguage(currentLang);
                 } else {
@@ -29,8 +32,8 @@ const LanguageSelector = () => {
             }
         }, 1000);
 
-        // Stop checking after 20 seconds
-        const timeoutId = setTimeout(() => clearInterval(intervalId), 20000);
+        // Stop checking after 10 seconds
+        const timeoutId = setTimeout(() => clearInterval(intervalId), 10000);
 
         return () => {
             clearInterval(intervalId);
@@ -43,14 +46,18 @@ const LanguageSelector = () => {
         setSelectedLanguage(newLang);
         localStorage.setItem('user_lang', newLang);
 
-        // Update Google Translate cookie
-        // Format: /source/target or /auto/target
-        // We assume source is 'en' based on our config
-        document.cookie = `googtrans=/en/${newLang}; path=/; domain=${window.location.hostname}`;
-        document.cookie = `googtrans=/en/${newLang}; path=/;`; // Fallback for localhost without specialized domain handling
-
-        // Force reload to ensure translation applies cleanly
-        window.location.reload();
+        if (newLang === 'en') {
+            // Clear Google Translate cookies to turn off translation
+            document.cookie = `googtrans=; path=/; domain=${window.location.hostname}; expires=Thu, 01 Jan 1970 00:00:00 UTC`;
+            document.cookie = `googtrans=; path=/; expires=Thu, 01 Jan 1970 00:00:00 UTC`;
+            document.cookie = `googtrans=/en/en; path=/; domain=${window.location.hostname}`; // Explicitly set to en/en
+            window.location.reload();
+        } else {
+            // Update Google Translate cookie
+            document.cookie = `googtrans=/en/${newLang}; path=/; domain=${window.location.hostname}`;
+            document.cookie = `googtrans=/en/${newLang}; path=/;`; // Fallback
+            window.location.reload();
+        }
     };
 
     return (
