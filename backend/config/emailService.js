@@ -249,6 +249,15 @@ async function sendSOSAlertEmail(adminEmail, sosData) {
                                         </tr>
                                     </table>
 
+                                    <!-- URGENT: Call User Button -->
+                                    <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #fff5f5; border-radius: 8px; border: 2px solid #dc143c;">
+                                        <p style="margin: 0 0 15px 0; color: #dc143c; font-weight: bold; font-size: 16px;">⚠️ IMMEDIATE ACTION REQUIRED</p>
+                                        <a href="tel:${sosData.phoneNumber}" style="background-color: #dc143c; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 18px; display: inline-block; box-shadow: 0 4px 12px rgba(220, 20, 60, 0.4);">
+                                            📞 CALL USER NOW
+                                        </a>
+                                        <p style="margin: 15px 0 0 0; color: #666; font-size: 14px;">Click to dial ${sosData.phoneNumber}</p>
+                                    </div>
+
                                     <!-- Booking Details -->
                                     <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Ride Details</h3>
                                     <table width="100%" style="margin-bottom: 20px;">
