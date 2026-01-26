@@ -360,7 +360,7 @@ async function sendRideCompletedEmail(userEmail, userName, bookingDetails, rewar
 
                 ${coinsNeeded <= 0
             ? `<p style="color: #28a745; font-weight: bold; margin: 10px 0;">🎉 Congratulations! You have enough coins for a FREE 2-Hour Ride!</p>
-                       <a href="http://localhost:3000/profile" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Redeem Now</a>`
+                       <a href="https://rent-hub-r.vercel.app/rewards" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Redeem Now</a>`
             : `<p style="margin: 10px 0; color: #555;">You are only <b>${coinsNeeded} coins</b> away from a FREE Ride!</p>
                        <div style="background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 10px;">
                            <div style="background: #D48806; height: 100%; width: ${Math.min(100, (totalCoins / 1000) * 100)}%;"></div>
