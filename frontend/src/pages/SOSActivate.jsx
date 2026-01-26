@@ -179,6 +179,12 @@ const SOSActivate = () => {
                         <p>Our team has received your emergency alert. We are contacting you at your registered number now.</p>
                         {locationStats && <small style={{ display: 'block', marginTop: '10px', opacity: 0.7 }}>{locationStats}</small>}
 
+                        <a href="tel:9040757683" style={{ textDecoration: 'none', width: '100%', display: 'block' }}>
+                            <button className="sos-button" style={{ marginTop: '20px', background: 'linear-gradient(135deg, #28a745 0%, #20c997 100%)' }}>
+                                <i className="fas fa-phone"></i> Call Support Now
+                            </button>
+                        </a>
+
                         <button className="btn-outline" onClick={() => window.location.href = '/'}>
                             Return to Home
                         </button>
