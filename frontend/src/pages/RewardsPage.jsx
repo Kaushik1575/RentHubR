@@ -13,8 +13,14 @@ const RewardsPage = () => {
     const [popup, setPopup] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
     useEffect(() => {
+        const token = localStorage.getItem('token');
+        if (!token) {
+            // Redirect to login if not authenticated, preserving the destination
+            navigate('/login', { state: { from: location } });
+            return;
+        }
         fetchRewardsData();
-    }, []);
+    }, [navigate, location]);
 
     const fetchRewardsData = async () => {
         try {
@@ -31,6 +37,13 @@ const RewardsPage = () => {
                     console.error('Rewards API failed:', result.message);
                 }
             } else {
+                if (res.status === 401 || res.status === 403) {
+                    // Token expired or invalid - redirect to login
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    navigate('/login', { state: { from: location } });
+                    return;
+                }
                 console.error('Rewards API fetch error:', res.status);
             }
         } catch (error) {
