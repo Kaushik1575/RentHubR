@@ -40,18 +40,24 @@ const activateSOS = async (req, res) => {
         // Get vehicle details
         let vehicleName = 'Unknown Vehicle';
 
+        console.log(`SOS Processing - ID: ${booking.id}, RH-ID: ${booking.booking_id}, Type: ${booking.vehicle_type}, VehicleID: ${booking.vehicle_id}`);
+
         // First, try to get vehicle name directly from booking if it exists
         if (booking.vehicle_name) {
             vehicleName = booking.vehicle_name;
         } else if (booking.vehicle_type && booking.vehicle_id) {
             // Determine correct table name
             let tableName;
-            if (booking.vehicle_type === 'scooty') {
+            const typeLower = (booking.vehicle_type || '').toLowerCase().trim();
+
+            if (typeLower === 'scooty') {
                 tableName = 'scooty';
-            } else if (booking.vehicle_type === 'bike') {
+            } else if (typeLower === 'bike') {
                 tableName = 'bikes';
+            } else if (typeLower === 'car') {
+                tableName = 'cars';
             } else {
-                tableName = booking.vehicle_type + 's';
+                tableName = typeLower + 's';
             }
 
             const { data: vehicle, error: vehicleError } = await supabase

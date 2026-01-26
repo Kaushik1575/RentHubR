@@ -528,10 +528,12 @@ const sendSOS = async (req, res) => {
 
         const sosToken = crypto.randomBytes(32).toString('hex');
         const frontendUrl = process.env.FRONTEND_URL || 'https://rent-hub-r.vercel.app';
-        const sosActivationLink = `${frontendUrl}/sos-activate?token=${sosToken}&bookingId=${bookingId}`;
+        // Use RH format for frontend display if available
+        const displayBookingId = booking.booking_id || booking.id;
+        const sosActivationLink = `${frontendUrl}/sos-activate?token=${sosToken}&bookingId=${displayBookingId}`;
 
         if (!global.sosTokens) global.sosTokens = {};
-        global.sosTokens[sosToken] = { bookingId, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() };
+        global.sosTokens[sosToken] = { bookingId: booking.id, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() };
 
         await sendSOSLinkEmail(userEmail, userName, sosActivationLink);
         res.json({ success: true, message: 'SOS activation link sent to ' + userEmail });
