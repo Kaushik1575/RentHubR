@@ -9,11 +9,11 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, messag
 
     // Design configuration matching the user's "Login Successful" image
     const config = {
-        icon: isSuccess ? 'fa-check' : (isConfirm ? 'fa-question' : (isInfo ? 'fa-info' : 'fa-exclamation-triangle')),
-        iconColor: isSuccess ? '#4caf50' : (isConfirm || isInfo ? '#3182ce' : '#f44336'), // Green for success, Blue for confirm/info, Red for error
-        iconBg: isSuccess ? '#e8f5e9' : (isConfirm || isInfo ? '#ebf8ff' : '#ffebee'),   // Light backgrounds
-        btnBg: isSuccess ? '#4caf50' : (isConfirm || isInfo ? '#3182ce' : '#f44336'),     // Button matches icon color
-        defaultTitle: isSuccess ? 'Success' : (isConfirm ? 'Confirmation' : (isInfo ? 'Information' : 'Error')),
+        icon: isSuccess ? 'fa-check' : (isConfirm ? 'fa-exclamation-triangle' : (isInfo ? 'fa-info' : 'fa-times')),
+        iconColor: isSuccess ? '#4caf50' : (isConfirm ? '#e53e3e' : (isInfo ? '#3182ce' : '#f44336')), // Green for success, Red for confirm/error, Blue for info
+        iconBg: isSuccess ? '#e8f5e9' : (isConfirm ? '#fff5f5' : (isInfo ? '#ebf8ff' : '#ffebee')),   // Refined light backgrounds
+        btnBg: isSuccess ? '#4caf50' : (isConfirm ? '#e53e3e' : (isInfo ? '#3182ce' : '#f44336')),     // Button matches icon color
+        defaultTitle: isSuccess ? 'Success' : (isConfirm ? 'Security Alert' : (isInfo ? 'Information' : 'Error')),
         btnText: 'Okay, Got it'
     };
 

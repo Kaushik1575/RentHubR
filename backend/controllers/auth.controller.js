@@ -311,22 +311,25 @@ const loginUser = async (req, res) => {
         // If user already has a session_id and forceLogin is NOT true, warn them
         const { forceLogin } = req.body;
         if (user.session_id && !forceLogin) {
-            console.log('⚠️ Concurrent login attempt detected for:', email);
+            console.log(`⚠️ Concurrent login attempt detected for: ${email}. Existing Session: ${user.session_id}`);
             return res.status(409).json({
                 error: 'Account already logged in on another device',
                 code: 'CONCURRENT_SESSION'
             });
         }
 
-        // Generate new session ID (Using UUID or random string)
-        const newSessionId = require('crypto').randomUUID();
+        // Generate new session ID (random string timestamp)
+        const newSessionId = Date.now().toString(36) + Math.random().toString(36).substr(2);
+        console.log('🔄 Generated New Session ID:', newSessionId);
 
         // Update user with new session ID (this invalidates old sessions if middleware checks it)
         try {
-            await SupabaseDB.updateUser(user.id, { session_id: newSessionId });
+            console.log(`📝 Updating user ${user.id} session_id...`);
+            const updatedUser = await SupabaseDB.updateUser(user.id, { session_id: newSessionId });
+            console.log('✅ Session_id updated in DB:', updatedUser?.session_id);
         } catch (updateErr) {
-            console.warn('⚠️ Could not update session_id (column might be missing), proceeding without session lock:', updateErr.message);
-            // We proceed to allow login even if session lock fails, to avoid blocking users due to schema mismatch
+            console.error('❌ Failed to update session_id:', updateErr);
+            console.warn('⚠️ Proceeding without session lock - Concurrent login protection compromised.');
         }
 
         const token = jwt.sign(

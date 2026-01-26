@@ -59,7 +59,7 @@ const Login = () => {
                     isOpen: true,
                     type: 'confirm',
                     title: 'Security Alert',
-                    message: 'Your account is already logged in on another device.\n\nDo you want to force a new login? This will terminate the previous session.',
+                    message: 'Your account is already logged in on another device.\n\nDo you want to log in here? This will log out the other device.',
                     confirmText: 'Yes, Login',
                     cancelText: 'No, Cancel',
                     onConfirm: () => {
@@ -67,6 +67,10 @@ const Login = () => {
                         handleUserLogin(null, true); // Retrying with forceLogin = true
                     }
                 });
+                // Optional: Clear password for security if you want them to re-type, 
+                // but the current request flow re-uses the state.
+                // If you want them to re-type, you'd need to close popup and ask for input again.
+                // For now, "Yes, Login" uses the current state credentials for convenience/UX.
                 return;
             }
 

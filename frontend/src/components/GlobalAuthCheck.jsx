@@ -29,6 +29,17 @@ const GlobalAuthCheck = () => {
                             message: 'Your account has been blocked by the administrator. You will be logged out.'
                         });
                     }
+                } else if (response.status === 401) {
+                    const errorData = await response.json();
+                    // SESSION_TERMINATED means concurrent login happened elsewhere
+                    if (errorData.code === 'SESSION_TERMINATED') {
+                        setPopup({
+                            isOpen: true,
+                            type: 'info',
+                            title: 'Session Expired',
+                            message: 'You have logged in on another device. This session has been terminated.'
+                        });
+                    }
                 }
             } catch (error) {
                 // Silently fail - don't disrupt user experience
