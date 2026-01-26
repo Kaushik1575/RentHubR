@@ -232,7 +232,7 @@ const RewardsPage = () => {
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '12px', fontWeight: 'bold', marginBottom: '25px', opacity: 0.8 }}>
                         <span>{(data.coins % 1000)} / 1000</span>
-                        <span>Goal Reached!</span>
+                        <span>{(data.coins % 1000) === 0 && data.coins > 0 ? 'Goal Reached!' : `${1000 - (data.coins % 1000)} coins to go`}</span>
                     </div>
 
                     <div style={{ display: 'flex', gap: '15px', flexWrap: 'wrap', alignItems: 'center' }}>
