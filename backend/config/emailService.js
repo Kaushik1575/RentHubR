@@ -197,50 +197,114 @@ async function sendSOSLinkEmail(userEmail, userName, sosLink) {
 // Send SOS alert email to admin
 async function sendSOSAlertEmail(adminEmail, sosData) {
     const html = `
-        <div style="font-family: Arial, sans-serif; color: #222; background-color: #fff3cd; padding: 20px; border-left: 4px solid #dc143c;">
-          <h2 style="color: #dc143c;">⚠️ SOS ALERT - IMMEDIATE ATTENTION REQUIRED ⚠️</h2>
-          <hr>
-          <h3>Booking Information:</h3>
-          <ul>
-            <li><b>Booking ID:</b> ${sosData.bookingId}</li>
-            <li><b>User Name:</b> ${sosData.userName}</li>
-            <li><b>Phone Number:</b> ${sosData.phoneNumber}</li>
-            <li><b>Email:</b> ${sosData.userEmail}</li>
-          </ul>
-          <h3>Vehicle Information:</h3>
-          <ul>
-            <li><b>Bike/Vehicle Model:</b> ${sosData.bikeModel}</li>
-            <li><b>Pickup Location:</b> ${sosData.pickupLocation}</li>
-          </ul>
-          <h3>SOS Details:</h3>
-          <ul>
-            <li><b>Activation Timestamp:</b> ${sosData.timestamp}</li>
-            <li><b>GPS Location:</b> ${sosData.gpsLocation}</li>
-            ${sosData.googleMapsLink ? `
-            <li style="margin-top: 10px;">
-                <a href="${sosData.googleMapsLink}" target="_blank" style="
-                    background-color: #4285F4;
-                    color: white;
-                    padding: 8px 16px;
-                    text-decoration: none;
-                    border-radius: 4px;
-                    display: inline-block;
-                    font-weight: bold;
-                ">📍 View on Google Maps</a>
-            </li>
-            ` : ''}
-          </ul>
-          <hr>
-          <p style="color: #dc143c; font-weight: bold; font-size: 1.1em;">Please contact the user immediately at the provided phone number.</p>
-          <p>Log into your admin panel to view full booking details and take necessary action.</p>
-          <br>
-          <p>RentHub Admin System</p>
-        </div>
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>SOS Alert</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td style="padding: 20px 0;">
+                        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
+                            <!-- Header -->
+                            <tr>
+                                <td align="center" style="background-color: #dc143c; padding: 30px 20px;">
+                                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; text-transform: uppercase; letter-spacing: 2px;">
+                                        ⚠️ SOS ALERT
+                                    </h1>
+                                    <p style="color: #ffcccc; margin: 10px 0 0 0; font-size: 16px;">
+                                        IMMEDIATE ACTION REQUIRED
+                                    </p>
+                                </td>
+                            </tr>
+                            
+                            <!-- Main Content -->
+                            <tr>
+                                <td style="padding: 40px 30px;">
+                                    <div style="background-color: #fff5f5; border-left: 5px solid #dc143c; padding: 15px; margin-bottom: 25px;">
+                                        <p style="margin: 0; color: #8a0c24; font-size: 16px;">
+                                            <strong>Admin Notice:</strong> A user has triggered an emergency SOS alert. Please verify the situation and contact them immediately.
+                                        </p>
+                                    </div>
+
+                                    <!-- User Details -->
+                                    <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0;">User Information</h3>
+                                    <table width="100%" style="margin-bottom: 20px;">
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #666; width: 40%;"><strong>Full Name:</strong></td>
+                                            <td style="padding: 8px 0; color: #333;">${sosData.userName}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #666;"><strong>Phone Number:</strong></td>
+                                            <td style="padding: 8px 0; color: #333; font-size: 18px; font-weight: bold;">
+                                                <a href="tel:${sosData.phoneNumber}" style="color: #dc143c; text-decoration: none;">${sosData.phoneNumber}</a>
+                                            </td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #666;"><strong>Email:</strong></td>
+                                            <td style="padding: 8px 0; color: #333;">${sosData.userEmail}</td>
+                                        </tr>
+                                    </table>
+
+                                    <!-- Booking Details -->
+                                    <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Ride Details</h3>
+                                    <table width="100%" style="margin-bottom: 20px;">
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #666; width: 40%;"><strong>Booking ID:</strong></td>
+                                            <td style="padding: 8px 0; color: #333; font-family: monospace; font-size: 16px; background: #eee; padding: 4px 8px; border-radius: 4px; display: inline-block;">${sosData.bookingId}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #666;"><strong>Vehicle:</strong></td>
+                                            <td style="padding: 8px 0; color: #333;">${sosData.bikeModel}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #666;"><strong>Pickup Point:</strong></td>
+                                            <td style="padding: 8px 0; color: #333;">${sosData.pickupLocation}</td>
+                                        </tr>
+                                        <tr>
+                                            <td style="padding: 8px 0; color: #666;"><strong>Alert Time:</strong></td>
+                                            <td style="padding: 8px 0; color: #333;">${sosData.timestamp}</td>
+                                        </tr>
+                                    </table>
+
+                                    <!-- Location -->
+                                    <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Location Details</h3>
+                                    <p style="color: #555; margin-bottom: 20px;">
+                                        <strong>Reported GPS:</strong><br>
+                                        ${sosData.gpsLocation}
+                                    </p>
+
+                                    ${sosData.googleMapsLink ? `
+                                    <div style="text-align: center; margin: 30px 0;">
+                                        <a href="${sosData.googleMapsLink}" target="_blank" style="background-color: #0b5cff; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(11, 92, 255, 0.3);">
+                                            📍 View Live Location on Maps
+                                        </a>
+                                    </div>
+                                    ` : '<p style="color: #dc143c; text-align: center; font-style: italic;">No specific map link available</p>'}
+                                </td>
+                            </tr>
+                            
+                            <!-- Footer -->
+                            <tr>
+                                <td style="background-color: #333; color: #fff; padding: 20px; text-align: center; font-size: 14px;">
+                                    <p style="margin: 0;">RentHub Emergency Response System</p>
+                                    <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">This is an automated priority alert.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
     `;
 
     return sendEmail({
         to: adminEmail,
-        subject: 'URGENT: SOS Alert from User - RentHub',
+        subject: `🚨 SOS ALERT: Booking #${sosData.bookingId} - User Requesting Help`,
         html: html
     });
 }

@@ -90,7 +90,7 @@ const activateSOS = async (req, res) => {
         }
 
         const sosData = {
-            bookingId: booking.id,
+            bookingId: booking.booking_id || booking.id,
             userName: booking.users?.full_name || 'Unknown User',
             userEmail: booking.users?.email || 'Unknown Email',
             phoneNumber: booking.users?.phone_number || 'Unknown Phone',

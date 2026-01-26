@@ -256,7 +256,7 @@ async function checkAndSendReminders() {
                 // Send reminder email
                 if (booking.users && booking.users.email) {
                     const bookingDetails = {
-                        bookingId: booking.booking_id || `#${booking.id}`,
+                        bookingId: booking.booking_id || booking.id,
                         vehicleName: vehicleName,
                         vehicleType: vehicleType,
                         startDate: booking.start_date,
