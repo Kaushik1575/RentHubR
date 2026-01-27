@@ -1,4 +1,4 @@
-:root {
+﻿:root {
     --primary-color: #4facfe;
     --secondary-color: #00c6ff;
     --dark-color: #2c3e50;
@@ -3139,5 +3139,10 @@ main.booking-page-main {
 .modern-auth-header p {
     color: #64748b;
     font-size: 16px;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; transform: translateY(10px); }
+    to { opacity: 1; transform: translateY(0); }
 }
 

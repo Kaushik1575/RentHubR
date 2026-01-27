@@ -7,6 +7,7 @@ const Home = () => {
     const [scooters, setScooters] = useState([]);
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
+    const [activeCategory, setActiveCategory] = useState('All');
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -140,6 +141,28 @@ const Home = () => {
         );
     };
 
+
+    // Scroll to specific section
+    const scrollToSection = (id) => {
+        const element = document.getElementById(id);
+        if (element) {
+            const offset = 80; // Adjust for sticky navbar
+            const bodyRect = document.body.getBoundingClientRect().top;
+            const elementRect = element.getBoundingClientRect().top;
+            const elementPosition = elementRect - bodyRect;
+            const offsetPosition = elementPosition - offset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
+            });
+            setActiveCategory(id); // Optional: keep highlighting the button
+        } else if (id === 'All') {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+            setActiveCategory('All');
+        }
+    };
+
     return (
         <main>
 
@@ -242,8 +265,67 @@ const Home = () => {
 
                     </div>
 
+
+                    {/* Category Filter */}
+                    <div className="filter-container" style={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        gap: '15px',
+                        marginBottom: '40px',
+                        flexWrap: 'wrap',
+                        position: 'sticky',
+                        top: '80px',
+                        zIndex: 100,
+                        backgroundColor: '#f8f9fa',
+                        padding: '10px 0'
+                    }}>
+                        {[
+                            { name: 'All', id: 'All', icon: '✨' },
+                            { name: 'Bikes', id: 'bikes-section', icon: '🏍️' },
+                            { name: 'Scooty', id: 'scooters-section', icon: '🛵' },
+                            { name: 'Cars', id: 'cars-section', icon: '🚗' }
+                        ].map((category) => (
+                            <button
+                                key={category.name}
+                                onClick={() => scrollToSection(category.id)}
+                                style={{
+                                    padding: '16px 40px',
+                                    borderRadius: '50px',
+                                    border: 'none',
+                                    background: activeCategory === category.id
+                                        ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
+                                        : 'white',
+                                    color: activeCategory === category.id ? 'white' : '#555',
+                                    fontSize: '18px',
+                                    fontWeight: '700',
+                                    cursor: 'pointer',
+                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
+                                    boxShadow: activeCategory === category.id
+                                        ? '0 8px 20px rgba(79, 172, 254, 0.4)'
+                                        : '0 4px 6px rgba(0,0,0,0.05)',
+                                    transform: activeCategory === category.id ? 'translateY(-2px)' : 'none',
+                                    outline: 'none'
+                                }}
+                                onMouseEnter={(e) => {
+                                    if (activeCategory !== category.id) {
+                                        e.currentTarget.style.transform = 'translateY(-2px)';
+                                        e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.1)';
+                                    }
+                                }}
+                                onMouseLeave={(e) => {
+                                    if (activeCategory !== category.id) {
+                                        e.currentTarget.style.transform = 'none';
+                                        e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)';
+                                    }
+                                }}
+                            >
+                                {category.icon} {category.name}
+                            </button>
+                        ))}
+                    </div>
+
                     {/* Bikes Section */}
-                    <div className="category-section">
+                    <div className="category-section" id="bikes-section">
                         <h3 className="category-header">Bikes</h3>
                         <div className="vehicle-grid" id="bikesGrid">
                             {loading ? <p>Loading bikes...</p> : bikes.map(bike => <VehicleCard key={bike.id} vehicle={bike} type="bike" />)}
@@ -252,16 +334,17 @@ const Home = () => {
                     </div>
 
                     {/* Scooty Section */}
-                    <div className="category-section">
-                        <h3 className="category-header">Scooters</h3>
+                    <div className="category-section" id="scooters-section">
+                        <h3 className="category-header">Scooty</h3>
                         <div className="vehicle-grid" id="scootyGrid">
                             {loading ? <p>Loading scooters...</p> : scooters.map(scooter => <VehicleCard key={scooter.id} vehicle={scooter} type="scooty" />)}
                             {!loading && scooters.length === 0 && <p>No scooters available.</p>}
                         </div>
                     </div>
 
+
                     {/* Cars Section */}
-                    <div className="category-section">
+                    <div className="category-section" id="cars-section">
                         <h3 className="category-header">Cars</h3>
                         <div className="vehicle-grid" id="carsGrid">
                             {loading ? <p>Loading cars...</p> : cars.map(car => <VehicleCard key={car.id} vehicle={car} type="car" />)}
@@ -270,6 +353,7 @@ const Home = () => {
                     </div>
                 </div>
             </section>
+
 
             {/* How It Works Section */}
             <section className="how-it-works">
