@@ -30,7 +30,12 @@ router.get('/users/:id', verifyAdminToken, adminController.getUserById);
 router.put('/users/:id', verifyAdminToken, adminController.updateUser);
 router.patch('/users/:id/block', verifyAdminToken, adminController.blockUser);
 
+
 // Vehicles
+router.get('/vehicle-requests', verifyAdminToken, adminController.getVehicleRequests);
+router.post('/vehicle-requests/:id/approve', verifyAdminToken, adminController.approveVehicle);
+router.post('/vehicle-requests/:id/reject', verifyAdminToken, adminController.rejectVehicle);
+
 router.get('/vehicles', verifyAdminToken, adminController.getAllVehicles);
 router.post('/vehicles/:type', verifyAdminToken, adminController.addVehicle);
 router.get('/vehicles/:type/:id', verifyAdminToken, adminController.getVehicleById);

@@ -1,8 +1,10 @@
 const supabase = require('../config/supabase');
 const SupabaseDB = require('../models/supabaseDB');
+const SponsorModel = require('../models/sponsorModel');
 const { getISTTimestamp } = require('../utils/dateUtils');
 const { generateInvoiceBuffer } = require('../utils/invoiceGenerator');
 const { sendEmail, sendRefundCompleteEmail, sendSOSLinkEmail, sendRideCompletedEmail } = require('../config/emailService');
+const { sendVehicleApprovedEmail } = require('../config/sponsorEmailService');
 const { makeBookingConfirmationCall } = require('../config/retellCallService');
 const { sendImmediateReminderIfNeeded, checkAndSendReminders } = require('../services/reminderService');
 const Razorpay = require('razorpay');
@@ -1067,7 +1069,57 @@ const addVehicle = async (req, res) => {
         if (type === 'scooty') type = 'scooty';
         const { data } = await supabase.from(type).insert([req.body]).select().single();
         res.status(201).json(data);
+
     } catch (error) { res.status(500).json({ error: 'Error' }); }
+};
+
+const getVehicleRequests = async (req, res) => {
+    try {
+        const vehicles = await SponsorModel.getPendingVehicles();
+        res.json(vehicles);
+    } catch (error) {
+        console.error('Error fetching vehicle requests:', error);
+        res.status(500).json({ error: 'Failed to fetch requests' });
+    }
+};
+
+const approveVehicle = async (req, res) => {
+    try {
+        const { id } = req.params;
+        // updated is the request object from staging table (as per my previous refactor)
+        const request = await SponsorModel.approveVehicle(id);
+
+        // Fetch sponsor details to send email
+        const sponsor = await SponsorModel.getSponsorById(request.sponsor_id);
+
+        if (sponsor && sponsor.email) {
+            await sendVehicleApprovedEmail(
+                sponsor.email,
+                sponsor.full_name,
+                {
+                    vehicleName: request.vehicle_details.name,
+                    type: request.vehicle_type,
+                    price: request.vehicle_details.price
+                }
+            );
+        }
+
+        res.json({ message: 'Vehicle approved successfully', vehicle: request });
+    } catch (error) {
+        console.error('Error approving vehicle:', error);
+        res.status(500).json({ error: 'Failed to approve vehicle' });
+    }
+};
+
+const rejectVehicle = async (req, res) => {
+    try {
+        const { id } = req.params;
+        await SponsorModel.rejectVehicle(id);
+        res.json({ message: 'Vehicle rejected/removed successfully' });
+    } catch (error) {
+        console.error('Error rejecting vehicle:', error);
+        res.status(500).json({ error: 'Failed to reject vehicle' });
+    }
 };
 
 const getPolicies = async (req, res) => {
@@ -1128,6 +1180,9 @@ module.exports = {
     updateVehicle,
     deleteVehicle,
     addVehicle,
+    getVehicleRequests,
+    approveVehicle,
+    rejectVehicle,
     getPolicies,
     manualReminderCheck,
     cronReminderCheck,

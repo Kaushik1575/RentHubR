@@ -99,9 +99,45 @@ const optionalVerifyToken = async (req, res, next) => {
     }
 };
 
+
+// Sponsor middleware
+const verifySponsor = async (req, res, next) => {
+    const authHeader = req.headers.authorization;
+    if (!authHeader) {
+        return res.status(401).json({ error: 'No token provided' });
+    }
+
+    const token = authHeader.split(' ')[1];
+    try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+
+        // Check sponsor in database
+        const { data: sponsor, error } = await supabase
+            .from('sponsors')
+            .select('is_blocked')
+            .eq('id', decoded.id)
+            .single();
+
+        if (error || !sponsor) {
+            return res.status(401).json({ error: 'Sponsor not found' });
+        }
+
+        if (sponsor.is_blocked) {
+            return res.status(403).json({ error: 'Sponsor account blocked' });
+        }
+
+        req.user = decoded; // { id, email, isSponsor: true }
+        next();
+    } catch (error) {
+        console.error('VerifySponsor: Invalid token', error.message);
+        return res.status(401).json({ error: 'Invalid or expired token' });
+    }
+};
+
 module.exports = {
     verifyToken,
     verifyAdminToken,
+    verifySponsor,
     optionalVerifyToken,
     JWT_SECRET
 };

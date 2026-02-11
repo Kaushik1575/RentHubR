@@ -94,6 +94,9 @@ function Layout() {
         <Route path="/register-user" element={<RegisterUser />} />
         <Route path="/register-admin" element={<RegisterAdmin />} />
         <Route path="/register-admin" element={<RegisterAdmin />} />
+        <Route path="/register-sponsor" element={<RegisterSponsor />} />
+        <Route path="/login-sponsor" element={<LoginSponsor />} />
+        <Route path="/sponsor/add-vehicle" element={<AddVehicle />} />
         <Route path="/admin" element={<AdminPanel />} />
         <Route path="/admin/loyalty-settings" element={<LoyaltySettings />} />
         <Route path="/booking-form" element={<BookingForm />} />

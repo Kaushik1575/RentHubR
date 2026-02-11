@@ -414,6 +414,7 @@ class SupabaseDB {
         return data;
     }
 
+
     static async registerReferral(newUserId, referrerCode) {
         // Find referrer
         const referrer = await this.getUserByReferralCode(referrerCode);

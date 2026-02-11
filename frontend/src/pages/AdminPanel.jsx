@@ -30,6 +30,7 @@ const AdminPanel = () => {
 
     // Vehicles
     const [vehicles, setVehicles] = useState([]);
+    const [requests, setRequests] = useState([]); // New state for requests
 
     // Modals State
     const [modal, setModal] = useState({ type: null, data: null }); // type: 'viewBooking', 'editBooking', etc.
@@ -60,6 +61,7 @@ const AdminPanel = () => {
         if (activeTab === 'users') loadUsers();
         if (activeTab === 'bookings') loadBookings();
         if (activeTab === 'vehicles') loadVehicles();
+        if (activeTab === 'requests') loadRequests(); // Load requests
         if (activeTab === 'policies') loadPolicies();
     }, [activeTab]);
 
@@ -101,6 +103,15 @@ const AdminPanel = () => {
         try {
             const res = await fetch('/api/admin/vehicles', { headers: { 'Authorization': `Bearer ${token}` } });
             if (res.ok) setVehicles(await res.json());
+        } catch (e) {
+            console.error(e);
+        }
+    };
+
+    const loadRequests = async () => {
+        try {
+            const res = await fetch('/api/admin/vehicle-requests', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) setRequests(await res.json());
         } catch (e) {
             console.error(e);
         }
@@ -328,6 +339,37 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error saving vehicle' }); }
     };
 
+    const handleApproveRequest = async (id) => {
+        try {
+            const res = await fetch(`/api/admin/vehicle-requests/${id}/approve`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                loadRequests();
+                setPopup({ isOpen: true, type: 'success', title: 'Approved', message: 'Vehicle approved successfully' });
+            } else {
+                setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to approve' });
+            }
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error approving request' }); }
+    };
+
+    const handleRejectRequest = async (id) => {
+        if (!window.confirm('Are you sure you want to reject this request?')) return;
+        try {
+            const res = await fetch(`/api/admin/vehicle-requests/${id}/reject`, {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                loadRequests();
+                setPopup({ isOpen: true, type: 'success', title: 'Rejected', message: 'Request rejected/removed' });
+            } else {
+                setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to reject' });
+            }
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error rejecting request' }); }
+    };
+
     // --- Filtering ---
     const filteredUsers = users.filter(u => {
         const s = usersFilter.toLowerCase();
@@ -385,6 +427,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <li><a className={`nav-link ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}><i className="fas fa-users"></i> User Management</a></li>
                             <li><a className={`nav-link ${activeTab === 'bookings' ? 'active' : ''}`} onClick={() => { setActiveTab('bookings'); setIsSidebarOpen(false); }}><i className="fas fa-calendar-check"></i> Bookings</a></li>
                             <li><a className={`nav-link ${activeTab === 'vehicles' ? 'active' : ''}`} onClick={() => { setActiveTab('vehicles'); setIsSidebarOpen(false); }}><i className="fas fa-motorcycle"></i> Vehicles</a></li>
+                            <li><a className={`nav-link ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => { setActiveTab('requests'); setIsSidebarOpen(false); }}><i className="fas fa-clipboard-list"></i> Requests {requests.length > 0 && <span className="badge">{requests.length}</span>}</a></li>
                             <li><a className={`nav-link ${activeTab === 'policies' ? 'active' : ''}`} onClick={() => { setActiveTab('policies'); setIsSidebarOpen(false); }}><i className="fas fa-file-alt"></i> Policies</a></li>
                             <li><a className={`nav-link`} onClick={() => { navigate('/admin/loyalty-settings'); setIsSidebarOpen(false); }}><i className="fas fa-coins"></i> Loyalty Settings</a></li>
                         </ul>
@@ -612,6 +655,39 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                     <button className="action-btn btn-view-vehicle" onClick={() => setModal({ type: 'viewVehicle', data: v })}><i className="fas fa-eye"></i> View</button>
                                                     <button className="action-btn btn-edit-vehicle" onClick={() => { setVehicleFormData(v); setModal({ type: 'editVehicle' }); }}><i className="fas fa-edit"></i> Edit</button>
                                                     <button className="action-btn btn-delete-vehicle" onClick={() => handleDeleteVehicle(v.id, v.type)}><i className="fas fa-trash"></i> Delete</button>
+                                                </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* REQUESTS */}
+                    {activeTab === 'requests' && (
+                        <div id="requests" className="content-section active">
+                            <h2>Vehicle Requests</h2>
+                            <div className="table-container">
+                                <table id="requests-table">
+                                    <thead><tr><th>Sponsor</th><th>Phone</th><th>Vehicle</th><th>Type</th><th>Price</th><th>Images</th><th>Actions</th></tr></thead>
+                                    <tbody>
+                                        {requests.length === 0 ? (
+                                            <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No pending requests</td></tr>
+                                        ) : requests.map(r => (
+                                            <tr key={r.id}>
+                                                <td>{r.sponsors?.full_name || 'N/A'}</td>
+                                                <td>{r.sponsors?.phone_number || 'N/A'}</td>
+                                                <td>{r.name} <br /><small>{r.model} ({r.year})</small></td>
+                                                <td>{r.vehicleType}</td>
+                                                <td>₹{r.price}/hr</td>
+                                                <td>
+                                                    <a href={r.image_url} target="_blank" rel="noreferrer" style={{ color: 'blue' }}>View Img</a>
+                                                    {r.rc_url && <><br /><a href={r.rc_url} target="_blank" rel="noreferrer" style={{ fontSize: '0.8em' }}>RC</a></>}
+                                                </td>
+                                                <td>
+                                                    <button className="action-btn btn-confirm" onClick={() => handleApproveRequest(r.id)} style={{ marginRight: '5px' }}><i className="fas fa-check"></i> Approve</button>
+                                                    <button className="action-btn btn-delete" onClick={() => handleRejectRequest(r.id)}><i className="fas fa-times"></i> Reject</button>
                                                 </td>
                                             </tr>
                                         ))}
