@@ -40,9 +40,6 @@ app.use('/api/reviews', reviewRoutes);
 const loyaltyRoutes = require('./routes/loyalty.routes');
 app.use('/api', loyaltyRoutes);
 
-const sponsorRoutes = require('./routes/sponsor.routes');
-app.use('/api/sponsor', sponsorRoutes);
-
 // Explicitly register cron route to match original path exactly
 const adminController = require('./controllers/admin.controller');
 app.get('/api/cron/reminders', adminController.cronReminderCheck);

@@ -339,19 +339,17 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error saving vehicle' }); }
     };
 
-    const handleApproveRequest = async (id) => {
-        try {
-            const res = await fetch(`/api/admin/vehicle-requests/${id}/approve`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                loadRequests();
-                setPopup({ isOpen: true, type: 'success', title: 'Approved', message: 'Vehicle approved successfully' });
-            } else {
-                setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to approve' });
-            }
-        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error approving request' }); }
+    const handleApproveRequest = (request) => {
+        setVehicleFormData({
+            name: request.name || '',
+            type: request.vehicleType || 'bike',
+            price: request.price || '',
+            category: 'Standard', // Default
+            status: 'available',
+            image_url: request.image_url || '',
+            requestId: request.id
+        });
+        setModal({ type: 'addVehicle' });
     };
 
     const handleRejectRequest = async (id) => {
@@ -681,12 +679,30 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                 <td>{r.name} <br /><small>{r.model} ({r.year})</small></td>
                                                 <td>{r.vehicleType}</td>
                                                 <td>₹{r.price}/hr</td>
+                                                <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
+                                                    {r.image_url && (
+                                                        <a href={r.image_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#007bff', fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <i className="fas fa-image"></i> Vehicle Photo
+                                                        </a>
+                                                    )}
+                                                    {r.rc_url && (
+                                                        <a href={r.rc_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#28a745', fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <i className="fas fa-file-alt"></i> RC Document
+                                                        </a>
+                                                    )}
+                                                    {r.insurance_url && (
+                                                        <a href={r.insurance_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#17a2b8', fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <i className="fas fa-shield-alt"></i> Insurance
+                                                        </a>
+                                                    )}
+                                                    {r.puc_url && (
+                                                        <a href={r.puc_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#6c757d', fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                            <i className="fas fa-smog"></i> PUC
+                                                        </a>
+                                                    )}
+                                                </div>
                                                 <td>
-                                                    <a href={r.image_url} target="_blank" rel="noreferrer" style={{ color: 'blue' }}>View Img</a>
-                                                    {r.rc_url && <><br /><a href={r.rc_url} target="_blank" rel="noreferrer" style={{ fontSize: '0.8em' }}>RC</a></>}
-                                                </td>
-                                                <td>
-                                                    <button className="action-btn btn-confirm" onClick={() => handleApproveRequest(r.id)} style={{ marginRight: '5px' }}><i className="fas fa-check"></i> Approve</button>
+                                                    <button className="action-btn btn-confirm" onClick={() => handleApproveRequest(r)} style={{ marginRight: '5px' }}><i className="fas fa-check"></i> Approve</button>
                                                     <button className="action-btn btn-delete" onClick={() => handleRejectRequest(r.id)}><i className="fas fa-times"></i> Reject</button>
                                                 </td>
                                             </tr>
@@ -1128,6 +1144,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             </div>
                             <div style={{ marginBottom: '10px' }}><label>Category</label><input type="text" value={vehicleFormData.category || ''} onChange={e => setVehicleFormData({ ...vehicleFormData, category: e.target.value })} required /></div>
                             <div style={{ marginBottom: '10px' }}><label>Price</label><input type="number" value={vehicleFormData.price || ''} onChange={e => setVehicleFormData({ ...vehicleFormData, price: e.target.value })} required /></div>
+                            <div style={{ marginBottom: '10px' }}><label>Image URL</label><input type="text" value={vehicleFormData.image_url || ''} onChange={e => setVehicleFormData({ ...vehicleFormData, image_url: e.target.value })} placeholder="https://..." /></div>
                             <div style={{ marginBottom: '10px' }}><label>Status</label>
                                 <select value={vehicleFormData.status || 'available'} onChange={e => setVehicleFormData({ ...vehicleFormData, status: e.target.value })}>
                                     <option value="available">Available</option>

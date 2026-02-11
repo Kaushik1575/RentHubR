@@ -98,9 +98,7 @@ const Navbar = () => {
                         <Link to="/" style={linkStyle}>Home</Link>
                         <Link to="/about" style={linkStyle}>About</Link>
                         <Link to="/contact" style={linkStyle}>Contact</Link>
-                        {!isLoggedIn && (
-                            <Link to="/register-sponsor" style={linkStyle}>Become a Host</Link>
-                        )}
+
                         {isLoggedIn && (
                             <div style={{ position: 'relative' }}>
                                 <Link to="/my-bookings" style={linkStyle}>My Bookings</Link>
@@ -246,27 +244,6 @@ const Navbar = () => {
                                 <div style={{ textAlign: 'left', flex: 1 }}>
                                     <div style={{ fontSize: '18px', fontWeight: '800' }}>User Account</div>
                                     <div style={{ fontSize: '13px', opacity: 0.9, fontWeight: '500' }}>For renting vehicles</div>
-                                </div>
-                                <div style={{ fontSize: '20px', opacity: 0.8 }}>→</div>
-                            </button>
-
-                            {/* Host Button */}
-                            <button onClick={() => { setShowRegisterModal(false); navigate('/register-sponsor'); }} style={{
-                                width: '100%', padding: '15px 20px', border: 'none', borderRadius: '20px', cursor: 'pointer',
-                                background: 'linear-gradient(135deg, #0984e3 0%, #74b9ff 100%)',
-                                color: 'white', display: 'flex', alignItems: 'center', gap: '15px', position: 'relative', overflow: 'hidden',
-                                boxShadow: '0 10px 25px rgba(9, 132, 227, 0.3)', transition: 'transform 0.2s, box-shadow 0.2s'
-                            }}
-                                onMouseOver={e => { e.currentTarget.style.transform = 'translateY(-3px)'; e.currentTarget.style.boxShadow = '0 15px 30px rgba(9, 132, 227, 0.4)'; }}
-                                onMouseOut={e => { e.currentTarget.style.transform = 'translateY(0)'; e.currentTarget.style.boxShadow = '0 10px 25px rgba(9, 132, 227, 0.3)'; }}
-                            >
-                                <div style={{
-                                    width: '45px', height: '45px', background: 'rgba(255,255,255,0.2)', borderRadius: '14px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px'
-                                }}>🏠</div>
-                                <div style={{ textAlign: 'left', flex: 1 }}>
-                                    <div style={{ fontSize: '18px', fontWeight: '800' }}>Host Account</div>
-                                    <div style={{ fontSize: '13px', opacity: 0.9, fontWeight: '500' }}>For listing vehicles</div>
                                 </div>
                                 <div style={{ fontSize: '20px', opacity: 0.8 }}>→</div>
                             </button>

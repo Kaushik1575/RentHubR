@@ -1,10 +1,8 @@
 const supabase = require('../config/supabase');
 const SupabaseDB = require('../models/supabaseDB');
-const SponsorModel = require('../models/sponsorModel');
 const { getISTTimestamp } = require('../utils/dateUtils');
 const { generateInvoiceBuffer } = require('../utils/invoiceGenerator');
-const { sendEmail, sendRefundCompleteEmail, sendSOSLinkEmail, sendRideCompletedEmail } = require('../config/emailService');
-const { sendVehicleApprovedEmail } = require('../config/sponsorEmailService');
+const { sendEmail, sendRefundCompleteEmail, sendSOSLinkEmail, sendRideCompletedEmail, sendVehicleApprovedEmail } = require('../config/emailService');
 const { makeBookingConfirmationCall } = require('../config/retellCallService');
 const { sendImmediateReminderIfNeeded, checkAndSendReminders } = require('../services/reminderService');
 const Razorpay = require('razorpay');
@@ -1064,19 +1062,90 @@ const deleteVehicle = async (req, res) => {
 const addVehicle = async (req, res) => {
     try {
         let { type } = req.params;
+        const { requestId, ...vehicleData } = req.body;
+
         if (type === 'car') type = 'cars';
-        if (type === 'bike') type = 'bikes';
-        if (type === 'scooty') type = 'scooty';
-        const { data } = await supabase.from(type).insert([req.body]).select().single();
+        else if (type === 'bike' || type === 'bikes') type = 'bikes';
+        else if (type === 'scooty') type = 'scooty';
+        else return res.status(400).json({ error: 'Invalid vehicle type' });
+
+        // Insert into main table
+        const { data, error } = await supabase
+            .from(type)
+            .insert([vehicleData])
+            .select()
+            .single();
+
+        if (error) throw error;
+
+        // If this was a sponsor request, approve it and send email
+        if (requestId) {
+            // 1. Update status
+            await supabase
+                .from('sponsor_vehicle_requests')
+                .update({ status: 'approved' })
+                .eq('id', requestId);
+
+            // 2. Send notification email
+            try {
+                // Fetch full request details to get sponsor ID
+                const { data: request } = await supabase
+                    .from('sponsor_vehicle_requests')
+                    .select('sponsor_id, vehicle_details, vehicle_type')
+                    .eq('id', requestId)
+                    .single();
+
+                if (request) {
+                    const { data: sponsor } = await supabase
+                        .from('sponsors')
+                        .select('email, full_name')
+                        .eq('id', request.sponsor_id)
+                        .single();
+
+                    if (sponsor && sponsor.email) {
+                        const { sendVehicleApprovedEmail } = require('../config/emailService');
+                        await sendVehicleApprovedEmail(
+                            sponsor.email,
+                            sponsor.full_name,
+                            {
+                                vehicleName: request.vehicle_details.name,
+                                type: request.vehicle_type,
+                                price: request.vehicle_details.price
+                            }
+                        );
+                    }
+                }
+            } catch (emailError) {
+                console.error('Error sending approval email:', emailError);
+            }
+        }
+
         res.status(201).json(data);
 
-    } catch (error) { res.status(500).json({ error: 'Error' }); }
+    } catch (error) {
+        console.error('Error adding vehicle:', error);
+        res.status(500).json({ error: 'Error adding vehicle' });
+    }
 };
 
 const getVehicleRequests = async (req, res) => {
     try {
-        const vehicles = await SponsorModel.getPendingVehicles();
-        res.json(vehicles);
+        const { data, error } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*, sponsors(full_name, phone_number)')
+            .eq('status', 'pending');
+
+        if (error) throw error;
+
+        const formattedData = data.map(r => ({
+            id: r.id, // Request ID
+            sponsor_id: r.sponsor_id,
+            vehicleType: r.vehicle_type,
+            ...r.vehicle_details, // Spread the details (name, price, etc)
+            sponsors: r.sponsors
+        }));
+
+        res.json(formattedData);
     } catch (error) {
         console.error('Error fetching vehicle requests:', error);
         res.status(500).json({ error: 'Failed to fetch requests' });
@@ -1085,36 +1154,83 @@ const getVehicleRequests = async (req, res) => {
 
 const approveVehicle = async (req, res) => {
     try {
-        const { id } = req.params;
-        // updated is the request object from staging table (as per my previous refactor)
-        const request = await SponsorModel.approveVehicle(id);
+        const requestId = req.params.id;
 
-        // Fetch sponsor details to send email
-        const sponsor = await SponsorModel.getSponsorById(request.sponsor_id);
+        // 1. Get the request
+        const { data: request, error: reqError } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*')
+            .eq('id', requestId)
+            .single();
 
-        if (sponsor && sponsor.email) {
-            await sendVehicleApprovedEmail(
-                sponsor.email,
-                sponsor.full_name,
-                {
-                    vehicleName: request.vehicle_details.name,
-                    type: request.vehicle_type,
-                    price: request.vehicle_details.price
-                }
-            );
+        if (reqError) throw reqError;
+        if (!request) return res.status(404).json({ error: 'Request not found' });
+
+        // 2. Prepare data for main table
+        const vehicleData = {
+            ...request.vehicle_details,
+            is_approved: true,
+            is_available: true
+        };
+
+        // Determine table
+        let tableName;
+        if (request.vehicle_type === 'bike') tableName = 'bikes';
+        else if (request.vehicle_type === 'car') tableName = 'cars';
+        else if (request.vehicle_type === 'scooty') tableName = 'scooty';
+        else return res.status(400).json({ error: 'Invalid vehicle type' });
+
+        // 3. Insert into main table
+        const { error: insertError } = await supabase
+            .from(tableName)
+            .insert([vehicleData]);
+
+        if (insertError) throw insertError;
+
+        // 4. Update request status
+        await supabase
+            .from('sponsor_vehicle_requests')
+            .update({ status: 'approved' })
+            .eq('id', requestId);
+
+        // 5. Send Email
+        try {
+            const { data: sponsor } = await supabase
+                .from('sponsors')
+                .select('email, full_name')
+                .eq('id', request.sponsor_id)
+                .single();
+
+            if (sponsor && sponsor.email) {
+                await sendVehicleApprovedEmail(
+                    sponsor.email,
+                    sponsor.full_name,
+                    {
+                        vehicleName: request.vehicle_details.name,
+                        type: request.vehicle_type,
+                        price: request.vehicle_details.price
+                    }
+                );
+            }
+        } catch (emailError) {
+            console.error('Error sending approval email:', emailError);
         }
 
-        res.json({ message: 'Vehicle approved successfully', vehicle: request });
+        res.json({ message: 'Vehicle approved successfully' });
     } catch (error) {
         console.error('Error approving vehicle:', error);
-        res.status(500).json({ error: 'Failed to approve vehicle' });
+        res.status(500).json({ error: 'Error approving vehicle' });
     }
 };
 
 const rejectVehicle = async (req, res) => {
     try {
-        const { id } = req.params;
-        await SponsorModel.rejectVehicle(id);
+        const { error } = await supabase
+            .from('sponsor_vehicle_requests')
+            .update({ status: 'rejected' })
+            .eq('id', req.params.id);
+
+        if (error) throw error;
         res.json({ message: 'Vehicle rejected/removed successfully' });
     } catch (error) {
         console.error('Error rejecting vehicle:', error);
