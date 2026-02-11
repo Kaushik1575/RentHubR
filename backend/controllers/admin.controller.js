@@ -1141,7 +1141,15 @@ const getVehicleRequests = async (req, res) => {
             id: r.id, // Request ID
             sponsor_id: r.sponsor_id,
             vehicleType: r.vehicle_type,
-            ...r.vehicle_details, // Spread the details (name, price, etc)
+            name: r.name,
+            registration_number: r.registration_number,
+            model: r.model,
+            year: r.year,
+            price: r.price,
+            image_url: r.image_url,
+            rc_url: r.rc_url,
+            insurance_url: r.insurance_url,
+            puc_url: r.puc_url,
             sponsors: r.sponsors
         }));
 
