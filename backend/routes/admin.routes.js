@@ -45,6 +45,9 @@ router.delete('/vehicles/:type/:id', verifyAdminToken, adminController.deleteVeh
 // Policies
 router.get('/policies', verifyAdminToken, adminController.getPolicies);
 
+// Sponsor Earnings
+router.get('/sponsor-earnings', verifyAdminToken, adminController.getSponsorEarnings);
+
 // Reminders (Cron & Manual)
 // Schedule manual reminder check
 router.post('/cron/reminders/manual', verifyAdminToken, adminController.manualReminderCheck);

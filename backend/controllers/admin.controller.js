@@ -1284,6 +1284,88 @@ const cronReminderCheck = async (req, res) => {
     }
 };
 
+const getSponsorEarnings = async (req, res) => {
+    try {
+        // 1. Get all sponsors
+        const { data: sponsors, error: sError } = await supabase.from('sponsors').select('id, full_name, email');
+        if (sError) throw sError;
+
+        // 2. Get all vehicles (bikes, cars, scooty) with sponsor_id
+        const [bikes, cars, scooty] = await Promise.all([
+            supabase.from('bikes').select('id, sponsor_id'),
+            supabase.from('cars').select('id, sponsor_id'),
+            supabase.from('scooty').select('id, sponsor_id')
+        ]);
+
+        // Map Vehicle ID -> Sponsor ID
+        const vehicleSponsorMap = new Map();
+
+        (bikes.data || []).forEach(v => vehicleSponsorMap.set(`${v.id}-bike`, v.sponsor_id));
+        (cars.data || []).forEach(v => vehicleSponsorMap.set(`${v.id}-car`, v.sponsor_id));
+        (scooty.data || []).forEach(v => vehicleSponsorMap.set(`${v.id}-scooty`, v.sponsor_id));
+
+        // Also fallback map for ID-only
+        const vehicleIdSponsorMap = new Map();
+        [...(bikes.data || []), ...(cars.data || []), ...(scooty.data || [])].forEach(v => {
+            vehicleIdSponsorMap.set(v.id, v.sponsor_id);
+        });
+
+        // 3. Get all bookings
+        const { data: bookings, error: bError } = await supabase
+            .from('bookings')
+            .select('total_amount, status, created_at, vehicle_id, vehicle_type')
+            .order('created_at', { ascending: false });
+
+        if (bError) throw bError;
+
+        // 4. Aggregate
+        const earnings = {};
+
+        // Initialize
+        (sponsors || []).forEach(s => {
+            earnings[s.id] = {
+                id: s.id,
+                name: s.full_name,
+                email: s.email,
+                totalRevenue: 0,
+                sponsorShare: 0,
+                platformShare: 0,
+                bookingsCount: 0
+            };
+        });
+
+        earnings['unassigned'] = { id: 'unassigned', name: 'Unassigned / RentHub', email: '---', totalRevenue: 0, sponsorShare: 0, platformShare: 0, bookingsCount: 0 };
+
+        (bookings || []).forEach(b => {
+            if (!['completed', 'ride_completed', 'ride_ended', 'payment_success'].includes(b.status)) return;
+
+            const amount = parseFloat(b.total_amount) || 0;
+
+            // Find Sponsor
+            const key = b.vehicle_type ? `${b.vehicle_id}-${b.vehicle_type}` : null;
+            let sponsorId = key ? vehicleSponsorMap.get(key) : vehicleIdSponsorMap.get(b.vehicle_id);
+
+            if (!sponsorId || !earnings[sponsorId]) sponsorId = 'unassigned';
+
+            earnings[sponsorId].totalRevenue += amount;
+            earnings[sponsorId].bookingsCount += 1;
+        });
+
+        // Calculate Shares
+        const result = Object.values(earnings).map(e => ({
+            ...e,
+            platformShare: Math.round(e.totalRevenue * 0.30),
+            sponsorShare: Math.round(e.totalRevenue * 0.70)
+        }));
+
+        res.json(result);
+
+    } catch (error) {
+        console.error('Error fetching sponsor earnings:', error);
+        res.status(500).json({ error: 'Failed to fetch earnings' });
+    }
+};
+
 module.exports = {
     getAllBookings,
     getBookingById,
@@ -1310,5 +1392,6 @@ module.exports = {
     getPolicies,
     manualReminderCheck,
     cronReminderCheck,
-    handleQRScan
+    handleQRScan,
+    getSponsorEarnings
 };

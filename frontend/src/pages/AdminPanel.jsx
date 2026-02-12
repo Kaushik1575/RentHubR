@@ -31,6 +31,7 @@ const AdminPanel = () => {
     // Vehicles
     const [vehicles, setVehicles] = useState([]);
     const [requests, setRequests] = useState([]); // New state for requests
+    const [earnings, setEarnings] = useState([]); // Sponsor Earnings
 
     // Modals State
     const [modal, setModal] = useState({ type: null, data: null }); // type: 'viewBooking', 'editBooking', etc.
@@ -63,6 +64,7 @@ const AdminPanel = () => {
         if (activeTab === 'vehicles') loadVehicles();
         if (activeTab === 'requests') loadRequests(); // Load requests
         if (activeTab === 'policies') loadPolicies();
+        if (activeTab === 'earnings') loadEarnings();
     }, [activeTab]);
 
     const loadDashboardStats = async () => {
@@ -115,6 +117,13 @@ const AdminPanel = () => {
         } catch (e) {
             console.error(e);
         }
+    };
+
+    const loadEarnings = async () => {
+        try {
+            const res = await fetch('/api/admin/sponsor-earnings', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) setEarnings(await res.json());
+        } catch (e) { console.error(e); }
     };
 
     const loadPolicies = () => {
@@ -427,6 +436,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <li><a className={`nav-link ${activeTab === 'vehicles' ? 'active' : ''}`} onClick={() => { setActiveTab('vehicles'); setIsSidebarOpen(false); }}><i className="fas fa-motorcycle"></i> Vehicles</a></li>
                             <li><a className={`nav-link ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => { setActiveTab('requests'); setIsSidebarOpen(false); }}><i className="fas fa-clipboard-list"></i> Requests {requests.length > 0 && <span className="badge">{requests.length}</span>}</a></li>
                             <li><a className={`nav-link ${activeTab === 'policies' ? 'active' : ''}`} onClick={() => { setActiveTab('policies'); setIsSidebarOpen(false); }}><i className="fas fa-file-alt"></i> Policies</a></li>
+                            <li><a className={`nav-link ${activeTab === 'earnings' ? 'active' : ''}`} onClick={() => { setActiveTab('earnings'); setIsSidebarOpen(false); }}><i className="fas fa-chart-line"></i> Sponsor Reports</a></li>
                             <li><a className={`nav-link`} onClick={() => { navigate('/admin/loyalty-settings'); setIsSidebarOpen(false); }}><i className="fas fa-coins"></i> Loyalty Settings</a></li>
                         </ul>
                     </nav>
@@ -707,6 +717,32 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                     <button className="action-btn btn-confirm" onClick={() => handleApproveRequest(r)} style={{ marginRight: '5px' }}><i className="fas fa-check"></i> Approve</button>
                                                     <button className="action-btn btn-delete" onClick={() => handleRejectRequest(r.id)}><i className="fas fa-times"></i> Reject</button>
                                                 </td>
+                                            </tr>
+                                        ))}
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* EARNINGS */}
+                    {activeTab === 'earnings' && (
+                        <div id="earnings" className="content-section active">
+                            <h2>Sponsor Earnings Report</h2>
+                            <div className="table-container">
+                                <table id="earnings-table">
+                                    <thead><tr><th>Sponsor</th><th>Email</th><th>Total Revenue</th><th>Sponsor Share (70%)</th><th>Platform Share (30%)</th><th>Bookings</th></tr></thead>
+                                    <tbody>
+                                        {earnings.length === 0 ? (
+                                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>No earnings data found</td></tr>
+                                        ) : earnings.map((e, idx) => (
+                                            <tr key={e.id || idx}>
+                                                <td>{e.name}</td>
+                                                <td>{e.email}</td>
+                                                <td style={{ fontWeight: 'bold' }}>₹{e.totalRevenue.toLocaleString()}</td>
+                                                <td style={{ color: 'green' }}>₹{e.sponsorShare.toLocaleString()}</td>
+                                                <td style={{ color: 'blue' }}>₹{e.platformShare.toLocaleString()}</td>
+                                                <td>{e.bookingsCount}</td>
                                             </tr>
                                         ))}
                                     </tbody>
