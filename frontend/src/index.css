@@ -3146,3 +3146,241 @@ main.booking-page-main {
     to { opacity: 1; transform: translateY(0); }
 }
 
+
+/* Document Icon Buttons (Admin Request Panel) */
+.doc-icon-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 6px;
+    text-decoration: none;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+.doc-icon-btn:hover { transform: translateY(-2px); box-shadow: 0 4px 8px rgba(0,0,0,0.15); }
+
+.doc-icon-btn.photo { background-color: #e3f2fd; color: #1976d2; border: 1px solid #bbdefb; }
+.doc-icon-btn.rc { background-color: #e8f5e9; color: #2e7d32; border: 1px solid #c8e6c9; }
+.doc-icon-btn.insurance { background-color: #e0f7fa; color: #0097a7; border: 1px solid #b2ebf2; }
+.doc-icon-btn.puc { background-color: #f5f5f5; color: #616161; border: 1px solid #e0e0e0; }
+
+/* Action Icon Buttons */
+.icon-action-btn {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 50%;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    transition: all 0.2s ease;
+    box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+}
+.icon-action-btn:hover { transform: scale(1.1); }
+.icon-action-btn.approve { background-color: #4caf50; color: white; }
+.icon-action-btn.reject { background-color: #f44336; color: white; }
+
+/* Status Badges in Admin Table */
+.status-badge.status-bike { background-color: #e3f2fd; color: #1565c0; border: 1px solid #90caf9; }
+.status-badge.status-car { background-color: #e8eaf6; color: #283593; border: 1px solid #9fa8da; }
+.status-badge.status-scooty { background-color: #fff3e0; color: #ef6c00; border: 1px solid #ffcc80; }
+
+
+/* Improved Vehicle Request Cards */
+.requests-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(340px, 1fr));
+    gap: 20px;
+    padding: 10px;
+}
+
+.request-card {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+    overflow: hidden;
+    transition: transform 0.2s, box-shadow 0.2s;
+    border: 1px solid #eee;
+    display: flex;
+    flex-direction: column;
+}
+
+.request-card:hover {
+    transform: translateY(-5px);
+    box-shadow: 0 8px 25px rgba(0,0,0,0.12);
+}
+
+.req-header {
+    background: #f8f9fa;
+    padding: 15px 20px;
+    border-bottom: 1px solid #eaeaea;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+}
+
+.req-title h4 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: #333;
+    font-weight: 700;
+}
+
+.req-model {
+    color: #666;
+    font-size: 0.9rem;
+    display: block;
+    margin-top: 4px;
+}
+
+.req-badges {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 5px;
+}
+
+.price-badge {
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: #333;
+}
+
+.price-badge small {
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: #666;
+}
+
+.req-body {
+    padding: 20px;
+    flex: 1;
+}
+
+.req-info-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.req-info-item label {
+    display: block;
+    font-size: 0.75rem;
+    color: #888;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    margin-bottom: 4px;
+}
+
+.req-info-item p {
+    margin: 0;
+    font-weight: 600;
+    color: #444;
+    font-size: 0.95rem;
+}
+
+.req-info-item i {
+    color: #6c757d;
+    margin-right: 6px;
+}
+
+.req-docs-section label {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: #555;
+    margin-bottom: 10px;
+}
+
+.req-docs-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 8px;
+}
+
+.doc-chip {
+    padding: 6px 12px;
+    border-radius: 20px;
+    font-size: 0.85rem;
+    text-decoration: none;
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-weight: 500;
+    border: 1px solid transparent;
+    transition: all 0.2s;
+}
+
+.doc-chip.photo { background: #e3f2fd; color: #1565c0; border-color: #bbdefb; }
+.doc-chip.rc { background: #e8f5e9; color: #2e7d32; border-color: #c8e6c9; }
+.doc-chip.insurance { background: #e0f7fa; color: #00838f; border-color: #b2ebf2; }
+.doc-chip.puc { background: #f5f5f5; color: #616161; border-color: #e0e0e0; }
+.doc-chip.missing { background: #fff3e0; color: #ef6c00; border-style: dashed; border-color: #ffb74d; }
+
+.doc-chip:hover {
+    filter: brightness(0.95);
+    transform: translateY(-1px);
+}
+
+.req-footer {
+    padding: 15px 20px;
+    background: #fff;
+    border-top: 1px solid #eee;
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 15px;
+}
+
+.req-btn {
+    border: none;
+    padding: 10px;
+    border-radius: 6px;
+    font-weight: 600;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    transition: opacity 0.2s;
+}
+
+.req-btn:hover { opacity: 0.9; }
+
+.req-btn.approve {
+    background: #28a745;
+    color: white;
+}
+
+.req-btn.reject {
+    background: #dc3545;
+    color: white;
+    background: #fff;
+    border: 1px solid #dc3545;
+    color: #dc3545;
+}
+
+.req-btn.reject:hover {
+    background: #fee;
+}
+
+.no-data-card {
+    background: white;
+    padding: 40px;
+    text-align: center;
+    border-radius: 12px;
+    box-shadow: 0 4px 10px rgba(0,0,0,0.05);
+    color: #888;
+}
+.no-data-card i {
+    font-size: 3rem;
+    color: #ddd;
+    margin-bottom: 15px;
+}
+

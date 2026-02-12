@@ -1043,7 +1043,15 @@ const updateVehicle = async (req, res) => {
         if (type === 'car') type = 'cars';
         if (type === 'bike') type = 'bikes';
         if (type === 'scooty') type = 'scooty';
-        const { data } = await supabase.from(type).update(req.body).eq('id', id).select().single();
+
+        const { status, type: payloadType, ...updates } = req.body;
+
+        // Map status to is_available if present
+        if (status) {
+            updates.is_available = status === 'available';
+        }
+
+        const { data } = await supabase.from(type).update(updates).eq('id', id).select().single();
         res.json(data);
     } catch (error) { res.status(500).json({ error: 'Error' }); }
 };
@@ -1062,17 +1070,58 @@ const deleteVehicle = async (req, res) => {
 const addVehicle = async (req, res) => {
     try {
         let { type } = req.params;
-        const { requestId, ...vehicleData } = req.body;
+        // Fields from the form/request
+        const {
+            requestId,
+            status,
+            type: payloadType, // exclude
+            ...bodyData
+        } = req.body;
 
         if (type === 'car') type = 'cars';
         else if (type === 'bike' || type === 'bikes') type = 'bikes';
         else if (type === 'scooty') type = 'scooty';
         else return res.status(400).json({ error: 'Invalid vehicle type' });
 
+        // Define allowed columns based on known schema
+        const allowedColumns = [
+            'name',
+            'price',
+            'image_url',
+            'is_available',
+            'is_approved',
+            'sponsor_id',
+            'fuel_type',
+            'engine',
+            'rc_url',
+            'insurance_url',
+            'puc_url'
+        ];
+
+        // Construct insert object
+        const insertData = {};
+
+        // 1. Map fields directly if they exist in allowedColumns
+        Object.keys(bodyData).forEach(key => {
+            if (allowedColumns.includes(key)) {
+                insertData[key] = bodyData[key];
+            }
+        });
+
+        // 2. Explicit mappings
+        // Map 'status' from form to 'is_available' in DB
+        insertData.is_available = status === 'available';
+
+        // Ensure default fields
+        insertData.is_approved = true;
+
+        // Note: We deliberately IGNORE 'model', 'year', 'category', 'registration_number'
+        // if they are not in allowedColumns, and we do NOT combine them into 'name'.
+
         // Insert into main table
         const { data, error } = await supabase
             .from(type)
-            .insert([vehicleData])
+            .insert([insertData])
             .select()
             .single();
 
@@ -1088,14 +1137,16 @@ const addVehicle = async (req, res) => {
 
             // 2. Send notification email
             try {
-                // Fetch full request details to get sponsor ID
-                const { data: request } = await supabase
+                // Fetch full request details to get sponsor ID and vehicle info
+                const { data: request, error: reqError } = await supabase
                     .from('sponsor_vehicle_requests')
-                    .select('sponsor_id, vehicle_details, vehicle_type')
+                    .select('sponsor_id, vehicle_type, name, price, model, year')
                     .eq('id', requestId)
                     .single();
 
-                if (request) {
+                if (reqError) {
+                    console.error('Error fetching request for email:', reqError);
+                } else if (request) {
                     const { data: sponsor } = await supabase
                         .from('sponsors')
                         .select('email, full_name')
@@ -1104,19 +1155,37 @@ const addVehicle = async (req, res) => {
 
                     if (sponsor && sponsor.email) {
                         const { sendVehicleApprovedEmail } = require('../config/emailService');
-                        await sendVehicleApprovedEmail(
+
+                        // Construct vehicle name with model if available
+                        let vehicleName = request.name || 'Vehicle';
+                        if (request.model) vehicleName += ` ${request.model}`;
+                        if (request.year) vehicleName += ` (${request.year})`;
+
+                        console.log(`📧 Sending approval email to ${sponsor.email} for ${vehicleName}`);
+
+                        const emailResult = await sendVehicleApprovedEmail(
                             sponsor.email,
                             sponsor.full_name,
                             {
-                                vehicleName: request.vehicle_details.name,
+                                vehicleName: vehicleName,
                                 type: request.vehicle_type,
-                                price: request.vehicle_details.price
+                                price: request.price
                             }
                         );
+
+                        if (emailResult && emailResult.success) {
+                            console.log('✅ Approval email sent successfully');
+                        } else {
+                            console.error('❌ Email sending failed:', emailResult);
+                        }
+                    } else {
+                        console.error('❌ Sponsor email not found');
                     }
+                } else {
+                    console.error('❌ Request not found for email notification');
                 }
             } catch (emailError) {
-                console.error('Error sending approval email:', emailError);
+                console.error('❌ Error sending approval email:', emailError);
             }
         }
 
@@ -1133,7 +1202,7 @@ const getVehicleRequests = async (req, res) => {
         const { data, error } = await supabase
             .from('sponsor_vehicle_requests')
             .select('*, sponsors(full_name, phone_number)')
-            .eq('status', 'pending');
+            .order('created_at', { ascending: false });
 
         if (error) throw error;
 
@@ -1150,6 +1219,7 @@ const getVehicleRequests = async (req, res) => {
             rc_url: r.rc_url,
             insurance_url: r.insurance_url,
             puc_url: r.puc_url,
+            status: r.status,
             sponsors: r.sponsors
         }));
 

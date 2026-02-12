@@ -352,6 +352,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
         setVehicleFormData({
             name: request.name || '',
             type: request.vehicleType || 'bike',
+            model: request.model || '',
+            year: request.year || '',
+            registration_number: request.registration_number || '',
             price: request.price || '',
             category: 'Standard', // Default
             status: 'available',
@@ -676,51 +679,93 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {activeTab === 'requests' && (
                         <div id="requests" className="content-section active">
                             <h2>Vehicle Requests</h2>
-                            <div className="table-container">
-                                <table id="requests-table">
-                                    <thead><tr><th>Sponsor</th><th>Phone</th><th>Vehicle</th><th>Type</th><th>Price</th><th>Images</th><th>Actions</th></tr></thead>
-                                    <tbody>
-                                        {requests.length === 0 ? (
-                                            <tr><td colSpan="7" style={{ textAlign: 'center', padding: '20px' }}>No pending requests</td></tr>
-                                        ) : requests.map(r => (
-                                            <tr key={r.id}>
-                                                <td>{r.sponsors?.full_name || 'N/A'}</td>
-                                                <td>{r.sponsors?.phone_number || 'N/A'}</td>
-                                                <td>{r.name} <br /><small>{r.model} ({r.year})</small></td>
-                                                <td>{r.vehicleType}</td>
-                                                <td>₹{r.price}/hr</td>
-                                                <td>
-                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '5px' }}>
-                                                        {r.image_url && (
-                                                            <a href={r.image_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#007bff', fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                <i className="fas fa-image"></i> Photo
-                                                            </a>
-                                                        )}
-                                                        {r.rc_url && (
-                                                            <a href={r.rc_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#28a745', fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                <i className="fas fa-file-alt"></i> RC Doc
-                                                            </a>
-                                                        )}
-                                                        {r.insurance_url && (
-                                                            <a href={r.insurance_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#17a2b8', fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                <i className="fas fa-shield-alt"></i> Insr.
-                                                            </a>
-                                                        )}
-                                                        {r.puc_url && (
-                                                            <a href={r.puc_url} target="_blank" rel="noreferrer" style={{ textDecoration: 'none', color: '#6c757d', fontSize: '0.85em', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                                                                <i className="fas fa-smog"></i> PUC
-                                                            </a>
-                                                        )}
+                            <div className="requests-container">
+                                {requests.length === 0 ? (
+                                    <div className="no-data-card">
+                                        <i className="fas fa-clipboard-list"></i>
+                                        <p>No pending vehicle requests found.</p>
+                                    </div>
+                                ) : (
+                                    <div className="requests-grid">
+                                        {requests.map(r => (
+                                            <div key={r.id} className="request-card">
+                                                <div className="req-header">
+                                                    <div className="req-title">
+                                                        <h4>{r.name}</h4>
+                                                        <span className="req-model">{r.model} • {r.year}</span>
                                                     </div>
-                                                </td>
-                                                <td>
-                                                    <button className="action-btn btn-confirm" onClick={() => handleApproveRequest(r)} style={{ marginRight: '5px' }}><i className="fas fa-check"></i> Approve</button>
-                                                    <button className="action-btn btn-delete" onClick={() => handleRejectRequest(r.id)}><i className="fas fa-times"></i> Reject</button>
-                                                </td>
-                                            </tr>
+                                                    <div className="req-badges">
+                                                        <span className={`status-badge status-${(r.vehicleType || 'bike').toLowerCase()}`}>{r.vehicleType}</span>
+                                                        <span className="price-badge">₹{r.price}<small>/hr</small></span>
+                                                    </div>
+                                                </div>
+
+                                                <div className="req-body">
+                                                    <div className="req-info-row">
+                                                        <div className="req-info-item">
+                                                            <label>Sponsor</label>
+                                                            <p><i className="fas fa-user-tie"></i> {r.sponsors?.full_name || 'N/A'}</p>
+                                                        </div>
+                                                        <div className="req-info-item">
+                                                            <label>Contact</label>
+                                                            <p><i className="fas fa-phone-alt"></i> {r.phone_number || r.sponsors?.phone_number || 'N/A'}</p>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="req-docs-section">
+                                                        <label>Documents Provided:</label>
+                                                        <div className="req-docs-list">
+                                                            {r.image_url ? (
+                                                                <a href={r.image_url} target="_blank" rel="noreferrer" className="doc-chip photo">
+                                                                    <i className="fas fa-camera"></i> Photo
+                                                                </a>
+                                                            ) : <span className="doc-chip missing">Missing Photo</span>}
+
+                                                            {r.rc_url ? (
+                                                                <a href={r.rc_url} target="_blank" rel="noreferrer" className="doc-chip rc">
+                                                                    <i className="fas fa-file-invoice"></i> RC Book
+                                                                </a>
+                                                            ) : <span className="doc-chip missing">Missing RC</span>}
+
+                                                            {r.insurance_url ? (
+                                                                <a href={r.insurance_url} target="_blank" rel="noreferrer" className="doc-chip insurance">
+                                                                    <i className="fas fa-shield-alt"></i> Insurance
+                                                                </a>
+                                                            ) : <span className="doc-chip missing">Missing Insr.</span>}
+
+                                                            {r.puc_url ? (
+                                                                <a href={r.puc_url} target="_blank" rel="noreferrer" className="doc-chip puc">
+                                                                    <i className="fas fa-smog"></i> PUC
+                                                                </a>
+                                                            ) : <span className="doc-chip missing">Missing PUC</span>}
+                                                        </div>
+                                                    </div>
+                                                </div>
+
+                                                <div className="req-footer" style={{ borderTop: '1px solid #eee', marginTop: '15px', paddingTop: '15px' }}>
+                                                    {r.status === 'approved' ? (
+                                                        <div style={{ width: '100%', textAlign: 'center', color: '#28a745', fontWeight: 'bold', fontSize: '1.1rem', padding: '8px', background: '#e6fffa', borderRadius: '6px' }}>
+                                                            <i className="fas fa-check-circle"></i> Approved
+                                                        </div>
+                                                    ) : r.status === 'rejected' ? (
+                                                        <div style={{ width: '100%', textAlign: 'center', color: '#e53e3e', fontWeight: 'bold', fontSize: '1.1rem', padding: '8px', background: '#fff5f5', borderRadius: '6px' }}>
+                                                            <i className="fas fa-times-circle"></i> Rejected
+                                                        </div>
+                                                    ) : (
+                                                        <>
+                                                            <button className="req-btn approve" onClick={() => handleApproveRequest(r)}>
+                                                                <i className="fas fa-check-circle"></i> Approve Request
+                                                            </button>
+                                                            <button className="req-btn reject" onClick={() => handleRejectRequest(r.id)}>
+                                                                <i className="fas fa-times-circle"></i> Reject
+                                                            </button>
+                                                        </>
+                                                    )}
+                                                </div>
+                                            </div>
                                         ))}
-                                    </tbody>
-                                </table>
+                                    </div>
+                                )}
                             </div>
                         </div>
                     )}
@@ -1166,30 +1211,168 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                 </div>
             )}
 
+            {/* Add / Edit Vehicle Modal */}
             {(modal.type === 'addVehicle' || modal.type === 'editVehicle') && (
                 <div className="modal">
-                    <div className="modal-content">
+                    <div className="modal-content" style={{ maxWidth: '650px', width: '95%' }}>
                         <span className="close-button" onClick={() => setModal({ type: null })}>&times;</span>
-                        <h2>{modal.type === 'addVehicle' ? 'Add' : 'Edit'} Vehicle</h2>
+                        <h2 style={{ borderBottom: '1px solid #eee', paddingBottom: '15px', marginBottom: '20px' }}>
+                            {modal.type === 'addVehicle' ? 'Add New Vehicle' : 'Edit Vehicle Details'}
+                        </h2>
+
                         <form onSubmit={handleVehicleSubmit}>
-                            <div style={{ marginBottom: '10px' }}><label>Name</label><input type="text" value={vehicleFormData.name || ''} onChange={e => setVehicleFormData({ ...vehicleFormData, name: e.target.value })} required /></div>
-                            <div style={{ marginBottom: '10px' }}><label>Type</label>
-                                <select value={vehicleFormData.type || 'bike'} onChange={e => setVehicleFormData({ ...vehicleFormData, type: e.target.value })}>
-                                    <option value="car">Car</option>
-                                    <option value="bike">Bike</option>
-                                    <option value="scooty">Scooty</option>
-                                </select>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '20px' }}>
+                                {/* Left Column */}
+                                <div>
+                                    <div className="form-group">
+                                        <label>Vehicle Name</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={vehicleFormData.name || ''}
+                                            onChange={e => setVehicleFormData({ ...vehicleFormData, name: e.target.value })}
+                                            placeholder="e.g. Royal Enfield Classic"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Vehicle Type</label>
+                                        <select
+                                            className="form-control"
+                                            value={vehicleFormData.type || 'bike'}
+                                            onChange={e => setVehicleFormData({ ...vehicleFormData, type: e.target.value })}
+                                        >
+                                            <option value="bike">Bike</option>
+                                            <option value="car">Car</option>
+                                            <option value="scooty">Scooty</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Model</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={vehicleFormData.model || ''}
+                                            onChange={e => setVehicleFormData({ ...vehicleFormData, model: e.target.value })}
+                                            placeholder="e.g. Classic 350"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Year</label>
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            value={vehicleFormData.year || ''}
+                                            onChange={e => setVehicleFormData({ ...vehicleFormData, year: e.target.value })}
+                                            placeholder="e.g. 2024"
+                                            required
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Hourly Price (₹)</label>
+                                        <input
+                                            type="number"
+                                            className="form-control"
+                                            value={vehicleFormData.price || ''}
+                                            onChange={e => setVehicleFormData({ ...vehicleFormData, price: e.target.value })}
+                                            min="0"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Right Column */}
+                                <div>
+                                    <div className="form-group">
+                                        <label>Registration Number</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={vehicleFormData.registration_number || ''}
+                                            onChange={e => setVehicleFormData({ ...vehicleFormData, registration_number: e.target.value })}
+                                            placeholder="e.g. OD-02-XY-1234"
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Category</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={vehicleFormData.category || ''}
+                                            onChange={e => setVehicleFormData({ ...vehicleFormData, category: e.target.value })}
+                                            placeholder="e.g. Cruiser"
+                                        />
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Status</label>
+                                        <select
+                                            className="form-control"
+                                            value={vehicleFormData.status || 'available'}
+                                            onChange={e => setVehicleFormData({ ...vehicleFormData, status: e.target.value })}
+                                        >
+                                            <option value="available">Available (Active)</option>
+                                            <option value="unavailable">Unavailable</option>
+                                        </select>
+                                    </div>
+
+                                    <div className="form-group">
+                                        <label>Image URL</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={vehicleFormData.image_url || ''}
+                                            onChange={e => setVehicleFormData({ ...vehicleFormData, image_url: e.target.value })}
+                                            placeholder="https://example.com/image.jpg"
+                                        />
+                                    </div>
+
+                                    {/* Image Preview */}
+                                    <div style={{
+                                        height: '110px',
+                                        background: '#f8f9fa',
+                                        border: '1px dashed #ced4da',
+                                        borderRadius: '8px',
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        marginTop: '10px',
+                                        overflow: 'hidden'
+                                    }}>
+                                        {vehicleFormData.image_url ? (
+                                            <img
+                                                src={vehicleFormData.image_url}
+                                                alt="Preview"
+                                                style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                                                onError={(e) => { e.target.style.display = 'none'; e.target.parentNode.innerText = 'Invalid Image URL' }}
+                                            />
+                                        ) : (
+                                            <span style={{ color: '#adb5bd', fontSize: '0.9rem' }}>Image Preview</span>
+                                        )}
+                                    </div>
+                                </div>
                             </div>
-                            <div style={{ marginBottom: '10px' }}><label>Category</label><input type="text" value={vehicleFormData.category || ''} onChange={e => setVehicleFormData({ ...vehicleFormData, category: e.target.value })} required /></div>
-                            <div style={{ marginBottom: '10px' }}><label>Price</label><input type="number" value={vehicleFormData.price || ''} onChange={e => setVehicleFormData({ ...vehicleFormData, price: e.target.value })} required /></div>
-                            <div style={{ marginBottom: '10px' }}><label>Image URL</label><input type="text" value={vehicleFormData.image_url || ''} onChange={e => setVehicleFormData({ ...vehicleFormData, image_url: e.target.value })} placeholder="https://..." /></div>
-                            <div style={{ marginBottom: '10px' }}><label>Status</label>
-                                <select value={vehicleFormData.status || 'available'} onChange={e => setVehicleFormData({ ...vehicleFormData, status: e.target.value })}>
-                                    <option value="available">Available</option>
-                                    <option value="unavailable">Unavailable</option>
-                                </select>
+
+                            {/* Footer / Actions */}
+                            <div style={{ marginTop: '25px', paddingTop: '20px', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                                <button type="button" className="action-btn" style={{ background: '#f8f9fa', color: '#333', border: '1px solid #ddd' }} onClick={() => setModal({ type: null })}>Cancel</button>
+                                <button type="submit" className="action-btn btn-confirm" style={{ minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
+                                    <i className="fas fa-save"></i>
+                                    {modal.type === 'addVehicle' ? (vehicleFormData.requestId ? 'Approve & Earn' : 'Add Vehicle') : 'Save Changes'}
+                                </button>
                             </div>
-                            <button className="action-btn btn-confirm">Save</button>
+
+                            {modal.type === 'addVehicle' && vehicleFormData.requestId && (
+                                <p style={{ marginTop: '15px', fontSize: '0.85rem', color: '#666', textAlign: 'center' }}>
+                                    <i className="fas fa-info-circle"></i> Approving this vehicle will automatically notify the sponsor via email.
+                                </p>
+                            )}
                         </form>
                     </div>
                 </div>
