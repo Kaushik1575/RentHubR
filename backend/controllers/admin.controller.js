@@ -1175,8 +1175,18 @@ const approveVehicle = async (req, res) => {
         if (!request) return res.status(404).json({ error: 'Request not found' });
 
         // 2. Prepare data for main table
+        // 2. Prepare data for main table
         const vehicleData = {
-            ...request.vehicle_details,
+            name: request.name,
+            registration_number: request.registration_number,
+            model: request.model,
+            year: request.year,
+            price: request.price,
+            image_url: request.image_url,
+            rc_url: request.rc_url,
+            insurance_url: request.insurance_url,
+            puc_url: request.puc_url,
+            sponsor_id: request.sponsor_id,
             is_approved: true,
             is_available: true
         };
