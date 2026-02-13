@@ -1612,15 +1612,7 @@ const updateWithdrawalStatus = async (req, res) => {
             .from('withdrawal_requests')
             .update(updateData)
             .eq('id', id)
-            .select(`
-                *,
-                sponsors:sponsor_id (
-                    id,
-                    full_name,
-                    email,
-                    phone_number
-                )
-            `)
+            .select()
             .single();
 
         if (error) {
@@ -1629,10 +1621,17 @@ const updateWithdrawalStatus = async (req, res) => {
         }
 
         // Send Email Notification if Completed (Paid)
-        if (status === 'completed') {
+        if (status === 'completed' && data.sponsor_id) {
             try {
-                const sponsorEmail = data.sponsors?.email;
-                const sponsorName = data.sponsors?.full_name || 'Partner';
+                // Manually fetch sponsor details to be safe (handles missing DB relationships)
+                const { data: sponsor } = await supabase
+                    .from('sponsors')
+                    .select('email, full_name')
+                    .eq('id', data.sponsor_id)
+                    .single();
+
+                const sponsorEmail = sponsor?.email;
+                const sponsorName = sponsor?.full_name || 'Partner';
 
                 if (sponsorEmail) {
                     await sendWithdrawalPaidEmail(
@@ -1643,7 +1642,11 @@ const updateWithdrawalStatus = async (req, res) => {
                             transactionReference: data.transaction_reference || transactionReference,
                             date: data.processed_at || new Date(),
                             paymentMethod: data.payment_method,
-                            bankName: null
+                            bankName: data.bank_name,
+                            upiId: data.upi_id,
+                            bankAccountNumber: data.bank_account_number,
+                            ifscCode: data.ifsc_code,
+                            accountHolderName: data.account_holder_name
                         }
                     );
                     console.log(`📧 [EMAIL] Withdrawal confirmation sent to ${sponsorEmail}`);

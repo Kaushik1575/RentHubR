@@ -93,7 +93,7 @@ async function sendVehicleApprovedEmail(sponsorEmail, sponsorName, vehicleDetail
 
 // Send Withdrawal Paid Email
 async function sendWithdrawalPaidEmail(sponsorEmail, sponsorName, payload) {
-    const { amount, transactionReference, date, paymentMethod, bankName } = payload;
+    const { amount, transactionReference, date, paymentMethod, bankName, upiId, bankAccountNumber, ifscCode, accountHolderName } = payload;
 
     const formattedAmount = Number(amount).toLocaleString('en-IN', {
         style: 'currency',
@@ -131,10 +131,34 @@ async function sendWithdrawalPaidEmail(sponsorEmail, sponsorName, payload) {
                         <td style="padding: 8px 0; color: #666; font-size: 14px;">Method:</td>
                         <td style="padding: 8px 0; font-weight: bold; text-align: right; text-transform: capitalize; font-size: 14px;">${paymentMethod}</td>
                     </tr>
-                     ${bankName ? `
+                    ${upiId ? `
                     <tr>
-                        <td style="padding: 8px 0; color: #666; font-size: 14px;">Bank:</td>
+                        <td style="padding: 8px 0; color: #666; font-size: 14px;">UPI ID:</td>
+                        <td style="padding: 8px 0; font-weight: bold; text-align: right; font-size: 14px;">${upiId}</td>
+                    </tr>
+                    ` : ''}
+                    ${bankName ? `
+                    <tr>
+                        <td style="padding: 8px 0; color: #666; font-size: 14px;">Bank Name:</td>
                         <td style="padding: 8px 0; font-weight: bold; text-align: right; font-size: 14px;">${bankName}</td>
+                    </tr>
+                    ` : ''}
+                    ${bankAccountNumber ? `
+                    <tr>
+                        <td style="padding: 8px 0; color: #666; font-size: 14px;">Account No:</td>
+                        <td style="padding: 8px 0; font-weight: bold; text-align: right; font-size: 14px;">${bankAccountNumber}</td>
+                    </tr>
+                    ` : ''}
+                    ${ifscCode ? `
+                    <tr>
+                        <td style="padding: 8px 0; color: #666; font-size: 14px;">IFSC Code:</td>
+                        <td style="padding: 8px 0; font-weight: bold; text-align: right; font-size: 14px;">${ifscCode}</td>
+                    </tr>
+                    ` : ''}
+                    ${accountHolderName ? `
+                    <tr>
+                        <td style="padding: 8px 0; color: #666; font-size: 14px;">Account Holder:</td>
+                        <td style="padding: 8px 0; font-weight: bold; text-align: right; font-size: 14px;">${accountHolderName}</td>
                     </tr>
                     ` : ''}
                 </table>
@@ -157,7 +181,7 @@ async function sendWithdrawalPaidEmail(sponsorEmail, sponsorName, payload) {
 
     return sendEmail({
         to: sponsorEmail,
-        subject: `Payment Processed: ${formattedAmount} - RentHub`,
+        subject: `Payment Processed: ${formattedAmount} (Ref: ${transactionReference || 'N/A'}) - RentHub`,
         html: html
     });
 }

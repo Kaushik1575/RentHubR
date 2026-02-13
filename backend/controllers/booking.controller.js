@@ -7,6 +7,7 @@ const { generateInvoiceBuffer } = require('../utils/invoiceGenerator');
 const { sendImmediateReminderIfNeeded } = require('../services/reminderService');
 const { makeBookingConfirmationCall } = require('../config/retellCallService');
 const { generateBookingId } = require('../utils/bookingIdGenerator');
+const { normalizeVehicleType } = require('../utils/vehicleTypeNormalizer');
 const Razorpay = require('razorpay');
 
 // Helpers
@@ -121,7 +122,13 @@ const createBooking = async (req, res) => {
         console.log('--- Booking Request Received ---');
         console.log('User:', req.user);
         console.log('Body:', req.body);
-        const { vehicleId, startDate, startTime, duration, vehicleType, transactionId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+        let { vehicleId, startDate, startTime, duration, vehicleType, transactionId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+
+        // Normalize vehicle type (ensure singular form 'car', 'bike', 'scooty')
+        vehicleType = normalizeVehicleType(vehicleType);
+        if (!vehicleType) {
+            return res.status(400).json({ error: 'Invalid vehicle type.' });
+        }
 
         const razorpay = new Razorpay({
             key_id: process.env.RAZORPAY_KEY_ID,
