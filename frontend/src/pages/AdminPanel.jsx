@@ -1012,15 +1012,22 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 <div className="withdrawal-stat-card blue">
                                     <div className="w-stat-icon"><i className="fas fa-rupee-sign"></i></div>
                                     <div className="w-stat-info">
-                                        <h4>Pending Amount</h4>
-                                        <p>₹{withdrawalRequests.filter(r => r.status === 'pending').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toLocaleString()}</p>
+                                        <h4>Pending Approval</h4>
+                                        <p>₹{withdrawalRequests.filter(r => r.status === 'pending').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                    </div>
+                                </div>
+                                <div className="withdrawal-stat-card" style={{ borderLeft: '4px solid #3182ce', background: '#ebf8ff' }}>
+                                    <div className="w-stat-icon" style={{ color: '#3182ce' }}><i className="fas fa-check"></i></div>
+                                    <div className="w-stat-info">
+                                        <h4>Approved (Unpaid)</h4>
+                                        <p>₹{withdrawalRequests.filter(r => r.status === 'approved').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     </div>
                                 </div>
                                 <div className="withdrawal-stat-card green">
-                                    <div className="w-stat-icon"><i className="fas fa-check-circle"></i></div>
+                                    <div className="w-stat-icon"><i className="fas fa-check-double"></i></div>
                                     <div className="w-stat-info">
                                         <h4>Total Paid</h4>
-                                        <p>₹{withdrawalRequests.filter(r => r.status === 'completed').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toLocaleString()}</p>
+                                        <p>₹{withdrawalRequests.filter(r => r.status === 'completed').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     </div>
                                 </div>
                             </div>
@@ -1090,13 +1097,13 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                                     <div className="sponsor-email">{req.sponsors?.email || 'N/A'}</div>
                                                                     {balance !== null && (
                                                                         <div style={{ fontSize: '0.85rem', color: balance < 0 ? '#e53e3e' : '#2ecc71', fontWeight: 'bold' }}>
-                                                                            Bal: ₹{balance.toLocaleString()}
+                                                                            Bal: ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                                                         </div>
                                                                     )}
                                                                 </div>
                                                             </div>
                                                         </td>
-                                                        <td className="withdrawal-amount">₹{parseFloat(req.amount).toLocaleString()}</td>
+                                                        <td className="withdrawal-amount">₹{parseFloat(req.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
                                                         <td>
                                                             <span className={`method-badge ${req.payment_method}`}>
                                                                 {req.payment_method === 'bank' ? <i className="fas fa-university"></i> : <i className="fas fa-mobile-alt"></i>}
@@ -1515,7 +1522,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     </div>
                                     <div className="stat-content">
                                         <h4>Total Revenue</h4>
-                                        <p>₹{modal.data.totalRevenue?.toLocaleString()}</p>
+                                        <p>₹{parseFloat(modal.data.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     </div>
                                 </div>
                                 <div className="stat-card-premium">
@@ -1524,7 +1531,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     </div>
                                     <div className="stat-content">
                                         <h4>Net Earnings</h4>
-                                        <p className="text-success">₹{modal.data.sponsorShare?.toLocaleString()}</p>
+                                        <p className="text-success">₹{parseFloat(modal.data.sponsorShare || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
                                     </div>
                                 </div>
                                 <div className="stat-card-premium">
@@ -1553,28 +1560,28 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     </div>
                                     <div className="summary-row" style={{ marginTop: '10px' }}>
                                         <span className="summary-label">Total Generated Revenue</span>
-                                        <span className="summary-value">₹{modal.data.totalRevenue?.toLocaleString()}</span>
+                                        <span className="summary-value">₹{parseFloat(modal.data.totalRevenue || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
 
                                     <div className="summary-row">
                                         <span className="summary-label">Platform Fee (30%)</span>
-                                        <span className="summary-value text-warning">- ₹{modal.data.platformShare?.toLocaleString()}</span>
+                                        <span className="summary-value text-warning">- ₹{parseFloat(modal.data.platformShare || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
 
                                     <div className="summary-row" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
                                         <span className="summary-label">Sponsor Gross Share (70%)</span>
-                                        <span className="summary-value text-success">₹{modal.data.sponsorShare?.toLocaleString()}</span>
+                                        <span className="summary-value text-success">₹{parseFloat(modal.data.sponsorShare || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
 
                                     <div className="summary-row">
                                         <span className="summary-label">Total Amount Withdrawn</span>
-                                        <span className="summary-value text-danger">- ₹{modal.data.totalWithdrawn?.toLocaleString()}</span>
+                                        <span className="summary-value text-danger">- ₹{parseFloat(modal.data.totalWithdrawn || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                                     </div>
 
                                     <div className="summary-row total">
                                         <span className="summary-label">Current Withdrawable Balance</span>
                                         <span className="summary-value" style={{ fontSize: '1.4rem', color: modal.data.currentBalance < 0 ? '#ef4444' : '#0f172a' }}>
-                                            ₹{modal.data.currentBalance?.toLocaleString()}
+                                            ₹{parseFloat(modal.data.currentBalance || 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                                         </span>
                                     </div>
                                 </div>

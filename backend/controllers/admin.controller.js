@@ -3,6 +3,7 @@ const SupabaseDB = require('../models/supabaseDB');
 const { getISTTimestamp } = require('../utils/dateUtils');
 const { generateInvoiceBuffer } = require('../utils/invoiceGenerator');
 const { sendEmail, sendRefundCompleteEmail, sendSOSLinkEmail, sendRideCompletedEmail, sendVehicleApprovedEmail } = require('../config/emailService');
+const { sendWithdrawalPaidEmail } = require('../config/sponsorEmailService');
 const { makeBookingConfirmationCall } = require('../config/retellCallService');
 const { sendImmediateReminderIfNeeded, checkAndSendReminders } = require('../services/reminderService');
 const { normalizeVehicleType } = require('../utils/vehicleTypeNormalizer');
@@ -1611,12 +1612,47 @@ const updateWithdrawalStatus = async (req, res) => {
             .from('withdrawal_requests')
             .update(updateData)
             .eq('id', id)
-            .select()
+            .select(`
+                *,
+                sponsors:sponsor_id (
+                    id,
+                    full_name,
+                    email,
+                    phone_number
+                )
+            `)
             .single();
 
         if (error) {
             console.error('❌ Error updating withdrawal:', error);
             return res.status(500).json({ error: 'Failed to update withdrawal request' });
+        }
+
+        // Send Email Notification if Completed (Paid)
+        if (status === 'completed') {
+            try {
+                const sponsorEmail = data.sponsors?.email;
+                const sponsorName = data.sponsors?.full_name || 'Partner';
+
+                if (sponsorEmail) {
+                    await sendWithdrawalPaidEmail(
+                        sponsorEmail,
+                        sponsorName,
+                        {
+                            amount: data.amount,
+                            transactionReference: data.transaction_reference || transactionReference,
+                            date: data.processed_at || new Date(),
+                            paymentMethod: data.payment_method,
+                            bankName: null
+                        }
+                    );
+                    console.log(`📧 [EMAIL] Withdrawal confirmation sent to ${sponsorEmail}`);
+                } else {
+                    console.warn('⚠️ [EMAIL] Sponsor email not found, skipping notification');
+                }
+            } catch (emailErr) {
+                console.error('❌ [EMAIL] Failed to send withdrawal email:', emailErr);
+            }
         }
 
         console.log('✅ Withdrawal updated successfully');
