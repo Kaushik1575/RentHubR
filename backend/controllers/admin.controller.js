@@ -5,6 +5,7 @@ const { generateInvoiceBuffer } = require('../utils/invoiceGenerator');
 const { sendEmail, sendRefundCompleteEmail, sendSOSLinkEmail, sendRideCompletedEmail, sendVehicleApprovedEmail } = require('../config/emailService');
 const { makeBookingConfirmationCall } = require('../config/retellCallService');
 const { sendImmediateReminderIfNeeded, checkAndSendReminders } = require('../services/reminderService');
+const { normalizeVehicleType } = require('../utils/vehicleTypeNormalizer');
 const Razorpay = require('razorpay');
 const crypto = require('crypto');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com']; // Replace with env or config if needed
@@ -1366,77 +1367,151 @@ const cronReminderCheck = async (req, res) => {
 
 const getSponsorEarnings = async (req, res) => {
     try {
+        console.log('🔍 Generating Sponsor Earnings Report...');
+
         // 1. Get all sponsors
         const { data: sponsors, error: sError } = await supabase.from('sponsors').select('id, full_name, email');
         if (sError) throw sError;
 
-        // 2. Get all vehicles (bikes, cars, scooty) with sponsor_id
-        const [bikes, cars, scooty] = await Promise.all([
+        // 2. Get all vehicles
+        const [bikesRes, carsRes, scootyRes] = await Promise.all([
             supabase.from('bikes').select('id, sponsor_id'),
             supabase.from('cars').select('id, sponsor_id'),
             supabase.from('scooty').select('id, sponsor_id')
         ]);
 
-        // Map Vehicle ID -> Sponsor ID
-        const vehicleSponsorMap = new Map();
+        const bikes = bikesRes.data || [];
+        const cars = carsRes.data || [];
+        const scooty = scootyRes.data || [];
 
-        (bikes.data || []).forEach(v => vehicleSponsorMap.set(`${v.id}-bike`, v.sponsor_id));
-        (cars.data || []).forEach(v => vehicleSponsorMap.set(`${v.id}-car`, v.sponsor_id));
-        (scooty.data || []).forEach(v => vehicleSponsorMap.set(`${v.id}-scooty`, v.sponsor_id));
+        // Map Vehicle -> Sponsor & Count Vehicles
+        const vehicleSponsorMap = new Map(); // Key: "id-type" -> sponsorId
+        const vehicleIdOnlyMap = new Map();  // Key: id -> sponsorId (fallback)
+        const sponsorVehicleCounts = {};
 
-        // Also fallback map for ID-only
-        const vehicleIdSponsorMap = new Map();
-        [...(bikes.data || []), ...(cars.data || []), ...(scooty.data || [])].forEach(v => {
-            vehicleIdSponsorMap.set(v.id, v.sponsor_id);
-        });
+        const processVehicles = (list, type) => {
+            list.forEach(v => {
+                const sId = v.sponsor_id || 'unassigned';
+                const idStr = String(v.id);
+
+                // Maps
+                vehicleSponsorMap.set(`${idStr}-${type}`, sId); // e.g. "10-bike"
+                vehicleIdOnlyMap.set(idStr, sId);
+
+                // Count (only count each vehicle once)
+                if (!sponsorVehicleCounts[sId]) sponsorVehicleCounts[sId] = 0;
+                sponsorVehicleCounts[sId]++;
+            });
+        };
+
+        processVehicles(bikes, 'bike');
+        processVehicles(cars, 'car');
+        processVehicles(scooty, 'scooty');
 
         // 3. Get all bookings
         const { data: bookings, error: bError } = await supabase
             .from('bookings')
-            .select('total_amount, status, created_at, vehicle_id, vehicle_type')
+            .select('id, total_amount, status, created_at, vehicle_id, vehicle_type, booking_id, advance_payment')
             .order('created_at', { ascending: false });
 
         if (bError) throw bError;
 
-        // 4. Aggregate
-        const earnings = {};
+        // 4. Get Withdrawals
+        const { data: withdrawals, error: wError } = await supabase
+            .from('withdrawal_requests')
+            .select('sponsor_id, amount, status');
 
-        // Initialize
-        (sponsors || []).forEach(s => {
-            earnings[s.id] = {
-                id: s.id,
-                name: s.full_name,
-                email: s.email,
-                totalRevenue: 0,
-                sponsorShare: 0,
-                platformShare: 0,
-                bookingsCount: 0
-            };
+        if (wError) console.error('Error fetching withdrawals:', wError);
+
+        const withdrawalMap = {}; // sponsorId -> totalWithdrawn
+        (withdrawals || []).forEach(w => {
+            if (['approved', 'completed'].includes(w.status)) {
+                const amt = parseFloat(w.amount) || 0;
+                if (!withdrawalMap[w.sponsor_id]) withdrawalMap[w.sponsor_id] = 0;
+                withdrawalMap[w.sponsor_id] += amt;
+            }
         });
 
-        earnings['unassigned'] = { id: 'unassigned', name: 'Unassigned / RentHub', email: '---', totalRevenue: 0, sponsorShare: 0, platformShare: 0, bookingsCount: 0 };
+        // 5. Initialize Earnings Structure
+        const earnings = {};
+        const initSponsor = (id, name, email) => ({
+            id, name, email,
+            totalRevenue: 0,
+            sponsorShare: 0,
+            platformShare: 0,
+            bookingsCount: 0,
+            totalWithdrawn: 0,
+            currentBalance: 0,
+            totalVehicles: sponsorVehicleCounts[id] || 0
+        });
 
+        (sponsors || []).forEach(s => {
+            earnings[s.id] = initSponsor(s.id, s.full_name, s.email);
+        });
+
+        // Ensure 'unassigned' exists
+        if (!earnings['unassigned']) {
+            earnings['unassigned'] = initSponsor('unassigned', 'Unassigned / RentHub', '---');
+        }
+
+        // 6. Process Bookings
         (bookings || []).forEach(b => {
-            if (!['completed', 'ride_completed', 'ride_ended', 'payment_success'].includes(b.status)) return;
+            // Only count revenue for COMPLETED bookings (must match sponsor dashboard logic)
+            const validStatus = ['completed', 'ride_completed', 'ride_ended', 'payment_success'];
+            if (!validStatus.includes(b.status)) return;
 
+            // Determine Amount: Use total_amount. If partial payment flow, ensure this logic matches requirements.
+            // For revenue report, we usually want the Total Booked Value or Actual Revenue.
             const amount = parseFloat(b.total_amount) || 0;
 
-            // Find Sponsor
-            const key = b.vehicle_type ? `${b.vehicle_id}-${b.vehicle_type}` : null;
-            let sponsorId = key ? vehicleSponsorMap.get(key) : vehicleIdSponsorMap.get(b.vehicle_id);
+            // Find Sponsor - Normalize vehicle type to handle plural forms
+            const vId = String(b.vehicle_id);
+            const vType = normalizeVehicleType(b.vehicle_type); // normalize "bikes" → "bike", "cars" → "car"
 
-            if (!sponsorId || !earnings[sponsorId]) sponsorId = 'unassigned';
+            let sponsorId = vehicleSponsorMap.get(`${vId}-${vType}`);
+
+            // Fallback 1: Try ID-only lookup (if types mismatch or missing)
+            if (!sponsorId) {
+                sponsorId = vehicleIdOnlyMap.get(vId);
+            }
+
+            // Fallback 2: Check variations if specific known types
+            if (!sponsorId) {
+                sponsorId = vehicleSponsorMap.get(`${vId}-bike`) ||
+                    vehicleSponsorMap.get(`${vId}-car`) ||
+                    vehicleSponsorMap.get(`${vId}-scooty`);
+            }
+
+            if (!sponsorId) sponsorId = 'unassigned';
+
+            // If sponsor deleted but historical booking exists, attribute to unassigned or basic placeholder
+            if (!earnings[sponsorId]) {
+                if (!earnings['unassigned']) earnings['unassigned'] = initSponsor('unassigned', 'Unassigned', '---');
+                sponsorId = 'unassigned';
+            }
 
             earnings[sponsorId].totalRevenue += amount;
             earnings[sponsorId].bookingsCount += 1;
         });
 
-        // Calculate Shares
-        const result = Object.values(earnings).map(e => ({
-            ...e,
-            platformShare: Math.round(e.totalRevenue * 0.30),
-            sponsorShare: Math.round(e.totalRevenue * 0.70)
-        }));
+        // 7. Calculate Final Stats
+        const result = Object.values(earnings).map(e => {
+            const platformShare = Math.round(e.totalRevenue * 0.70); // Corrected: Sponsor gets 70%
+            const platformFee = Math.round(e.totalRevenue * 0.30);   // Platform gets 30%
+            const withdrawn = withdrawalMap[e.id] || 0;
+            const balance = platformShare - withdrawn; // Sponsor Share - Withdrawn
+
+            return {
+                ...e,
+                platformShare: platformFee, // Renamed to platformFee in usage usually, but keeping var name consistent
+                sponsorShare: platformShare,
+                totalWithdrawn: withdrawn,
+                currentBalance: balance
+            };
+        });
+
+        // Sort by revenue desc
+        result.sort((a, b) => b.totalRevenue - a.totalRevenue);
 
         res.json(result);
 
@@ -1446,13 +1521,118 @@ const getSponsorEarnings = async (req, res) => {
     }
 };
 
+
+
+// Admin: Get all withdrawal requests
+const getAllWithdrawalRequests = async (req, res) => {
+    try {
+        console.log('🔍 [ADMIN API] Fetching withdrawal requests...');
+
+        // Fetch requests with sponsor details
+        // Note: We need to make sure the relationship is defined in Supabase or handle manual join if needed
+        // Assuming 'sponsors' table exists and is linked via sponsor_id
+
+        const { data: requests, error } = await supabase
+            .from('withdrawal_requests')
+            .select(`
+                *,
+                sponsors:sponsor_id (
+                    id,
+                    full_name,
+                    email,
+                    phone_number
+                )
+            `)
+            .order('created_at', { ascending: false });
+
+        if (error) {
+            console.error('❌ Error fetching withdrawal requests:', error);
+            // If relationship error, try fetching raw and manual join (fallback)
+            if (error.code === 'PGRST200') {
+                console.log('⚠️ Relationship error, attempting manual fetch...');
+                const { data: rawRequests } = await supabase
+                    .from('withdrawal_requests')
+                    .select('*')
+                    .order('created_at', { ascending: false });
+
+                if (!rawRequests) return res.status(500).json({ error: 'Failed to fetch' });
+
+                // Get unique sponsor IDs
+                const sponsorIds = [...new Set(rawRequests.map(r => r.sponsor_id))];
+
+                // Fetch sponsors
+                const { data: sponsors } = await supabase
+                    .from('sponsors')
+                    .select('id, full_name, email, phone_number')
+                    .in('id', sponsorIds);
+
+                // Map sponsors to requests
+                const enrichedRequests = rawRequests.map(req => ({
+                    ...req,
+                    sponsors: sponsors?.find(s => s.id === req.sponsor_id) || null
+                }));
+
+                return res.json({ requests: enrichedRequests });
+            }
+
+            return res.status(500).json({ error: 'Failed to fetch withdrawal requests' });
+        }
+
+        console.log(`✅ Found ${requests?.length || 0} withdrawal requests`);
+        res.json({ requests });
+    } catch (error) {
+        console.error('❌ Error in getAllWithdrawalRequests:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
+// Admin: Update withdrawal status (Approve/Reject/Complete)
+const updateWithdrawalStatus = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const { status, adminNotes, transactionReference } = req.body;
+
+        console.log(`📝 Updating withdrawal ${id} to ${status}`);
+
+        if (!['approved', 'rejected', 'completed'].includes(status)) {
+            return res.status(400).json({ error: 'Invalid status' });
+        }
+
+        const updateData = {
+            status,
+            updated_at: new Date().toISOString()
+        };
+
+        if (adminNotes) updateData.admin_notes = adminNotes;
+        if (transactionReference) updateData.transaction_reference = transactionReference;
+        if (status === 'completed') updateData.processed_at = new Date().toISOString();
+
+        const { data, error } = await supabase
+            .from('withdrawal_requests')
+            .update(updateData)
+            .eq('id', id)
+            .select()
+            .single();
+
+        if (error) {
+            console.error('❌ Error updating withdrawal:', error);
+            return res.status(500).json({ error: 'Failed to update withdrawal request' });
+        }
+
+        console.log('✅ Withdrawal updated successfully');
+        res.json({ message: 'Status updated successfully', request: data });
+    } catch (error) {
+        console.error('Error updating withdrawal status:', error);
+        res.status(500).json({ error: 'Internal server error' });
+    }
+};
+
 module.exports = {
     getAllBookings,
     getBookingById,
     deleteBooking,
     updateBooking,
     confirmBooking,
-
     cancelBookingAdmin,
     markRefundComplete,
     sendSOS,
@@ -1473,5 +1653,7 @@ module.exports = {
     manualReminderCheck,
     cronReminderCheck,
     handleQRScan,
-    getSponsorEarnings
+    getSponsorEarnings,
+    getAllWithdrawalRequests,
+    updateWithdrawalStatus
 };

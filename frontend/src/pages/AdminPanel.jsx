@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 import ConfirmationPopup from '../components/ConfirmationPopup';
 import { Scanner } from '@yudiel/react-qr-scanner';
+import './AdminPanelStyles.css';
 
 
 const AdminPanel = () => {
@@ -32,6 +33,8 @@ const AdminPanel = () => {
     const [vehicles, setVehicles] = useState([]);
     const [requests, setRequests] = useState([]); // New state for requests
     const [earnings, setEarnings] = useState([]); // Sponsor Earnings
+    const [withdrawalRequests, setWithdrawalRequests] = useState([]); // Withdrawal Requests
+    const [withdrawalFilter, setWithdrawalFilter] = useState('pending'); // 'pending', 'approved', 'history', 'all'
 
     // Modals State
     const [modal, setModal] = useState({ type: null, data: null }); // type: 'viewBooking', 'editBooking', etc.
@@ -65,6 +68,10 @@ const AdminPanel = () => {
         if (activeTab === 'requests') loadRequests(); // Load requests
         if (activeTab === 'policies') loadPolicies();
         if (activeTab === 'earnings') loadEarnings();
+        if (activeTab === 'withdrawals') {
+            loadWithdrawalRequests();
+            loadEarnings(); // Load earnings to show balance context
+        }
     }, [activeTab]);
 
     const loadDashboardStats = async () => {
@@ -124,6 +131,40 @@ const AdminPanel = () => {
             const res = await fetch('/api/admin/sponsor-earnings', { headers: { 'Authorization': `Bearer ${token}` } });
             if (res.ok) setEarnings(await res.json());
         } catch (e) { console.error(e); }
+    };
+
+    const loadWithdrawalRequests = async () => {
+        try {
+            const res = await fetch('/api/admin/withdrawal/requests', { headers: { 'Authorization': `Bearer ${token}` } });
+            if (res.ok) {
+                const data = await res.json();
+                setWithdrawalRequests(data.requests || []);
+            }
+        } catch (e) { console.error('Error loading withdrawals', e); }
+    };
+
+    const handleWithdrawalAction = async (id, status) => {
+        try {
+            const res = await fetch(`/api/admin/withdrawal/requests/${id}`, {
+                method: 'PUT',
+                headers: {
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ status })
+            });
+
+            if (res.ok) {
+                setPopup({ isOpen: true, type: 'success', title: 'Success', message: `Withdrawal request ${status}` });
+                loadWithdrawalRequests(); // Reload list
+                loadEarnings(); // Reload earnings to update balance
+            } else {
+                setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to update status' });
+            }
+        } catch (e) {
+            console.error('Error updating withdrawal:', e);
+            setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Something went wrong' });
+        }
     };
 
     const loadPolicies = () => {
@@ -440,6 +481,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <li><a className={`nav-link ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => { setActiveTab('requests'); setIsSidebarOpen(false); }}><i className="fas fa-clipboard-list"></i> Requests {requests.length > 0 && <span className="badge">{requests.length}</span>}</a></li>
                             <li><a className={`nav-link ${activeTab === 'policies' ? 'active' : ''}`} onClick={() => { setActiveTab('policies'); setIsSidebarOpen(false); }}><i className="fas fa-file-alt"></i> Policies</a></li>
                             <li><a className={`nav-link ${activeTab === 'earnings' ? 'active' : ''}`} onClick={() => { setActiveTab('earnings'); setIsSidebarOpen(false); }}><i className="fas fa-chart-line"></i> Sponsor Reports</a></li>
+                            <li><a className={`nav-link ${activeTab === 'withdrawals' ? 'active' : ''}`} onClick={() => { setActiveTab('withdrawals'); setIsSidebarOpen(false); }}><i className="fas fa-money-bill-wave"></i> Withdrawals</a></li>
                             <li><a className={`nav-link`} onClick={() => { navigate('/admin/loyalty-settings'); setIsSidebarOpen(false); }}><i className="fas fa-coins"></i> Loyalty Settings</a></li>
                         </ul>
                     </nav>
@@ -774,20 +816,78 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {activeTab === 'earnings' && (
                         <div id="earnings" className="content-section active">
                             <h2>Sponsor Earnings Report</h2>
+
+                            {/* Summary Dashboard Logic */}
+                            {(() => {
+                                const totalRevenueAll = earnings.reduce((sum, e) => sum + (e.totalRevenue || 0), 0);
+                                const sponsorShareAll = earnings.reduce((sum, e) => sum + (e.sponsorShare || 0), 0);
+                                const platformShareAll = earnings.reduce((sum, e) => sum + (e.platformShare || 0), 0);
+                                const withdrawnAll = earnings.reduce((sum, e) => sum + (e.totalWithdrawn || 0), 0);
+                                const pendingBalanceAll = earnings.reduce((sum, e) => sum + (e.currentBalance || 0), 0);
+
+                                return (
+                                    <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+                                        <div className="stat-card" style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #4299e1' }}>
+                                            <div style={{ color: '#718096', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '500' }}>TOTAL REVENUE</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2d3748' }}>₹{totalRevenueAll.toLocaleString()}</div>
+                                        </div>
+                                        <div className="stat-card" style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #48bb78' }}>
+                                            <div style={{ color: '#718096', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '500' }}>SPONSOR SHARE (70%)</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2d3748' }}>₹{sponsorShareAll.toLocaleString()}</div>
+                                        </div>
+                                        <div className="stat-card" style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #ed8936' }}>
+                                            <div style={{ color: '#718096', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '500' }}>PLATFORM FEE (30%)</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2d3748' }}>₹{platformShareAll.toLocaleString()}</div>
+                                        </div>
+                                        <div className="stat-card" style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #e53e3e' }}>
+                                            <div style={{ color: '#718096', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '500' }}>TOTAL PAID</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2d3748' }}>₹{withdrawnAll.toLocaleString()}</div>
+                                        </div>
+                                        <div className="stat-card" style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #805ad5' }}>
+                                            <div style={{ color: '#718096', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '500' }}>PENDING BALANCE</div>
+                                            <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2d3748' }}>₹{pendingBalanceAll.toLocaleString()}</div>
+                                        </div>
+                                    </div>
+                                );
+                            })()}
+
                             <div className="table-container">
-                                <table id="earnings-table">
-                                    <thead><tr><th>Sponsor</th><th>Email</th><th>Total Revenue</th><th>Sponsor Share (70%)</th><th>Platform Share (30%)</th><th>Bookings</th></tr></thead>
+                                <table id="earnings-table" className="sponsor-earnings-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Sponsor</th>
+                                            <th>Email</th>
+                                            <th>Vehicles</th>
+                                            <th>Total Revenue</th>
+                                            <th>Sponsor Share (70%)</th>
+                                            <th>Platform Fee (30%)</th>
+                                            <th>Withdrawn</th>
+                                            <th>Balance</th>
+                                            <th>Bookings</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
                                     <tbody>
                                         {earnings.length === 0 ? (
-                                            <tr><td colSpan="6" style={{ textAlign: 'center', padding: '20px' }}>No earnings data found</td></tr>
+                                            <tr><td colSpan="8" style={{ textAlign: 'center', padding: '20px' }}>No earnings data found</td></tr>
                                         ) : earnings.map((e, idx) => (
                                             <tr key={e.id || idx}>
                                                 <td>{e.name}</td>
                                                 <td>{e.email}</td>
+                                                <td style={{ textAlign: 'center' }}>{e.totalVehicles || 0}</td>
                                                 <td style={{ fontWeight: 'bold' }}>₹{e.totalRevenue.toLocaleString()}</td>
                                                 <td style={{ color: 'green' }}>₹{e.sponsorShare.toLocaleString()}</td>
-                                                <td style={{ color: 'blue' }}>₹{e.platformShare.toLocaleString()}</td>
+                                                <td style={{ color: '#ed8936' }}>₹{e.platformShare.toLocaleString()}</td>
+                                                <td style={{ color: '#e53e3e' }}>₹{e.totalWithdrawn?.toLocaleString() || 0}</td>
+                                                <td style={{ fontWeight: 'bold', color: e.currentBalance < 0 ? 'red' : 'black' }}>
+                                                    ₹{e.currentBalance?.toLocaleString() || 0}
+                                                </td>
                                                 <td>{e.bookingsCount}</td>
+                                                <td>
+                                                    <button className="action-btn btn-view btn-icon-only" onClick={() => setModal({ type: 'viewSponsorDetails', data: e })} title="View Details">
+                                                        <i className="fas fa-eye"></i>
+                                                    </button>
+                                                </td>
                                             </tr>
                                         ))}
                                     </tbody>
@@ -886,6 +986,174 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     <p>Last updated: December 2025</p>
                                     <p>RentHub Inc. &copy; All rights reserved.</p>
                                 </div>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* WITHDRAWALS */}
+                    {/* WITHDRAWALS */}
+                    {/* WITHDRAWALS */}
+                    {activeTab === 'withdrawals' && (
+                        <div id="withdrawals" className="content-section active">
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <h2>Sponsor Withdrawals</h2>
+                                <button className="action-btn" onClick={loadWithdrawalRequests}><i className="fas fa-sync-alt"></i></button>
+                            </div>
+
+                            {/* Stats Cards */}
+                            <div className="withdrawal-stats-container">
+                                <div className="withdrawal-stat-card orange">
+                                    <div className="w-stat-icon"><i className="fas fa-hourglass-half"></i></div>
+                                    <div className="w-stat-info">
+                                        <h4>Pending Requests</h4>
+                                        <p>{withdrawalRequests.filter(r => r.status === 'pending').length}</p>
+                                    </div>
+                                </div>
+                                <div className="withdrawal-stat-card blue">
+                                    <div className="w-stat-icon"><i className="fas fa-rupee-sign"></i></div>
+                                    <div className="w-stat-info">
+                                        <h4>Pending Amount</h4>
+                                        <p>₹{withdrawalRequests.filter(r => r.status === 'pending').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                                <div className="withdrawal-stat-card green">
+                                    <div className="w-stat-icon"><i className="fas fa-check-circle"></i></div>
+                                    <div className="w-stat-info">
+                                        <h4>Total Paid</h4>
+                                        <p>₹{withdrawalRequests.filter(r => r.status === 'completed').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toLocaleString()}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Filters */}
+                            <div className="withdrawal-filters-container">
+                                <div className="w-tabs">
+                                    <button className={`w-tab ${withdrawalFilter === 'pending' ? 'active' : ''}`} onClick={() => setWithdrawalFilter('pending')}>Pending</button>
+                                    <button className={`w-tab ${withdrawalFilter === 'approved' ? 'active' : ''}`} onClick={() => setWithdrawalFilter('approved')}>Approved</button>
+                                    <button className={`w-tab ${withdrawalFilter === 'history' ? 'active' : ''}`} onClick={() => setWithdrawalFilter('history')}>History</button>
+                                    <button className={`w-tab ${withdrawalFilter === 'all' ? 'active' : ''}`} onClick={() => setWithdrawalFilter('all')}>All Requests</button>
+                                </div>
+                            </div>
+
+                            <div className="withdrawal-table-container">
+                                <table id="withdrawals-table">
+                                    <thead>
+                                        <tr>
+                                            <th>Date & Time</th>
+                                            <th>Sponsor Details</th>
+                                            <th>Amount</th>
+                                            <th>Method</th>
+                                            <th>Payment Details</th>
+                                            <th>Status</th>
+                                            <th>Actions</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {withdrawalRequests
+                                            .filter(req => {
+                                                if (withdrawalFilter === 'all') return true;
+                                                if (withdrawalFilter === 'history') return ['completed', 'rejected'].includes(req.status);
+                                                return req.status === withdrawalFilter;
+                                            })
+                                            .length === 0 ? (
+                                            <tr><td colSpan="7" style={{ textAlign: 'center', padding: '60px', color: '#A0AEC0' }}>
+                                                <div style={{ marginBottom: '15px' }}><i className="fas fa-search" style={{ fontSize: '2.5rem', color: '#E2E8F0' }}></i></div>
+                                                <div style={{ fontSize: '1.1rem', fontWeight: '500' }}>No {withdrawalFilter !== 'all' ? withdrawalFilter : ''} requests found</div>
+                                            </td></tr>
+                                        ) : withdrawalRequests
+                                            .filter(req => {
+                                                if (withdrawalFilter === 'all') return true;
+                                                if (withdrawalFilter === 'history') return ['completed', 'rejected'].includes(req.status);
+                                                return req.status === withdrawalFilter;
+                                            })
+                                            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                                            .map(req => {
+                                                const sEarnings = earnings.find(e => e.id === req.sponsor_id);
+                                                const balance = sEarnings ? sEarnings.currentBalance : null;
+                                                return (
+                                                    <tr key={req.id} className="withdrawal-row">
+                                                        <td>
+                                                            <div className="col-date">
+                                                                <div className="col-date-main">{new Date(req.created_at).toLocaleDateString()}</div>
+                                                                <div className="col-date-sub">
+                                                                    <i className="far fa-clock"></i> {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td>
+                                                            <div className="sponsor-cell">
+                                                                <div className="sponsor-avatar">
+                                                                    {(req.sponsors?.full_name || 'SP').substring(0, 2).toUpperCase()}
+                                                                </div>
+                                                                <div className="sponsor-info">
+                                                                    <div className="sponsor-name">{req.sponsors?.full_name || 'Unknown'}</div>
+                                                                    <div className="sponsor-email">{req.sponsors?.email || 'N/A'}</div>
+                                                                    {balance !== null && (
+                                                                        <div style={{ fontSize: '0.85rem', color: balance < 0 ? '#e53e3e' : '#2ecc71', fontWeight: 'bold' }}>
+                                                                            Bal: ₹{balance.toLocaleString()}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
+                                                        </td>
+                                                        <td className="withdrawal-amount">₹{parseFloat(req.amount).toLocaleString()}</td>
+                                                        <td>
+                                                            <span className={`method-badge ${req.payment_method}`}>
+                                                                {req.payment_method === 'bank' ? <i className="fas fa-university"></i> : <i className="fas fa-mobile-alt"></i>}
+                                                                {req.payment_method.toUpperCase()}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            {req.payment_method === 'bank' ? (
+                                                                <div style={{ fontSize: '0.85em' }}>
+                                                                    <div>Acct: {req.bank_account_number}</div>
+                                                                    <div>IFSC: {req.ifsc_code}</div>
+                                                                </div>
+                                                            ) : (
+                                                                <div style={{ fontSize: '0.85em' }}>
+                                                                    UPI: {req.upi_id}
+                                                                </div>
+                                                            )}
+                                                        </td>
+                                                        <td>
+                                                            <span className={`status-badge status-${req.status}`}>
+                                                                {req.status.toUpperCase()}
+                                                            </span>
+                                                        </td>
+                                                        <td>
+                                                            {req.status === 'pending' && (
+                                                                <div style={{ display: 'flex', gap: '5px' }}>
+                                                                    <button
+                                                                        className="action-btn btn-confirm"
+                                                                        title="Approve"
+                                                                        onClick={() => handleWithdrawalAction(req.id, 'approved')}
+                                                                    >
+                                                                        <i className="fas fa-check"></i>
+                                                                    </button>
+                                                                    <button
+                                                                        className="action-btn btn-delete"
+                                                                        title="Reject"
+                                                                        onClick={() => handleWithdrawalAction(req.id, 'rejected')}
+                                                                    >
+                                                                        <i className="fas fa-times"></i>
+                                                                    </button>
+                                                                </div>
+                                                            )}
+                                                            {req.status === 'approved' && (
+                                                                <button
+                                                                    className="action-btn btn-confirm"
+                                                                    style={{ background: '#2196F3', borderColor: '#2196F3' }}
+                                                                    onClick={() => handleWithdrawalAction(req.id, 'completed')}
+                                                                >
+                                                                    <i className="fas fa-check-double"></i> Pay
+                                                                </button>
+                                                            )}
+                                                        </td>
+                                                    </tr>
+                                                );
+                                            })}
+                                    </tbody>
+                                </table>
                             </div>
                         </div>
                     )}
@@ -1207,6 +1475,112 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <div style={{ marginBottom: '12px' }}><label>Phone</label><input type="text" value={editUserData.phoneNumber || ''} onChange={e => setEditUserData({ ...editUserData, phoneNumber: e.target.value })} /></div>
                             <button className="action-btn btn-confirm">Save</button>
                         </form>
+                    </div>
+                </div>
+            )}
+
+            {/* SPONSOR DETAILS MODAL */}
+            {modal.type === 'viewSponsorDetails' && (
+                <div className="modal">
+                    <div className="modal-content sponsor-dashboard-modal" style={{ maxWidth: '900px', width: '95%', padding: '0', background: 'transparent', border: 'none' }}>
+
+                        {/* Header */}
+                        <div className="modal-header-styled">
+                            <h2>
+                                <i className="fas fa-chart-line"></i>
+                                {modal.data.name}'s Dashboard
+                            </h2>
+                            <button className="modal-close-btn-styled" onClick={() => setModal({ type: null })}>
+                                <i className="fas fa-times"></i>
+                            </button>
+                        </div>
+
+                        {/* Body */}
+                        <div className="modal-body-styled">
+
+                            {/* Premium Stats Grid */}
+                            <div className="modal-stats-grid">
+                                <div className="stat-card-premium">
+                                    <div className="stat-icon-wrapper" style={{ background: '#ecfdf5', color: '#10b981' }}>
+                                        <i className="fas fa-car-side"></i>
+                                    </div>
+                                    <div className="stat-content">
+                                        <h4>Total Vehicles</h4>
+                                        <p>{modal.data.totalVehicles || 0}</p>
+                                    </div>
+                                </div>
+                                <div className="stat-card-premium">
+                                    <div className="stat-icon-wrapper" style={{ background: '#eff6ff', color: '#3b82f6' }}>
+                                        <i className="fas fa-rupee-sign"></i>
+                                    </div>
+                                    <div className="stat-content">
+                                        <h4>Total Revenue</h4>
+                                        <p>₹{modal.data.totalRevenue?.toLocaleString()}</p>
+                                    </div>
+                                </div>
+                                <div className="stat-card-premium">
+                                    <div className="stat-icon-wrapper" style={{ background: '#f0fdf4', color: '#16a34a' }}>
+                                        <i className="fas fa-wallet"></i>
+                                    </div>
+                                    <div className="stat-content">
+                                        <h4>Net Earnings</h4>
+                                        <p className="text-success">₹{modal.data.sponsorShare?.toLocaleString()}</p>
+                                    </div>
+                                </div>
+                                <div className="stat-card-premium">
+                                    <div className="stat-icon-wrapper" style={{ background: '#fef2f2', color: '#ef4444' }}>
+                                        <i className="fas fa-calendar-check"></i>
+                                    </div>
+                                    <div className="stat-content">
+                                        <h4>Bookings</h4>
+                                        <p>{modal.data.bookingsCount}</p>
+                                    </div>
+                                </div>
+                            </div>
+
+                            {/* Detailed Financial Summary */}
+                            <div className="financial-summary-section">
+                                <h3><i className="fas fa-file-invoice-dollar" style={{ marginRight: '8px' }}></i> Financial Summary</h3>
+
+                                <div className="summary-rows">
+                                    <div className="summary-row">
+                                        <span className="summary-label">Sponsor Name</span>
+                                        <span className="summary-value">{modal.data.name}</span>
+                                    </div>
+                                    <div className="summary-row">
+                                        <span className="summary-label">Registered Email</span>
+                                        <span className="summary-value" style={{ color: '#64748b' }}>{modal.data.email}</span>
+                                    </div>
+                                    <div className="summary-row" style={{ marginTop: '10px' }}>
+                                        <span className="summary-label">Total Generated Revenue</span>
+                                        <span className="summary-value">₹{modal.data.totalRevenue?.toLocaleString()}</span>
+                                    </div>
+
+                                    <div className="summary-row">
+                                        <span className="summary-label">Platform Fee (30%)</span>
+                                        <span className="summary-value text-warning">- ₹{modal.data.platformShare?.toLocaleString()}</span>
+                                    </div>
+
+                                    <div className="summary-row" style={{ borderBottom: '1px solid #f1f5f9', paddingBottom: '12px' }}>
+                                        <span className="summary-label">Sponsor Gross Share (70%)</span>
+                                        <span className="summary-value text-success">₹{modal.data.sponsorShare?.toLocaleString()}</span>
+                                    </div>
+
+                                    <div className="summary-row">
+                                        <span className="summary-label">Total Amount Withdrawn</span>
+                                        <span className="summary-value text-danger">- ₹{modal.data.totalWithdrawn?.toLocaleString()}</span>
+                                    </div>
+
+                                    <div className="summary-row total">
+                                        <span className="summary-label">Current Withdrawable Balance</span>
+                                        <span className="summary-value" style={{ fontSize: '1.4rem', color: modal.data.currentBalance < 0 ? '#ef4444' : '#0f172a' }}>
+                                            ₹{modal.data.currentBalance?.toLocaleString()}
+                                        </span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
                 </div>
             )}
