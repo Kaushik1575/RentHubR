@@ -3946,3 +3946,19 @@ main.booking-page-main {
     padding: 6px 12px;
     border-radius: 6px;
 }
+
+/* Promo Cards Mobile Responsiveness */
+@media (max-width: 768px) {
+    /* Force promo cards to stack on mobile */
+    .vehicle-showcase .container > div[style*="grid"] {
+        grid-template-columns: 1fr !important;
+    }
+}
+
+@media (max-width: 576px) {
+    /* Ensure single column on very small screens */
+    .vehicle-showcase .container > div[style*="grid"] {
+        grid-template-columns: 1fr !important;
+        gap: 15px !important;
+    }
+}

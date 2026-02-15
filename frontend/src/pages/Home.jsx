@@ -185,7 +185,13 @@ const Home = () => {
                     {/* Ride & Earn Promo Banner */}
                     {/* Ride & Earn Promo Banner */}
                     {/* New Split Promo Section */}
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '20px', margin: '40px 0' }}>
+                    <div style={{
+                        display: 'grid',
+                        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                        gap: '20px',
+                        margin: '40px 0',
+                        width: '100%'
+                    }}>
 
                         {/* Card 1: Ride & Earn */}
                         <div onClick={handleRewardClick} style={{ textDecoration: 'none' }}>
