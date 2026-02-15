@@ -263,6 +263,44 @@ const Home = () => {
                             </div>
                         </div>
 
+                        {/* Card 3: Become a Sponsor */}
+                        <div onClick={() => window.open('https://sponser-seven.vercel.app/', '_blank')} style={{ textDecoration: 'none' }}>
+                            <div style={{
+                                background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
+                                borderRadius: '20px',
+                                padding: '25px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: '20px',
+                                boxShadow: '0 10px 25px rgba(17, 153, 142, 0.3)',
+                                transition: 'transform 0.2s',
+                                cursor: 'pointer',
+                                position: 'relative',
+                                overflow: 'hidden'
+                            }}
+                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'}
+                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
+                            >
+                                <div style={{
+                                    background: 'rgba(255,255,255,0.25)',
+                                    borderRadius: '50%',
+                                    width: '70px', height: '70px',
+                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                    fontSize: '32px',
+                                    backdropFilter: 'blur(5px)',
+                                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
+                                }}>🚗</div>
+                                <div>
+                                    <h3 style={{ margin: '0 0 5px 0', color: 'white', fontSize: '22px', fontWeight: '800' }}>Become a Sponsor</h3>
+                                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.95)', fontSize: '14px', fontWeight: '500' }}>
+                                        Add your vehicle & <strong>Earn Money</strong>.<br />Start earning today!
+                                    </p>
+                                </div>
+                                {/* Decorative circle */}
+                                <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '110px', height: '110px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
+                            </div>
+                        </div>
+
                     </div>
 
 
