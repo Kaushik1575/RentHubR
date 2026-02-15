@@ -1085,6 +1085,41 @@ const addVehicle = async (req, res) => {
         else if (type === 'scooty') type = 'scooty';
         else return res.status(400).json({ error: 'Invalid vehicle type' });
 
+        // --- IDEMPOTENCY & DUPLICATE CHECKS ---
+        if (requestId) {
+            // 1. Check if request is already approved
+            const { data: requestCheck, error: checkError } = await supabase
+                .from('sponsor_vehicle_requests')
+                .select('status')
+                .eq('id', requestId)
+                .single();
+
+            if (checkError) {
+                console.error('Error checking request status:', checkError);
+                return res.status(500).json({ error: 'Error validating request' });
+            }
+
+            if (requestCheck && requestCheck.status === 'approved') {
+                console.log(`⚠️ Request ${requestId} is already approved. Preventing duplicate.`);
+                return res.status(200).json({ message: 'Vehicle already approved', alreadyApproved: true });
+            }
+        }
+
+        // 2. Check if Registration Number already exists in the target table
+        if (bodyData.registration_number) {
+            const { data: existingVehicle, error: existError } = await supabase
+                .from(type)
+                .select('id')
+                .eq('registration_number', bodyData.registration_number)
+                .single();
+
+            if (existingVehicle) {
+                console.log(`⚠️ Vehicle with Reg No ${bodyData.registration_number} already exists.`);
+                return res.status(409).json({ error: 'Vehicle with this registration number already exists' });
+            }
+        }
+        // --------------------------------------
+
         // Define allowed columns based on known schema
         const allowedColumns = [
             'name',
@@ -1097,7 +1132,11 @@ const addVehicle = async (req, res) => {
             'engine',
             'rc_url',
             'insurance_url',
-            'puc_url'
+            'puc_url',
+            'registration_number', // Ensure this is allowed
+            'model',
+            'year',
+            'category'
         ];
 
         // Construct insert object
@@ -1117,9 +1156,6 @@ const addVehicle = async (req, res) => {
         // Ensure default fields
         insertData.is_approved = true;
 
-        // Note: We deliberately IGNORE 'model', 'year', 'category', 'registration_number'
-        // if they are not in allowedColumns, and we do NOT combine them into 'name'.
-
         // Insert into main table
         const { data, error } = await supabase
             .from(type)
@@ -1132,10 +1168,12 @@ const addVehicle = async (req, res) => {
         // If this was a sponsor request, approve it and send email
         if (requestId) {
             // 1. Update status
-            await supabase
+            const { error: updateReqError } = await supabase
                 .from('sponsor_vehicle_requests')
                 .update({ status: 'approved' })
                 .eq('id', requestId);
+
+            if (updateReqError) console.error("Error updating request status:", updateReqError);
 
             // 2. Send notification email
             try {

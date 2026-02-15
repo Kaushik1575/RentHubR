@@ -51,6 +51,7 @@ const AdminPanel = () => {
         title: '',
         message: ''
     });
+    const [isSubmitting, setIsSubmitting] = useState(false);
 
     useEffect(() => {
         if (!token || !adminUser || !adminUser.adminId) {
@@ -367,6 +368,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
     const handleVehicleSubmit = async (e) => {
         e.preventDefault();
+        if (isSubmitting) return;
+
+        setIsSubmitting(true);
         const isEdit = !!vehicleFormData.id;
         const url = isEdit
             ? `/api/admin/vehicles/${vehicleFormData.type}/${vehicleFormData.id}`
@@ -379,14 +383,27 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                 headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
                 body: JSON.stringify(vehicleFormData)
             });
+
+            const data = await res.json();
+
             if (res.ok) {
+                if (data.alreadyApproved) {
+                    setPopup({ isOpen: true, type: 'success', title: 'Already Approved', message: data.message });
+                } else {
+                    setPopup({ isOpen: true, type: 'success', title: isEdit ? 'Updated' : 'Added', message: `Vehicle ${isEdit ? 'updated' : 'added'} successfully` });
+                }
                 setModal({ type: null });
                 loadVehicles();
-                setPopup({ isOpen: true, type: 'success', title: isEdit ? 'Updated' : 'Added', message: `Vehicle ${isEdit ? 'updated' : 'added'} successfully` });
+                if (activeTab === 'requests') loadRequests();
             } else {
-                setPopup({ isOpen: true, type: 'error', title: 'Action Failed', message: 'Operation failed' });
+                setPopup({ isOpen: true, type: 'error', title: 'Action Failed', message: data.error || 'Operation failed' });
             }
-        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error saving vehicle' }); }
+        } catch (e) {
+            console.error(e);
+            setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error saving vehicle' });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     const handleApproveRequest = (request) => {
@@ -1743,9 +1760,17 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             {/* Footer / Actions */}
                             <div style={{ marginTop: '25px', paddingTop: '20px', borderTop: '1px solid #eee', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
                                 <button type="button" className="action-btn" style={{ background: '#f8f9fa', color: '#333', border: '1px solid #ddd' }} onClick={() => setModal({ type: null })}>Cancel</button>
-                                <button type="submit" className="action-btn btn-confirm" style={{ minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}>
-                                    <i className="fas fa-save"></i>
-                                    {modal.type === 'addVehicle' ? (vehicleFormData.requestId ? 'Approve & Earn' : 'Add Vehicle') : 'Save Changes'}
+                                <button type="submit" className="action-btn btn-confirm" disabled={isSubmitting} style={{ minWidth: '120px', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', opacity: isSubmitting ? 0.7 : 1, cursor: isSubmitting ? 'not-allowed' : 'pointer' }}>
+                                    {isSubmitting ? (
+                                        <>
+                                            <i className="fas fa-spinner fa-spin"></i> Processing...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <i className="fas fa-save"></i>
+                                            {modal.type === 'addVehicle' ? (vehicleFormData.requestId ? 'Approve & Earn' : 'Add Vehicle') : 'Save Changes'}
+                                        </>
+                                    )}
                                 </button>
                             </div>
 
