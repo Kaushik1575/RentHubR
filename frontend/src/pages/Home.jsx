@@ -187,7 +187,7 @@ const Home = () => {
                     {/* New Split Promo Section */}
                     <div style={{
                         display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))',
+                        gridTemplateColumns: 'repeat(3, 1fr)',
                         gap: '20px',
                         margin: '40px 0',
                         width: '100%'
@@ -298,7 +298,7 @@ const Home = () => {
                                 }}>🚗</div>
                                 <div>
                                     <h3 style={{ margin: '0 0 5px 0', color: 'white', fontSize: '22px', fontWeight: '800' }}>Become a Sponsor</h3>
-                                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.95)', fontSize: '14px', fontWeight: '500' }}>
+                                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.95)', fontSize: '14px', fontWeight: '500', lineHeight: '1.5' }}>
                                         Add your vehicle & <strong>Earn Money</strong>.<br />Start earning today!
                                     </p>
                                 </div>
