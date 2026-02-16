@@ -23,9 +23,9 @@ const Home = () => {
                 const scootersData = await scootersRes.json();
                 const carsData = await carsRes.json();
 
-                setBikes(bikesData || []);
-                setScooters(scootersData || []);
-                setCars(carsData || []);
+                setBikes((bikesData || []).filter(v => v.is_available));
+                setScooters((scootersData || []).filter(v => v.is_available));
+                setCars((carsData || []).filter(v => v.is_available));
             } catch (error) {
                 console.error('Error loading vehicles:', error);
             } finally {
