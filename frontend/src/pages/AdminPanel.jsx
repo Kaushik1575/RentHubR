@@ -438,6 +438,22 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error rejecting request' }); }
     };
 
+    const handleDeleteRequest = async (id) => {
+        if (!window.confirm('Are you sure you want to delete this request permanently?')) return;
+        try {
+            const res = await fetch(`/api/admin/vehicle-requests/${id}`, {
+                method: 'DELETE',
+                headers: { 'Authorization': `Bearer ${token}` }
+            });
+            if (res.ok) {
+                loadRequests();
+                setPopup({ isOpen: true, type: 'success', title: 'Deleted', message: 'Request deleted' });
+            } else {
+                setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to delete' });
+            }
+        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error deleting request' }); }
+    };
+
     // --- Filtering ---
     const filteredUsers = users.filter(u => {
         const s = usersFilter.toLowerCase();
@@ -803,12 +819,22 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
                                                 <div className="req-footer" style={{ borderTop: '1px solid #eee', marginTop: '15px', paddingTop: '15px' }}>
                                                     {r.status === 'approved' ? (
-                                                        <div style={{ width: '100%', textAlign: 'center', color: '#28a745', fontWeight: 'bold', fontSize: '1.1rem', padding: '8px', background: '#e6fffa', borderRadius: '6px' }}>
-                                                            <i className="fas fa-check-circle"></i> Approved
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                            <div style={{ width: '100%', textAlign: 'center', color: '#28a745', fontWeight: 'bold', fontSize: '1.1rem', padding: '8px', background: '#e6fffa', borderRadius: '6px' }}>
+                                                                <i className="fas fa-check-circle"></i> Approved
+                                                            </div>
+                                                            <button className="req-btn reject" style={{ width: '100%', background: '#dc3545', color: '#fff', border: 'none' }} onClick={() => handleDeleteRequest(r.id)}>
+                                                                <i className="fas fa-trash"></i> Delete Request
+                                                            </button>
                                                         </div>
                                                     ) : r.status === 'rejected' ? (
-                                                        <div style={{ width: '100%', textAlign: 'center', color: '#e53e3e', fontWeight: 'bold', fontSize: '1.1rem', padding: '8px', background: '#fff5f5', borderRadius: '6px' }}>
-                                                            <i className="fas fa-times-circle"></i> Rejected
+                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                            <div style={{ width: '100%', textAlign: 'center', color: '#e53e3e', fontWeight: 'bold', fontSize: '1.1rem', padding: '8px', background: '#fff5f5', borderRadius: '6px' }}>
+                                                                <i className="fas fa-times-circle"></i> Rejected
+                                                            </div>
+                                                            <button className="req-btn reject" style={{ width: '100%', background: '#dc3545', color: '#fff', border: 'none' }} onClick={() => handleDeleteRequest(r.id)}>
+                                                                <i className="fas fa-trash"></i> Delete Request
+                                                            </button>
                                                         </div>
                                                     ) : (
                                                         <>

@@ -112,7 +112,8 @@ class SupabaseDB {
     static async getVehicles(type) {
         const { data, error } = await supabase
             .from(type) // 'bikes', 'cars', or 'scooty'
-            .select('*');
+            .select('*')
+            .eq('is_available', true);
 
         if (error) throw error;
         return data;

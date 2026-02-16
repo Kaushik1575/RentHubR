@@ -1366,6 +1366,21 @@ const rejectVehicle = async (req, res) => {
     }
 };
 
+const deleteVehicleRequest = async (req, res) => {
+    try {
+        const { error } = await supabase
+            .from('sponsor_vehicle_requests')
+            .delete()
+            .eq('id', req.params.id);
+
+        if (error) throw error;
+        res.json({ message: 'Request deleted successfully' });
+    } catch (error) {
+        console.error('Error deleting request:', error);
+        res.status(500).json({ error: 'Failed to delete request' });
+    }
+};
+
 const getPolicies = async (req, res) => {
     try {
         const { data } = await supabase.from('policies').select('*');
@@ -1731,6 +1746,7 @@ module.exports = {
     cronReminderCheck,
     handleQRScan,
     getSponsorEarnings,
+    deleteVehicleRequest,
     getAllWithdrawalRequests,
     updateWithdrawalStatus
 };
