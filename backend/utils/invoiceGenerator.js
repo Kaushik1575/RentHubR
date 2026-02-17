@@ -209,7 +209,7 @@ const generateInvoiceBuffer = async (bookingId, userName, userEmail, vehicleName
         // ===== FOOTER =====
         const footerY = pageHeight - 40;
         doc.fillColor('#f3f4f6').rect(0, footerY, pageWidth, 40).fill();
-        doc.fillColor('#6b7280').fontSize(8).font('Helvetica').text('RentHub — Premium Bike & Scooty Rentals | support@renthub.in | +91 98765 43210 | www.renthub.in', margin, footerY + 5, { width: contentWidth });
+        doc.fillColor('#6b7280').fontSize(8).font('Helvetica').text('RentHub — Premium Bike & Scooty Rentals | renthub.otp@gmail.com | +91 9040757683 | www.renthub.in', margin, footerY + 5, { width: contentWidth });
         doc.fillColor('#9ca3af').fontSize(7).text('© 2024 RentHub. All rights reserved.', margin, footerY + 22);
 
         doc.end();
