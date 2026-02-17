@@ -421,7 +421,7 @@ const confirmBooking = async (req, res) => {
                                                 <!-- Contact Support -->
                                                 <div style="text-align: center; margin: 30px 0; padding: 20px; background: #f8f9fa; border-radius: 8px;">
                                                     <p style="margin: 0 0 10px 0; color: #666; font-size: 14px;">Need help or want to make changes?</p>
-                                                    <a href="tel:+919000000000" style="color: #667eea; text-decoration: none; font-weight: bold; font-size: 16px;">📞 Call Support</a>
+                                                    <a href="tel:+919040757683" style="color: #667eea; text-decoration: none; font-weight: bold; font-size: 16px;">📞 Call Support (+91 9040757683)</a>
                                                 </div>
                                             </td>
                                         </tr>
@@ -430,7 +430,7 @@ const confirmBooking = async (req, res) => {
                                         <tr>
                                             <td style="background-color: #333; color: #fff; padding: 25px; text-align: center; font-size: 14px;">
                                                 <p style="margin: 0 0 10px 0; font-weight: bold;">RentHub - Your Journey, Our Priority</p>
-                                                <p style="margin: 0; color: #999; font-size: 12px;">support@renthub.example | +91 90000 00000</p>
+                                                <p style="margin: 0; color: #999; font-size: 12px;">renthub.otp@gmail.com | +91 9040757683</p>
                                                 <p style="margin: 10px 0 0 0; color: #666; font-size: 11px;">If this email is in spam, please mark it as "Not Spam"</p>
                                             </td>
                                         </tr>
