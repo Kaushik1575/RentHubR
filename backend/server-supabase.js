@@ -65,15 +65,17 @@ app.get('*', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));
 });
 
-// Start Server (only in development, not on Vercel)
-if (process.env.NODE_ENV !== 'production') {
+// Start Server
+const isProduction = process.env.NODE_ENV === 'production';
+
+if (!isProduction || process.env.RENDER) {
     app.listen(PORT, () => {
         console.log(`Server is running on port ${PORT}`);
         console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
         initScheduler();
     });
 } else {
-    // Initialize scheduler in production too
+    // Fallback for serverless environments like Vercel
     initScheduler();
 }
 
