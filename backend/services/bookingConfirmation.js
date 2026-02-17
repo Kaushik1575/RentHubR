@@ -67,7 +67,7 @@ router.post('/confirmBooking', async (req, res) => {
               <p style="font-size:12px;color:#666;">If you find this email in spam, please mark as <b>Not Spam</b> to ensure future delivery.</p>
               <footer style="margin-top:18px;padding-top:8px;border-top:1px solid #eee;color:#999;font-size:12px;">
                 <div>RentHub — Bike & Vehicle Rentals</div>
-                <div>support@renthub.example | +91 90000 00000</div>
+                <div>renthub.otp@gmail.com | +91 9040757683</div>
                 <div>123 RentHub Street, City, Country</div>
               </footer>
             </div>
