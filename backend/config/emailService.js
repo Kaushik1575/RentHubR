@@ -147,8 +147,8 @@ async function sendBookingConfirmationEmail(userEmail, userName, bookingDetails)
                                     <!-- Action Links -->
                                     <div style="text-align: center; border-top: 1px solid #edf2f7; padding-top: 35px;">
                                         <p style="color: #718096; font-size: 14px; margin-bottom: 20px;">Need immediate assistance?</p>
-                                        <a href="tel:9040757683" style="display: inline-block; background: #3182ce; color: white; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 10px rgba(49, 130, 206, 0.3);">
-                                            📞 Call Support Team
+                                        <a href="tel:+919040757683" style="display: inline-block; background: #3182ce; color: white; padding: 14px 28px; border-radius: 50px; text-decoration: none; font-weight: 700; font-size: 16px; box-shadow: 0 4px 10px rgba(49, 130, 206, 0.3);">
+                                            📞 Call Support Team (+91 9040757683)
                                         </a>
                                     </div>
                                 </td>
