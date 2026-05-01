@@ -1,7 +1,7 @@
 const jwt = require('jsonwebtoken');
 const supabase = require('../config/supabase');
 
-const JWT_SECRET = 'your-secret-key'; // Use the same secret key as server-new.js
+const JWT_SECRET = process.env.JWT_SECRET || 'your-secret-key'; // Prioritize .env secret
 
 // Middleware to verify user token
 const verifyToken = async (req, res, next) => {

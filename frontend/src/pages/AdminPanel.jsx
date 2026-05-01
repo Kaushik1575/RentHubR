@@ -4,6 +4,7 @@ import StatusPopup from '../components/StatusPopup';
 import ConfirmationPopup from '../components/ConfirmationPopup';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import './AdminPanelStyles.css';
+import AdminIssues from '../components/AdminIssues';
 
 
 const AdminPanel = () => {
@@ -515,6 +516,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <li><a className={`nav-link ${activeTab === 'policies' ? 'active' : ''}`} onClick={() => { setActiveTab('policies'); setIsSidebarOpen(false); }}><i className="fas fa-file-alt"></i> Policies</a></li>
                             <li><a className={`nav-link ${activeTab === 'earnings' ? 'active' : ''}`} onClick={() => { setActiveTab('earnings'); setIsSidebarOpen(false); }}><i className="fas fa-chart-line"></i> Sponsor Reports</a></li>
                             <li><a className={`nav-link ${activeTab === 'withdrawals' ? 'active' : ''}`} onClick={() => { setActiveTab('withdrawals'); setIsSidebarOpen(false); }}><i className="fas fa-money-bill-wave"></i> Withdrawals</a></li>
+                            <li><a className={`nav-link ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { setActiveTab('issues'); setIsSidebarOpen(false); }}><i className="fas fa-headset"></i> Support Issues</a></li>
                             <li><a className={`nav-link`} onClick={() => { navigate('/admin/loyalty-settings'); setIsSidebarOpen(false); }}><i className="fas fa-coins"></i> Loyalty Settings</a></li>
                         </ul>
                     </nav>
@@ -1207,7 +1209,15 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             </div>
                         </div>
                     )}
+
+                    {/* SUPPORT ISSUES */}
+                    {activeTab === 'issues' && (
+                        <div id="issues" className="content-section active" style={{ padding: '24px' }}>
+                            <AdminIssues />
+                        </div>
+                    )}
                 </main>
+
             </div>
 
             {/* MODALS */}

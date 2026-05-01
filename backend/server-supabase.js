@@ -14,6 +14,7 @@ const sosRoutes = require('./routes/sos.routes');
 const invoiceRoutes = require('./routes/invoice.routes');
 const chatbotRoutes = require('./routes/chatbot.routes');
 const userRoutes = require('./routes/user.routes');
+const supportRoutes = require('./routes/support.routes');
 
 const app = express();
 const PORT = process.env.PORT || 3005;
@@ -22,8 +23,9 @@ const PORT = process.env.PORT || 3005;
 app.use(cors());
 app.use(compression());
 app.use(express.static(path.join(__dirname, '../frontend'))); // Serve static files
-app.use(express.json({ limit: '5mb' })); // Parse JSON bodies with higher limit for images
-app.use(express.urlencoded({ extended: true, limit: '5mb' }));
+app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploaded files
+app.use(express.json({ limit: '10mb' })); 
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 // API Routes Mounting
 app.use('/api', authRoutes);
@@ -39,6 +41,7 @@ const reviewRoutes = require('./routes/review.routes');
 app.use('/api/reviews', reviewRoutes);
 const loyaltyRoutes = require('./routes/loyalty.routes');
 app.use('/api', loyaltyRoutes);
+app.use('/api/support', supportRoutes);
 
 // Explicitly register cron route to match original path exactly
 const adminController = require('./controllers/admin.controller');

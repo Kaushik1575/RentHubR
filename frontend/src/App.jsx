@@ -21,6 +21,8 @@ import GlobalAuthCheck from './components/GlobalAuthCheck';
 import VehicleDetails from './pages/VehicleDetails';
 import RewardsPage from './pages/RewardsPage';
 import Chatbot from './components/Chatbot';
+import SupportPage from './pages/SupportPage';
+import TrackIssue from './pages/TrackIssue';
 
 import GoogleTranslateLoader from './components/GoogleTranslateLoader'; // Removed to disable auto-translate
 import './components/GoogleTranslate.css'; // Removed
@@ -100,6 +102,8 @@ function Layout() {
         <Route path="/track-booking" element={<TrackBooking />} />
         <Route path="/sos-activate" element={<SOSActivate />} />
         <Route path="/vehicle/:type/:id" element={<VehicleDetails />} />
+        <Route path="/support" element={<SupportPage />} />
+        <Route path="/track-issue" element={<TrackIssue />} />
       </Routes>
       {/* WhatsApp Floating Button - Show ONLY on Contact Page */}
       {location.pathname === '/contact' && (

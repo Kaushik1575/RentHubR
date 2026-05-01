@@ -1,4 +1,4 @@
-﻿:root {
+:root {
     --primary-color: #4facfe;
     --secondary-color: #00c6ff;
     --dark-color: #2c3e50;
@@ -3958,7 +3958,14 @@ main.booking-page-main {
 @media (max-width: 576px) {
     /* Ensure single column on very small screens */
     .vehicle-showcase .container > div[style*="grid"] {
-        grid-template-columns: 1fr !important;
+    grid-template-columns: 1fr !important;
         gap: 15px !important;
     }
 }
+
+/* Global utility animations */
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to   { transform: rotate(360deg); }
+}
+

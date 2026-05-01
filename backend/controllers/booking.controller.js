@@ -734,10 +734,38 @@ const submitRefundDetails = async (req, res) => {
     }
 };
 
+const getBookingById = async (req, res) => {
+    try {
+        const { id } = req.params;
+        const userId = req.user.id;
+
+        const { data: booking, error } = await supabase
+            .from('bookings')
+            .select('*, users:user_id(full_name, email)') // Fetch status etc.
+            .eq('booking_id', id.trim().toUpperCase())
+            .single();
+
+        if (error || !booking) {
+            return res.status(404).json({ error: 'Booking not found. Please check your ID.' });
+        }
+
+        // Security check: Only the owner or an admin can view details
+        if (booking.user_id !== userId && !req.user.isAdmin) {
+            return res.status(403).json({ error: 'Unauthorized to view this booking.' });
+        }
+
+        res.json({ success: true, booking });
+    } catch (error) {
+        console.error('Error fetching booking by id:', error);
+        res.status(500).json({ error: 'Error fetching booking details' });
+    }
+};
+
 module.exports = {
     checkAvailability,
     createBooking,
     getUserBookings,
     cancelBooking,
-    submitRefundDetails
+    submitRefundDetails,
+    getBookingById
 };

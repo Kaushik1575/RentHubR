@@ -104,6 +104,8 @@ const Navbar = () => {
                                 <Link to="/my-bookings" style={linkStyle}>My Bookings</Link>
                             </div>
                         )}
+                        <Link to="/support" style={linkStyle}>Support</Link>
+                        <Link to="/track-issue" style={linkStyle}>Track Issue</Link>
                     </div>
 
                     {/* Language Selector - Desktop */}
@@ -176,6 +178,8 @@ const Navbar = () => {
                                 <Link to="/my-bookings" onClick={closeMenu} style={mobileLinkStyle}>My Bookings</Link>
                             </>
                         )}
+                        <Link to="/support" onClick={closeMenu} style={{ ...mobileLinkStyle, color: '#6366f1' }}>🛟 Support</Link>
+                        <Link to="/track-issue" onClick={closeMenu} style={{ ...mobileLinkStyle, color: '#6366f1' }}>🔍 Track Issue</Link>
                         <div style={{ width: '100%', height: '1px', background: '#f0f0f0', margin: '10px 0' }}></div>
 
                         {/* Language Selector - Mobile */}
