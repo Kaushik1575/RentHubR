@@ -320,158 +320,168 @@ const Home = () => {
                                         scrollPadding: '50px' // Ensure snap accounts for padding
                                     }}
                                 >
-                                    {offers.map((offer) => (
-                                        <div 
-                                            key={offer.id}
-                                            style={{ 
-                                                minWidth: offers.length === 1 ? 'min(600px, 92vw)' : 'min(480px, 85vw)', 
-                                                background: 'white', 
-                                                borderRadius: '32px', 
-                                                overflow: 'hidden', 
-                                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
-                                                border: '1px solid #f1f5f9',
-                                                scrollSnapAlign: 'center',
-                                                transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                                position: 'relative',
-                                                flexShrink: 0,
-                                                display: 'flex',
-                                                flexDirection: 'column',
-                                                height: window.innerWidth < 768 ? 'auto' : '780px'
-                                            }}
-                                        >
-                                            {/* Top Status Header */}
-                                            <div style={{ 
-                                                padding: '20px 30px', 
-                                                borderBottom: '1px solid #f1f5f9',
-                                                display: 'flex',
-                                                justifyContent: 'space-between',
-                                                alignItems: 'center',
-                                                flexShrink: 0
-                                            }}>
+                                    {offers.map((offer) => {
+                                        const isMobile = window.innerWidth < 768;
+                                        return (
+                                            <div 
+                                                key={offer.id}
+                                                style={{ 
+                                                    minWidth: offers.length === 1 ? 'min(600px, 92vw)' : 'min(480px, 85vw)', 
+                                                    background: 'white', 
+                                                    borderRadius: isMobile ? '24px' : '32px', 
+                                                    overflow: 'hidden', 
+                                                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
+                                                    border: '1px solid #f1f5f9',
+                                                    scrollSnapAlign: 'center',
+                                                    transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                                    position: 'relative',
+                                                    flexShrink: 0,
+                                                    display: 'flex',
+                                                    flexDirection: 'column',
+                                                    height: isMobile ? 'auto' : '780px'
+                                                }}
+                                            >
+                                                {/* Top Status Header */}
                                                 <div style={{ 
-                                                    background: '#fff7ed', 
-                                                    padding: '6px 14px', 
-                                                    borderRadius: '100px', 
-                                                    fontSize: '11px', 
-                                                    fontWeight: '800', 
-                                                    color: '#c2410c',
-                                                    letterSpacing: '1px',
-                                                    textTransform: 'uppercase'
+                                                    padding: isMobile ? '15px 20px' : '20px 30px', 
+                                                    borderBottom: '1px solid #f1f5f9',
+                                                    display: 'flex',
+                                                    justifyContent: 'space-between',
+                                                    alignItems: 'center',
+                                                    flexShrink: 0
                                                 }}>
-                                                    ✨ Exclusive Deal
-                                                </div>
-                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#94a3b8' }}>
-                                                    Ends {offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon'}
-                                                </div>
-                                            </div>
-
-                                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
-                                                {/* Visual Section */}
-                                                <div style={{ width: '100%', height: '240px', position: 'relative', flexShrink: 0 }}>
-                                                    <img src={offer.image_url || 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&q=80&w=800'} alt={offer.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                     <div style={{ 
-                                                        position: 'absolute', 
-                                                        top: '20px', 
-                                                        left: '20px',
-                                                        background: 'rgba(255, 255, 255, 0.95)',
-                                                        padding: '8px 15px',
-                                                        borderRadius: '12px',
-                                                        fontSize: '14px',
-                                                        fontWeight: '900',
-                                                        color: '#4f46e5',
-                                                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                                                        background: '#fff7ed', 
+                                                        padding: '6px 12px', 
+                                                        borderRadius: '100px', 
+                                                        fontSize: '10px', 
+                                                        fontWeight: '800', 
+                                                        color: '#c2410c',
+                                                        letterSpacing: '1px',
+                                                        textTransform: 'uppercase'
                                                     }}>
-                                                        {offer.discount_percentage ? `${offer.discount_percentage}% OFF` : `₹${offer.flat_discount} OFF`}
+                                                        ✨ Exclusive Deal
+                                                    </div>
+                                                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8' }}>
+                                                        Ends {offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon'}
                                                     </div>
                                                 </div>
 
-                                                {/* Content Section */}
-                                                <div style={{ padding: '30px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                                    <div style={{ flex: 1 }}>
-                                                        <h3 style={{ fontSize: '32px', fontWeight: '800', margin: '0 0 10px 0', color: '#0f172a', letterSpacing: '-1px', lineHeight: '1.2' }}>{offer.title}</h3>
-                                                        <p style={{ color: '#64748b', fontSize: '16px', margin: '0 0 25px 0', lineHeight: '1.5' }}>{offer.description}</p>
-                                                        
-                                                        {/* Capsule Badges Grid */}
-                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '30px' }}>
-                                                            {[
-                                                                { icon: 'fa-tag', label: 'Valid For', value: offer.target_category, color: '#6366f1' },
-                                                                { icon: 'fa-calendar-alt', label: 'Availability', value: offer.valid_days ? offer.valid_days.split(',').map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d)]).join(', ') : 'Every Day', color: '#8b5cf6' },
-                                                                { icon: 'fa-clock', label: 'Min Booking', value: offer.min_duration > 0 ? `${offer.min_duration}h` : 'No Min', color: '#f59e0b', hide: offer.min_duration <= 0 },
-                                                                { icon: 'fa-wallet', label: 'Min Spend', value: offer.min_booking_amount > 0 ? `₹${offer.min_booking_amount}` : 'Any', color: '#10b981', hide: offer.min_booking_amount <= 0 },
-                                                                { icon: 'fa-hourglass-half', label: 'Expires', value: offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon', color: '#ef4444' }
-                                                            ].filter(r => !r.hide).map((rule, idx) => (
-                                                                <div key={idx} style={{ 
-                                                                    display: 'flex', 
-                                                                    alignItems: 'center', 
-                                                                    gap: '10px',
-                                                                    padding: '12px',
-                                                                    background: '#f8fafc',
-                                                                    borderRadius: '16px',
-                                                                    border: '1px solid #f1f5f9'
-                                                                }}>
-                                                                    <div style={{ color: rule.color, fontSize: '14px' }}>
-                                                                        <i className={`fas ${rule.icon}`}></i>
-                                                                    </div>
-                                                                    <div>
-                                                                        <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>{rule.label}</div>
-                                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{rule.value}</div>
-                                                                    </div>
-                                                                </div>
-                                                            ))}
+                                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                                    {/* Visual Section */}
+                                                    <div style={{ width: '100%', height: isMobile ? '180px' : '240px', position: 'relative', flexShrink: 0 }}>
+                                                        <img src={offer.image_url || 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&q=80&w=800'} alt={offer.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                        <div style={{ 
+                                                            position: 'absolute', 
+                                                            top: isMobile ? '15px' : '20px', 
+                                                            left: isMobile ? '15px' : '20px',
+                                                            background: 'rgba(255, 255, 255, 0.95)',
+                                                            padding: '6px 12px',
+                                                            borderRadius: '10px',
+                                                            fontSize: isMobile ? '12px' : '14px',
+                                                            fontWeight: '900',
+                                                            color: '#4f46e5',
+                                                            boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                                                        }}>
+                                                            {offer.discount_percentage ? `${offer.discount_percentage}% OFF` : `₹${offer.flat_discount} OFF`}
                                                         </div>
                                                     </div>
 
-                                                    {/* Copy Code Action - Always at Bottom */}
-                                                    <div style={{ 
-                                                        display: 'flex', 
-                                                        alignItems: 'center', 
-                                                        justifyContent: 'space-between', 
-                                                        background: '#0f172a', 
-                                                        padding: '10px 10px 10px 25px', 
-                                                        borderRadius: '24px', 
-                                                        boxShadow: '0 20px 40px rgba(15, 23, 42, 0.2)',
-                                                        flexShrink: 0,
-                                                        marginTop: 'auto'
-                                                    }}>
+                                                    {/* Content Section */}
+                                                    <div style={{ padding: isMobile ? '20px' : '30px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                                         <div style={{ flex: 1 }}>
-                                                            <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Promo Code</div>
-                                                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#ffffff', letterSpacing: '4px', fontFamily: 'monospace' }}>{offer.code}</div>
+                                                            <h3 style={{ 
+                                                                fontSize: isMobile ? '24px' : '32px', 
+                                                                fontWeight: '800', 
+                                                                margin: '0 0 8px 0', 
+                                                                color: '#0f172a', 
+                                                                letterSpacing: '-0.5px', 
+                                                                lineHeight: '1.2' 
+                                                            }}>{offer.title}</h3>
+                                                            <p style={{ color: '#64748b', fontSize: isMobile ? '14px' : '16px', margin: '0 0 20px 0', lineHeight: '1.5' }}>{offer.description}</p>
+                                                            
+                                                            {/* Capsule Badges Grid */}
+                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '10px', marginBottom: isMobile ? '20px' : '30px' }}>
+                                                                {[
+                                                                    { icon: 'fa-tag', label: 'Valid For', value: offer.target_category, color: '#6366f1' },
+                                                                    { icon: 'fa-calendar-alt', label: 'Availability', value: offer.valid_days ? offer.valid_days.split(',').map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d)]).join(', ') : 'Every Day', color: '#8b5cf6' },
+                                                                    { icon: 'fa-clock', label: 'Min Booking', value: offer.min_duration > 0 ? `${offer.min_duration}h` : 'No Min', color: '#f59e0b', hide: offer.min_duration <= 0 },
+                                                                    { icon: 'fa-wallet', label: 'Min Spend', value: offer.min_booking_amount > 0 ? `₹${offer.min_booking_amount}` : 'Any', color: '#10b981', hide: offer.min_booking_amount <= 0 },
+                                                                    { icon: 'fa-hourglass-half', label: 'Expires', value: offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon', color: '#ef4444' }
+                                                                ].filter(r => !r.hide).map((rule, idx) => (
+                                                                    <div key={idx} style={{ 
+                                                                        display: 'flex', 
+                                                                        alignItems: 'center', 
+                                                                        gap: '8px',
+                                                                        padding: isMobile ? '8px 10px' : '12px',
+                                                                        background: '#f8fafc',
+                                                                        borderRadius: '12px',
+                                                                        border: '1px solid #f1f5f9'
+                                                                    }}>
+                                                                        <div style={{ color: rule.color, fontSize: isMobile ? '12px' : '14px' }}>
+                                                                            <i className={`fas ${rule.icon}`}></i>
+                                                                        </div>
+                                                                        <div>
+                                                                            <div style={{ fontSize: '8px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>{rule.label}</div>
+                                                                            <div style={{ fontSize: isMobile ? '11px' : '13px', fontWeight: '700', color: '#1e293b' }}>{rule.value}</div>
+                                                                        </div>
+                                                                    </div>
+                                                                ))}
+                                                            </div>
                                                         </div>
-                                                        <button 
-                                                            onClick={(e) => {
-                                                                navigator.clipboard.writeText(offer.code);
-                                                                const btn = e.currentTarget;
-                                                                const originalContent = btn.innerHTML;
-                                                                btn.innerHTML = '<i class="fas fa-check"></i>';
-                                                                btn.style.background = '#10b981';
-                                                                setTimeout(() => {
-                                                                    btn.innerHTML = originalContent;
-                                                                    btn.style.background = '#6366f1';
-                                                                }, 2000);
-                                                            }}
-                                                            style={{ 
-                                                                background: '#6366f1', 
-                                                                color: 'white', 
-                                                                border: 'none', 
-                                                                width: '56px',
-                                                                height: '56px',
-                                                                borderRadius: '16px', 
-                                                                fontWeight: '700',
-                                                                cursor: 'pointer',
-                                                                display: 'flex',
-                                                                alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                fontSize: '18px',
-                                                                transition: 'all 0.3s ease'
-                                                            }}
-                                                        >
-                                                            <i className="far fa-copy"></i>
-                                                        </button>
+
+                                                        {/* Copy Code Action - Always at Bottom */}
+                                                        <div style={{ 
+                                                            display: 'flex', 
+                                                            alignItems: 'center', 
+                                                            justifyContent: 'space-between', 
+                                                            background: '#0f172a', 
+                                                            padding: isMobile ? '8px 8px 8px 18px' : '10px 10px 10px 25px', 
+                                                            borderRadius: '20px', 
+                                                            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.2)',
+                                                            flexShrink: 0,
+                                                            marginTop: 'auto'
+                                                        }}>
+                                                            <div style={{ flex: 1 }}>
+                                                                <div style={{ fontSize: '8px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>Promo Code</div>
+                                                                <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: '800', color: '#ffffff', letterSpacing: isMobile ? '2px' : '4px', fontFamily: 'monospace' }}>{offer.code}</div>
+                                                            </div>
+                                                            <button 
+                                                                onClick={(e) => {
+                                                                    navigator.clipboard.writeText(offer.code);
+                                                                    const btn = e.currentTarget;
+                                                                    const originalContent = btn.innerHTML;
+                                                                    btn.innerHTML = '<i class="fas fa-check"></i>';
+                                                                    btn.style.background = '#10b981';
+                                                                    setTimeout(() => {
+                                                                        btn.innerHTML = originalContent;
+                                                                        btn.style.background = '#6366f1';
+                                                                    }, 2000);
+                                                                }}
+                                                                style={{ 
+                                                                    background: '#6366f1', 
+                                                                    color: 'white', 
+                                                                    border: 'none', 
+                                                                    width: isMobile ? '44px' : '56px',
+                                                                    height: isMobile ? '44px' : '56px',
+                                                                    borderRadius: '14px', 
+                                                                    fontWeight: '700',
+                                                                    cursor: 'pointer',
+                                                                    display: 'flex',
+                                                                    alignItems: 'center',
+                                                                    justifyContent: 'center',
+                                                                    fontSize: isMobile ? '16px' : '18px',
+                                                                    transition: 'all 0.3s ease'
+                                                                }}
+                                                            >
+                                                                <i className="far fa-copy"></i>
+                                                            </button>
+                                                        </div>
                                                     </div>
                                                 </div>
                                             </div>
-                                        </div>
-                                    ))}
+                                        );
+                                    })}
                                 </div>
                             </div>
                         </div>
