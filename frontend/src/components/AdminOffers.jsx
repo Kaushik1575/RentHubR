@@ -20,12 +20,14 @@ const AdminOffers = () => {
         max_discount: '',
         usage_limit_per_user: '1',
         valid_until: '',
+        valid_from: '',
         valid_from_hour: '',
         valid_to_hour: '',
         valid_days: '',
         target_month: '',
         image_url: '',
-        is_active: true
+        is_active: true,
+        launch_type: 'instant'
     });
     const [uploading, setUploading] = useState(false);
     const [popup, setPopup] = useState({
@@ -78,12 +80,14 @@ const AdminOffers = () => {
                 max_discount: offer.max_discount || '',
                 usage_limit_per_user: offer.usage_limit_per_user || '1',
                 valid_until: offer.valid_until ? offer.valid_until.split('T')[0] : '',
+                valid_from: offer.valid_from ? offer.valid_from.split('T')[0] : '',
                 valid_from_hour: offer.valid_from_hour || '',
                 valid_to_hour: offer.valid_to_hour || '',
                 valid_days: offer.valid_days || '',
                 target_month: offer.target_month || '',
                 image_url: offer.image_url || '',
-                is_active: offer.is_active
+                is_active: offer.is_active,
+                launch_type: offer.valid_from ? 'scheduled' : 'instant'
             });
         } else {
             setEditingId(null);
@@ -101,12 +105,15 @@ const AdminOffers = () => {
                 max_discount: '',
                 usage_limit_per_user: '1',
                 valid_until: '',
+                valid_from: '',
                 valid_from_hour: '',
                 valid_to_hour: '',
                 valid_days: '',
                 target_month: '',
                 image_url: '',
-                is_active: true
+                is_active: true,
+                launch_type: 'instant',
+                broadcast: true
             });
         }
         setIsModalOpen(true);
@@ -142,6 +149,14 @@ const AdminOffers = () => {
         }
     };
 
+    const formatDateForInput = (isoString) => {
+        if (!isoString) return '';
+        const date = new Date(isoString);
+        if (isNaN(date.getTime())) return '';
+        const offset = date.getTimezoneOffset() * 60000;
+        return new Date(date.getTime() - offset).toISOString().slice(0, 16);
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
@@ -149,13 +164,28 @@ const AdminOffers = () => {
             const url = editingId ? `/api/offers/${editingId}` : '/api/offers/create';
             const method = editingId ? 'PUT' : 'POST';
 
+            const finalFormData = { ...formData };
+            
+            // Handle Start Date
+            if (formData.launch_type === 'instant' && !editingId) {
+                finalFormData.valid_from = new Date().toISOString();
+            } else if (finalFormData.valid_from) {
+                // Convert local time from datetime-local to UTC ISO string
+                finalFormData.valid_from = new Date(finalFormData.valid_from).toISOString();
+            }
+
+            // Handle Expiry Date
+            if (finalFormData.valid_until) {
+                finalFormData.valid_until = new Date(finalFormData.valid_until).toISOString();
+            }
+
             const res = await fetch(url, {
                 method,
                 headers: {
                     'Content-Type': 'application/json',
                     'Authorization': `Bearer ${token}`
                 },
-                body: JSON.stringify(formData)
+                body: JSON.stringify(finalFormData)
             });
 
             const data = await res.json();
@@ -523,15 +553,49 @@ const AdminOffers = () => {
                                 {/* SECTION: SCHEDULING */}
                                 <div className="form-section">
                                     <div className="section-title"><i className="fas fa-calendar-alt"></i> Schedule & Validity</div>
-                                    <div className="form-grid">
-                                        <div className="form-group">
-                                            <label>Expiry Date</label>
+                                    <div className="form-group full-width">
+                                        <label>Launch Type</label>
+                                        <div style={{ display: 'flex', gap: '15px' }}>
+                                            <button 
+                                                type="button" 
+                                                className={`preset-btn ${formData.launch_type === 'instant' ? 'active' : ''}`}
+                                                style={{ flex: 1, background: formData.launch_type === 'instant' ? '#4f46e5' : 'white', color: formData.launch_type === 'instant' ? 'white' : '#1e293b' }}
+                                                onClick={() => setFormData({ ...formData, launch_type: 'instant', valid_from: '' })}
+                                            >
+                                                ⚡ Instant Launch
+                                            </button>
+                                            <button 
+                                                type="button" 
+                                                className={`preset-btn ${formData.launch_type === 'scheduled' ? 'active' : ''}`}
+                                                style={{ flex: 1, background: formData.launch_type === 'scheduled' ? '#4f46e5' : 'white', color: formData.launch_type === 'scheduled' ? 'white' : '#1e293b' }}
+                                                onClick={() => setFormData({ ...formData, launch_type: 'scheduled' })}
+                                            >
+                                                📅 Schedule for Later
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="form-grid" style={{ gridColumn: 'span 2' }}>
+                                        {formData.launch_type === 'scheduled' && (
+                                            <div className="form-group">
+                                                <label>Launch Date & Time</label>
+                                                <input
+                                                    type="datetime-local"
+                                                    value={formatDateForInput(formData.valid_from)}
+                                                    onChange={e => setFormData({ ...formData, valid_from: e.target.value })}
+                                                    required={formData.launch_type === 'scheduled'}
+                                                />
+                                            </div>
+                                        )}
+                                        <div className="form-group" style={{ gridColumn: formData.launch_type === 'scheduled' ? 'auto' : 'span 2' }}>
+                                            <label>Expiry Date & Time</label>
                                             <input
-                                                type="date"
-                                                value={formData.valid_until}
+                                                type="datetime-local"
+                                                value={formatDateForInput(formData.valid_until)}
                                                 onChange={e => setFormData({ ...formData, valid_until: e.target.value })}
                                             />
                                         </div>
+                                    </div>
                                         <div className="form-group">
                                             <label>Valid Days</label>
                                             <div className="days-selector">
@@ -591,7 +655,6 @@ const AdminOffers = () => {
                                             </select>
                                         </div>
                                     </div>
-                                </div>
 
                                 {/* SECTION: MEDIA & TEXT */}
                                 <div className="form-section">
@@ -624,6 +687,31 @@ const AdminOffers = () => {
                                             placeholder="Tell users why they should use this offer..."
                                             rows="3"
                                         />
+                                    </div>
+                                    <div className="form-group" style={{ marginTop: '20px', background: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                        <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', margin: 0 }}>
+                                            <div style={{ position: 'relative', width: '44px', height: '24px' }}>
+                                                <input 
+                                                    type="checkbox" 
+                                                    checked={formData.broadcast}
+                                                    onChange={e => setFormData({ ...formData, broadcast: e.target.checked })}
+                                                    style={{ opacity: 0, width: 0, height: 0 }} 
+                                                />
+                                                <span style={{ 
+                                                    position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, 
+                                                    backgroundColor: formData.broadcast ? '#4f46e5' : '#cbd5e1', 
+                                                    transition: '0.4s', borderRadius: '34px' 
+                                                }}></span>
+                                                <span style={{ 
+                                                    position: 'absolute', height: '18px', width: '18px', left: formData.broadcast ? '22px' : '4px', bottom: '3px', 
+                                                    backgroundColor: 'white', transition: '0.4s', borderRadius: '50%' 
+                                                }}></span>
+                                            </div>
+                                            <div>
+                                                <div style={{ fontWeight: '700', color: '#1e1b4b', fontSize: '14px' }}>Broadcast to all users</div>
+                                                <div style={{ fontSize: '11px', color: '#64748b' }}>Send a premium email notification to all registered customers</div>
+                                            </div>
+                                        </label>
                                     </div>
                                 </div>
 

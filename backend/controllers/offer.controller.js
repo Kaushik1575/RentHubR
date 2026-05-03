@@ -11,7 +11,7 @@ exports.getActiveOffers = async (req, res) => {
             .select('*')
             .eq('is_active', true)
             .or(`valid_until.gte.${today},valid_until.is.null`)
-            .order('created_at', { ascending: false });
+            .order('valid_from', { ascending: true, nullsFirst: true });
 
         if (error) throw error;
         res.json({ success: true, offers: data });
@@ -53,7 +53,7 @@ exports.createOffer = async (req, res) => {
             min_booking_amount, min_duration, 
             min_monthly_bookings, target_category,
             max_discount, usage_limit_per_user,
-            valid_until, image_url,
+            valid_until, valid_from, image_url,
             valid_from_hour, valid_to_hour, valid_days,
             target_month
         } = req.body;
@@ -107,12 +107,14 @@ exports.createOffer = async (req, res) => {
             max_discount: toNum(max_discount),
             usage_limit_per_user: toInt(usage_limit_per_user, 1),
             valid_until: valid_until === '' ? null : valid_until,
+            valid_from: valid_from === '' ? null : valid_from,
             valid_from_hour: toInt(valid_from_hour),
             valid_to_hour: toInt(valid_to_hour),
             valid_days: validDaysStr,
             target_month: toInt(target_month),
             image_url,
-            is_active: true
+            is_active: true,
+            launch_email_sent: valid_from === '' || !valid_from ? true : false
         };
 
         console.log('Sanitized Data for DB:', JSON.stringify(insertData, null, 2));
@@ -128,9 +130,9 @@ exports.createOffer = async (req, res) => {
         }
 
         // --- BROADCAST EMAIL TO ALL USERS ---
-        // We do this in the background so the admin doesn't have to wait
-        (async () => {
-            try {
+        if (req.body.broadcast) {
+            (async () => {
+                try {
                 // 1. Fetch all user emails
                 const { data: users, error: userError } = await supabase
                     .from('users')
@@ -158,7 +160,8 @@ exports.createOffer = async (req, res) => {
             } catch (broadcastErr) {
                 console.error('❌ Email Broadcast Error:', broadcastErr);
             }
-        })();
+            })();
+        }
 
         res.json({ success: true, message: 'Offer created and notification blast started!', offer: data });
     } catch (err) {
@@ -191,6 +194,7 @@ exports.updateOffer = async (req, res) => {
         });
 
         if (updates.valid_until === '') updates.valid_until = null;
+        if (updates.valid_from === '') updates.valid_from = null;
 
         // --- PREVENT PAST EXPIRY DATE ---
         if (updates.valid_until) {
@@ -228,22 +232,24 @@ exports.updateOffer = async (req, res) => {
             throw error;
         }
         // --- BROADCAST EMAIL TO ALL USERS (on update) ---
-        (async () => {
-            try {
-                const { data: users, error: userError } = await supabase.from('users').select('email, full_name');
-                if (!userError && users && users.length > 0) {
-                    console.log(`🚀 Broadcasting updated offer to ${users.length} users...`);
-                    for (const user of users) {
-                        if (user.email) {
-                            try {
-                                await sendNewOfferEmail(user.email, user.full_name, data, true);
-                                await new Promise(resolve => setTimeout(resolve, 100));
-                            } catch (e) {}
+        if (req.body.broadcast) {
+            (async () => {
+                try {
+                    const { data: users, error: userError } = await supabase.from('users').select('email, full_name');
+                    if (!userError && users && users.length > 0) {
+                        console.log(`🚀 Broadcasting updated offer to ${users.length} users...`);
+                        for (const user of users) {
+                            if (user.email) {
+                                try {
+                                    await sendNewOfferEmail(user.email, user.full_name, data, true);
+                                    await new Promise(resolve => setTimeout(resolve, 100)); // Faster rate
+                                } catch (e) {}
+                            }
                         }
                     }
-                }
-            } catch (err) {}
-        })();
+                } catch (err) {}
+            })();
+        }
 
         res.json({ success: true, message: 'Offer updated and users notified!', offer: data });
     } catch (err) {

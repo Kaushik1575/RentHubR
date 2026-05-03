@@ -322,13 +322,25 @@ const Home = () => {
                                 >
                                     {offers.map((offer) => {
                                         const isMobile = window.innerWidth < 768;
+                                        const isFuture = offer.valid_from && new Date(offer.valid_from) > new Date();
+                                        const launchDateTime = isFuture 
+                                            ? new Date(offer.valid_from).toLocaleString('en-IN', { 
+                                                day: 'numeric', 
+                                                month: 'short', 
+                                                hour: '2-digit', 
+                                                minute: '2-digit',
+                                                hour12: true 
+                                            }) 
+                                            : null;
+
                                         return (
                                             <div 
                                                 key={offer.id}
+                                                className={`offer-card-modern ${isFuture ? 'offer-future' : ''}`}
                                                 style={{ 
                                                     minWidth: offers.length === 1 ? 'min(600px, 92vw)' : 'min(480px, 85vw)', 
                                                     background: 'white', 
-                                                    borderRadius: isMobile ? '24px' : '32px', 
+                                                    borderRadius: '32px', 
                                                     overflow: 'hidden', 
                                                     boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
                                                     border: '1px solid #f1f5f9',
@@ -338,9 +350,47 @@ const Home = () => {
                                                     flexShrink: 0,
                                                     display: 'flex',
                                                     flexDirection: 'column',
-                                                    height: isMobile ? 'auto' : '780px'
+                                                    height: isMobile ? 'auto' : '780px',
+                                                    cursor: isFuture ? 'default' : 'pointer'
                                                 }}
                                             >
+                                                {/* Future Blur Overlay */}
+                                                {isFuture && (
+                                                    <div style={{
+                                                        position: 'absolute',
+                                                        inset: 0,
+                                                        background: 'rgba(255, 255, 255, 0.1)',
+                                                        backdropFilter: 'blur(8px)',
+                                                        zIndex: 10,
+                                                        display: 'flex',
+                                                        flexDirection: 'column',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        textAlign: 'center',
+                                                        padding: '30px'
+                                                    }}>
+                                                        <div style={{ 
+                                                            background: '#4f46e5', 
+                                                            color: 'white', 
+                                                            padding: '12px 24px', 
+                                                            borderRadius: '50px', 
+                                                            fontWeight: '900', 
+                                                            fontSize: '18px', 
+                                                            boxShadow: '0 10px 25px rgba(79, 70, 229, 0.4)',
+                                                            marginBottom: '15px',
+                                                            animation: 'pulse 2s infinite'
+                                                        }}>
+                                                            🚀 LAUNCHING SOON
+                                                        </div>
+                                                        <div style={{ color: '#1e1b4b', fontWeight: '800', fontSize: '20px' }}>
+                                                            Starts on {launchDateTime}
+                                                        </div>
+                                                        <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '250px', marginTop: '10px' }}>
+                                                            Set your reminders! This exclusive deal will be unlocked on {launchDateTime}.
+                                                        </p>
+                                                    </div>
+                                                )}
+
                                                 {/* Top Status Header */}
                                                 <div style={{ 
                                                     padding: isMobile ? '15px 20px' : '20px 30px', 
@@ -348,28 +398,29 @@ const Home = () => {
                                                     display: 'flex',
                                                     justifyContent: 'space-between',
                                                     alignItems: 'center',
-                                                    flexShrink: 0
+                                                    flexShrink: 0,
+                                                    filter: isFuture ? 'blur(2px)' : 'none'
                                                 }}>
                                                     <div style={{ 
-                                                        background: '#fff7ed', 
+                                                        background: isFuture ? '#f1f5f9' : '#fff7ed', 
                                                         padding: '6px 12px', 
                                                         borderRadius: '100px', 
                                                         fontSize: '10px', 
                                                         fontWeight: '800', 
-                                                        color: '#c2410c',
+                                                        color: isFuture ? '#64748b' : '#c2410c',
                                                         letterSpacing: '1px',
                                                         textTransform: 'uppercase'
                                                     }}>
-                                                        ✨ Exclusive Deal
+                                                        {isFuture ? '📅 UPCOMING' : '✨ Exclusive Deal'}
                                                     </div>
                                                     <div style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8' }}>
-                                                        Ends {offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon'}
+                                                        {isFuture ? `Starting ${launchDateTime}` : `Ends ${offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon'}`}
                                                     </div>
                                                 </div>
 
-                                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, filter: isFuture ? 'blur(2px)' : 'none' }}>
                                                     {/* Visual Section */}
-                                                    <div style={{ width: '100%', height: isMobile ? '180px' : '240px', position: 'relative', flexShrink: 0 }}>
+                                                    <div className="offer-card-image" style={{ width: '100%', height: '240px', position: 'relative', flexShrink: 0 }}>
                                                         <img src={offer.image_url || 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&q=80&w=800'} alt={offer.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
                                                         <div style={{ 
                                                             position: 'absolute', 
@@ -390,18 +441,18 @@ const Home = () => {
                                                     {/* Content Section */}
                                                     <div style={{ padding: isMobile ? '20px' : '30px', flex: 1, display: 'flex', flexDirection: 'column' }}>
                                                         <div style={{ flex: 1 }}>
-                                                            <h3 style={{ 
-                                                                fontSize: isMobile ? '24px' : '32px', 
+                                                            <h3 className="offer-card-title" style={{ 
+                                                                fontSize: '32px', 
                                                                 fontWeight: '800', 
                                                                 margin: '0 0 8px 0', 
                                                                 color: '#0f172a', 
                                                                 letterSpacing: '-0.5px', 
                                                                 lineHeight: '1.2' 
                                                             }}>{offer.title}</h3>
-                                                            <p style={{ color: '#64748b', fontSize: isMobile ? '14px' : '16px', margin: '0 0 20px 0', lineHeight: '1.5' }}>{offer.description}</p>
+                                                            <p className="offer-card-desc" style={{ color: '#64748b', fontSize: '16px', margin: '0 0 20px 0', lineHeight: '1.5' }}>{offer.description}</p>
                                                             
                                                             {/* Capsule Badges Grid */}
-                                                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: isMobile ? '8px' : '10px', marginBottom: isMobile ? '20px' : '30px' }}>
+                                                            <div className="offer-info-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '30px' }}>
                                                                 {[
                                                                     { icon: 'fa-tag', label: 'Valid For', value: offer.target_category, color: '#6366f1' },
                                                                     { icon: 'fa-calendar-alt', label: 'Availability', value: offer.valid_days ? offer.valid_days.split(',').map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d)]).join(', ') : 'Every Day', color: '#8b5cf6' },
@@ -409,11 +460,11 @@ const Home = () => {
                                                                     { icon: 'fa-wallet', label: 'Min Spend', value: offer.min_booking_amount > 0 ? `₹${offer.min_booking_amount}` : 'Any', color: '#10b981', hide: offer.min_booking_amount <= 0 },
                                                                     { icon: 'fa-hourglass-half', label: 'Expires', value: offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon', color: '#ef4444' }
                                                                 ].filter(r => !r.hide).map((rule, idx) => (
-                                                                    <div key={idx} style={{ 
+                                                                    <div key={idx} className="offer-info-box" style={{ 
                                                                         display: 'flex', 
                                                                         alignItems: 'center', 
                                                                         gap: '8px',
-                                                                        padding: isMobile ? '8px 10px' : '12px',
+                                                                        padding: '12px',
                                                                         background: '#f8fafc',
                                                                         borderRadius: '12px',
                                                                         border: '1px solid #f1f5f9'
@@ -431,23 +482,28 @@ const Home = () => {
                                                         </div>
 
                                                         {/* Copy Code Action - Always at Bottom */}
-                                                        <div style={{ 
+                                                        <div className="offer-promo-bar" style={{ 
                                                             display: 'flex', 
                                                             alignItems: 'center', 
                                                             justifyContent: 'space-between', 
-                                                            background: '#0f172a', 
-                                                            padding: isMobile ? '8px 8px 8px 18px' : '10px 10px 10px 25px', 
+                                                            background: isFuture ? '#cbd5e1' : '#0f172a', 
+                                                            padding: '10px 10px 10px 25px', 
                                                             borderRadius: '20px', 
-                                                            boxShadow: '0 20px 40px rgba(15, 23, 42, 0.2)',
+                                                            boxShadow: isFuture ? 'none' : '0 20px 40px rgba(15, 23, 42, 0.2)',
                                                             flexShrink: 0,
                                                             marginTop: 'auto'
                                                         }}>
                                                             <div style={{ flex: 1 }}>
-                                                                <div style={{ fontSize: '8px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>Promo Code</div>
-                                                                <div style={{ fontSize: isMobile ? '18px' : '24px', fontWeight: '800', color: '#ffffff', letterSpacing: isMobile ? '2px' : '4px', fontFamily: 'monospace' }}>{offer.code}</div>
+                                                                <div style={{ fontSize: '8px', color: isFuture ? '#64748b' : '#94a3b8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>Promo Code</div>
+                                                                <div className="promo-code-text" style={{ fontSize: '24px', fontWeight: '800', color: '#ffffff', letterSpacing: '4px', fontFamily: 'monospace' }}>
+                                                                    {isFuture ? '••••••' : offer.code}
+                                                                </div>
                                                             </div>
                                                             <button 
+                                                                className="copy-btn-modern"
+                                                                disabled={isFuture}
                                                                 onClick={(e) => {
+                                                                    if (isFuture) return;
                                                                     navigator.clipboard.writeText(offer.code);
                                                                     const btn = e.currentTarget;
                                                                     const originalContent = btn.innerHTML;
@@ -459,22 +515,22 @@ const Home = () => {
                                                                     }, 2000);
                                                                 }}
                                                                 style={{ 
-                                                                    background: '#6366f1', 
+                                                                    background: isFuture ? '#94a3b8' : '#6366f1', 
                                                                     color: 'white', 
                                                                     border: 'none', 
-                                                                    width: isMobile ? '44px' : '56px',
-                                                                    height: isMobile ? '44px' : '56px',
+                                                                    width: '56px',
+                                                                    height: '56px',
                                                                     borderRadius: '14px', 
                                                                     fontWeight: '700',
-                                                                    cursor: 'pointer',
+                                                                    cursor: isFuture ? 'not-allowed' : 'pointer',
                                                                     display: 'flex',
                                                                     alignItems: 'center',
                                                                     justifyContent: 'center',
-                                                                    fontSize: isMobile ? '16px' : '18px',
+                                                                    fontSize: '18px',
                                                                     transition: 'all 0.3s ease'
                                                                 }}
                                                             >
-                                                                <i className="far fa-copy"></i>
+                                                                <i className={isFuture ? "fas fa-lock" : "far fa-copy"}></i>
                                                             </button>
                                                         </div>
                                                     </div>
