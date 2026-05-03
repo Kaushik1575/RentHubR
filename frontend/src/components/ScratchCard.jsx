@@ -52,7 +52,7 @@ const ScratchCard = ({ card, onReveal }) => {
                     <div style={{ fontSize: '28px', fontWeight: '900', color: '#1f2937', lineHeight: 1.1 }}>
                         {card.prize_type === 'COINS' ? `₹${card.prize_value}` : 'Coupon'}
                     </div>
-                    {card.prize_type === 'COINS' && <div style={{ fontSize: '12px', color: '#059669', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Coins Added</div>}
+                    {card.prize_type === 'COINS' && <div style={{ fontSize: '12px', color: '#059669', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '0.5px' }}>Points Added</div>}
                     <div style={{ fontSize: '10px', color: '#9ca3af', marginTop: 'auto' }}>
                         Won on {new Date(card.updated_at || Date.now()).toLocaleDateString()}
                     </div>

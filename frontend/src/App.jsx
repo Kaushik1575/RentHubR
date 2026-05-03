@@ -90,14 +90,14 @@ function Layout() {
         <Route path="/contact" element={<Contact />} />
         <Route path="/my-bookings" element={<MyBookings />} />
         <Route path="/profile" element={<ProfilePage />} />
-        <Route path="/rewards" element={<RewardsPage />} />
+        {/* Rewards route removed */}
         <Route path="/login" element={<Login />} />
         <Route path="/forgot-password" element={<ForgotPassword />} />
         <Route path="/register-user" element={<RegisterUser />} />
         <Route path="/register-admin" element={<RegisterAdmin />} />
         <Route path="/register-admin" element={<RegisterAdmin />} />
         <Route path="/admin" element={<AdminPanel />} />
-        <Route path="/admin/loyalty-settings" element={<LoyaltySettings />} />
+        {/* Loyalty settings route removed */}
         <Route path="/booking-form" element={<BookingForm />} />
         <Route path="/track-booking" element={<TrackBooking />} />
         <Route path="/sos-activate" element={<SOSActivate />} />

@@ -122,7 +122,7 @@ const createBooking = async (req, res) => {
         console.log('--- Booking Request Received ---');
         console.log('User:', req.user);
         console.log('Body:', req.body);
-        let { vehicleId, startDate, startTime, duration, vehicleType, transactionId, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+        let { vehicleId, startDate, startTime, duration, vehicleType, transactionId, couponCode, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
 
         // Normalize vehicle type (ensure singular form 'car', 'bike', 'scooty')
         vehicleType = normalizeVehicleType(vehicleType);
@@ -279,14 +279,35 @@ const createBooking = async (req, res) => {
             advance_payment: finalAdvancePayment, // 30% advance payment
             total_amount: finalTotalAmount, // Store total amount
             reward_id: usedRewardId,
-            is_free_ride: isFreeRide
+            is_free_ride: isFreeRide,
+            coupon_code: couponCode || null
         };
         console.log('Booking data to insert:', bookingData);
-        const { data, error } = await supabase
+        let { data, error } = await supabase
             .from('bookings')
             .insert([bookingData])
             .select()
             .single();
+
+        // SMART RETRY: If the coupon_code column is missing, try inserting without it
+        if (error && (error.message?.includes('coupon_code') || error.details?.includes('coupon_code') || error.code === 'PGRST204')) {
+            console.warn('⚠️ coupon_code column missing, retrying booking without it...');
+            const backupBookingData = { ...bookingData };
+            delete backupBookingData.coupon_code;
+            
+            const retry = await supabase
+                .from('bookings')
+                .insert([backupBookingData])
+                .select()
+                .single();
+            
+            if (retry.data) {
+                data = retry.data;
+                error = null; // Clear the error if retry succeeds
+            } else {
+                error = retry.error;
+            }
+        }
 
         if (error) {
             console.error('Error creating booking:', error);
@@ -294,7 +315,6 @@ const createBooking = async (req, res) => {
             if (error.code === '23505' && (error.details?.includes('transaction_id') || error.message?.includes('transaction_id'))) {
                 return res.status(409).json({ error: 'Transaction ID already exists.' });
             }
-            // Return actual DB error for debugging (remove in production if needed, but useful now)
             return res.status(500).json({ error: 'Error creating booking', details: error.message, code: error.code, hint: error.hint });
         }
 

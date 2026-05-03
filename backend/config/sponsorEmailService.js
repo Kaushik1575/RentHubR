@@ -3,9 +3,9 @@ const { Resend } = require('resend');
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Default sender
-const SENDER_EMAIL = 'onboarding@jitus.app';
-const SENDER_NAME = 'RentHub';
+// Default sender - pulled from .env for production/custom domains
+const SENDER_EMAIL = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+const SENDER_NAME = process.env.SENDER_NAME || 'RentHub';
 
 // Generic function to send email via Resend
 async function sendEmail({ to, subject, html, attachments }) {

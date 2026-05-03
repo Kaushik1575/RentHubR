@@ -130,14 +130,7 @@ const NavbarProfile = () => {
                         <i className="fas fa-user-circle" style={{ width: '20px', color: '#3498db' }}></i> My Profile
                     </div>
 
-                    <div
-                        onClick={() => { setIsOpen(false); navigate('/rewards'); }}
-                        style={menuItemStyle}
-                        onMouseOver={(e) => e.target.style.backgroundColor = '#f8f9fa'}
-                        onMouseOut={(e) => e.target.style.backgroundColor = 'transparent'}
-                    >
-                        <i className="fas fa-gift" style={{ width: '20px', color: '#f1c40f' }}></i> My Rewards
-                    </div>
+
 
                     <div
                         onClick={() => { setIsOpen(false); navigate('/my-bookings'); }}

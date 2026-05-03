@@ -11,32 +11,15 @@ const ProfilePage = () => {
     const [formData, setFormData] = useState({});
     const [popup, setPopup] = useState({ isOpen: false, type: 'info', title: '', message: '' });
 
-    // Loyalty System logic
-    const [rewards, setRewards] = useState([]);
+    // Rewards/Loyalty removed as per user request
 
     useEffect(() => {
         fetchProfile();
     }, []);
 
-    useEffect(() => {
-        if (user) fetchRewards();
-    }, [user]);
+    // fetchRewards removed
 
-    // Check for tab query parameter and scroll to rewards section
-    useEffect(() => {
-        const params = new URLSearchParams(location.search);
-        const tab = params.get('tab');
-
-        if (tab === 'rewards') {
-            // Wait for page to render, then scroll to rewards section
-            setTimeout(() => {
-                const rewardsSection = document.getElementById('rewards-section');
-                if (rewardsSection) {
-                    rewardsSection.scrollIntoView({ behavior: 'smooth', block: 'start' });
-                }
-            }, 500);
-        }
-    }, [location.search]);
+    // Rewards tab scroll logic removed
 
     const fetchProfile = async () => {
         setLoading(true);
@@ -70,68 +53,7 @@ const ProfilePage = () => {
         }
     };
 
-    const fetchRewards = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            const res = await fetch('/api/user/rewards', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            });
-            if (res.ok) {
-                const data = await res.json();
-                setRewards(data.rewards || []);
-            }
-        } catch (e) {
-            console.error('Failed to fetch rewards', e);
-        }
-    };
-
-    const handleRedeem = async () => {
-        try {
-            const token = localStorage.getItem('token');
-            setPopup({ isOpen: true, type: 'info', title: 'Redeeming...', message: 'Please wait while we process your reward.' });
-
-            const res = await fetch('/api/user/redeem', {
-                method: 'POST',
-                headers: {
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'application/json'
-                }
-            });
-            const data = await res.json();
-
-            if (res.ok && data.success) {
-                setRewards(prev => [data.reward, ...prev]);
-
-                if (location.state?.returnUrl) {
-                    setPopup({
-                        isOpen: true,
-                        type: 'success',
-                        title: 'Reward Redeemed!',
-                        message: `Your Code: ${data.reward.coupon_code}\nClick below to use it.`,
-                        customActions: (
-                            <div style={{ marginTop: '15px', display: 'flex', gap: '10px', justifyContent: 'center' }}>
-                                <button onClick={() => {
-                                    navigator.clipboard.writeText(data.reward.coupon_code);
-                                    navigate(location.state.returnUrl, { state: { autoApplyCode: data.reward.coupon_code } });
-                                }} style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                    Copy & Return to Booking
-                                </button>
-                                <button onClick={() => setPopup({ isOpen: false })} style={{ padding: '10px 20px', background: '#e2e8f0', color: '#4a5568', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                    Stay Here
-                                </button>
-                            </div>
-                        )
-                    });
-                } else {
-                    setPopup({ isOpen: true, type: 'success', title: 'Woohoo!', message: `Reward Redeemed! Code: ${data.reward.coupon_code} added.` });
-                }
-            } else {
-                setPopup({ isOpen: true, type: 'error', title: 'Redemption Failed', message: data.error || 'Could not redeem reward.' });
-            }
-        } catch (error) {
-            setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Network error during redemption.' });
-        }
-    };
+    // handleRedeem and fetchRewards functions removed
 
     const fileInputRef = React.useRef(null);
 

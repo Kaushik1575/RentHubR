@@ -4,6 +4,7 @@ import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { ReviewSummary, ReviewCard, ReviewForm, ImageSliderModal } from '../components/ReviewComponents';
 import { toast } from 'react-hot-toast';
+import StatusPopup from '../components/StatusPopup';
 
 const VehicleDetails = () => {
     const { type, id } = useParams(); // type: 'bikes', 'cars', 'scooty'
@@ -21,6 +22,12 @@ const VehicleDetails = () => {
     const userStr = localStorage.getItem('user');
     const currentUser = userStr ? JSON.parse(userStr) : null;
     const currentUserId = currentUser ? currentUser.id : null;
+
+    const [popup, setPopup] = useState({ isOpen: false, type: 'success', title: '', message: '', onConfirm: null });
+
+    const showPopup = (type, title, message, onConfirm = null) => {
+        setPopup({ isOpen: true, type, title, message, onConfirm });
+    };
 
     // Map 'bike' -> 'bikes' if necessary (though route should standardise)
     const apiType = type === 'bike' ? 'bikes' : type === 'car' ? 'cars' : type;
@@ -67,33 +74,34 @@ const VehicleDetails = () => {
     };
 
     const handleDeleteReview = async (reviewId) => {
-        if (!window.confirm("Are you sure you want to delete this review?")) return;
+        showPopup('confirm', 'Delete Review', 'Are you sure you want to delete this review?', async () => {
+            const token = localStorage.getItem('token');
+            try {
+                const res = await fetch(`/api/reviews/${reviewId}`, {
+                    method: 'DELETE',
+                    headers: {
+                        'Authorization': `Bearer ${token}`
+                    }
+                });
 
-        const token = localStorage.getItem('token');
-        try {
-            const res = await fetch(`/api/reviews/${reviewId}`, {
-                method: 'DELETE',
-                headers: {
-                    'Authorization': `Bearer ${token}`
+                if (res.ok) {
+                    setPopup({ ...popup, isOpen: false });
+                    toast.success("Review deleted");
+                    // Refresh reviews
+                    const reviewRes = await fetch(`/api/reviews/${apiType}/${id}`);
+                    if (reviewRes.ok) {
+                        const reviewData = await reviewRes.json();
+                        setReviews(reviewData);
+                    }
+                } else {
+                    const data = await res.json();
+                    showPopup('error', 'Delete Failed', data.error || "Failed to delete review");
                 }
-            });
-
-            if (res.ok) {
-                toast.success("Review deleted");
-                // Refresh reviews
-                const reviewRes = await fetch(`/api/reviews/${apiType}/${id}`);
-                if (reviewRes.ok) {
-                    const reviewData = await reviewRes.json();
-                    setReviews(reviewData);
-                }
-            } else {
-                const data = await res.json();
-                toast.error(data.error || "Failed to delete review");
+            } catch (error) {
+                console.error(error);
+                showPopup('error', 'Error', "Error deleting review");
             }
-        } catch (error) {
-            console.error(error);
-            toast.error("Error deleting review");
-        }
+        });
     };
 
     if (loading) return <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '100px', minHeight: '100vh' }}>Loading...</div>;
@@ -264,6 +272,17 @@ const VehicleDetails = () => {
                 </div>
 
             </div>
+            
+            <StatusPopup
+                isOpen={popup.isOpen}
+                onClose={() => setPopup({ ...popup, isOpen: false })}
+                type={popup.type}
+                title={popup.title}
+                message={popup.message}
+                onConfirm={popup.onConfirm}
+                confirmText="Yes, Delete It"
+                cancelText="Cancel"
+            />
         </div>
     );
 };

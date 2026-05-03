@@ -64,7 +64,7 @@ const LoyaltySettings = () => {
                 <button onClick={() => navigate('/admin')} style={{ marginRight: '15px', background: 'none', border: 'none', fontSize: '20px', cursor: 'pointer' }}>
                     <i className="fas fa-arrow-left"></i>
                 </button>
-                <h1 style={{ margin: 0 }}>Loyalty System Settings</h1>
+                <h1 style={{ margin: 0 }}>Reward System Settings</h1>
             </div>
 
             <div style={{ background: 'white', padding: '30px', borderRadius: '12px', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
@@ -81,12 +81,12 @@ const LoyaltySettings = () => {
                             <option value="false">Disabled</option>
                         </select>
                         <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
-                            If disabled, users won't earn coins and cannot redeem rewards.
+                            If disabled, users won't earn points and cannot redeem rewards.
                         </small>
                     </div>
 
                     <div style={{ marginBottom: '25px' }}>
-                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Earning Rate (Coins per Minute)</label>
+                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Earning Rate (Points per Minute)</label>
                         <input
                             type="number"
                             value={settings.earning_rate}
@@ -95,12 +95,12 @@ const LoyaltySettings = () => {
                             min="0.1" step="0.1"
                         />
                         <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
-                            How many coins a user earns for every minute of a completed ride.
+                            How many reward points a user earns for every minute of a completed ride.
                         </small>
                     </div>
 
                     <div style={{ marginBottom: '25px' }}>
-                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Reward Threshold (Coins needed for Free Ride)</label>
+                        <label style={{ display: 'block', marginBottom: '10px', fontWeight: 'bold' }}>Reward Threshold (Points needed for Free Ride)</label>
                         <input
                             type="number"
                             value={settings.reward_threshold}
@@ -109,7 +109,7 @@ const LoyaltySettings = () => {
                             min="100"
                         />
                         <small style={{ display: 'block', marginTop: '5px', color: '#666' }}>
-                            Coins required to redeem a "Free 2-Hour Ride" coupon.
+                            Points required to redeem a "Free 2-Hour Ride" coupon.
                         </small>
                     </div>
 

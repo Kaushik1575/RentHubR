@@ -193,7 +193,7 @@ exports.chat = async (req, res) => {
         if (req.user && req.user.id) {
             try {
                 const coins = await SupabaseDB.getUserCoins(req.user.id);
-                userContext = `\n**USER CONTEXT:**\n- User ID: ${req.user.id}\n- Super Coins Balance: ${coins}\n- Reward Status: ${coins >= 1000 ? "ELIGIBLE for Free 2-Hour Ride (Redeem in Profile)" : `${1000 - coins} coins needed for Free Ride`}\n`;
+                userContext = `\n**USER CONTEXT:**\n- User ID: ${req.user.id}\n- Reward Points Balance: ${coins}\n- Reward Status: ${coins >= 1000 ? "ELIGIBLE for Free 2-Hour Ride (Redeem in Profile)" : `${1000 - coins} points needed for Free Ride`}\n`;
             } catch (e) {
                 console.error("Error fetching user coins for chatbot:", e);
             }
@@ -239,11 +239,7 @@ ${userContext}
    - Example queries: "What's the weather in Mumbai?", "What should I pack for Goa?", "Check weather for my destination"
    - Output: CHECK_WEATHER action with the location.
 
-7. **SUPER COINS & REWARDS**:
-   - Answer queries like "How many coins do I have?" using USER CONTEXT.
-   - If user asks how to get coins: "You earn 1 Super Coin for every minute of a completed ride."
-   - If user asks about rewards: "Reach 1000 coins to unlock a FREE 2-Hour Ride!"
-   - Give motivational nudges if they are close to 1000.
+{/* Reward system decommissioned */}
 
 8. **CONTACT SUPPORT / SOMETHING ELSE**:
    - If the user asks for "Support", "Customer Care", "Phone Number", or says "Something else", you **MUST** output the CALL_SUPPORT action.

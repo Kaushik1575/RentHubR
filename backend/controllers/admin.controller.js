@@ -610,7 +610,10 @@ const sendSOS = async (req, res) => {
         const { data: booking } = await supabase.from('bookings').select('*, users:user_id(email, full_name, phone_number)').eq('id', bookingId).single();
 
         if (!booking) return res.status(404).json({ error: 'Booking not found' });
-        if ((booking.status || '').toLowerCase() !== 'confirmed') return res.status(400).json({ error: 'SOS can only be sent for confirmed bookings' });
+        const status = (booking.status || '').toLowerCase();
+        if (status !== 'confirmed' && status !== 'ride_started') {
+            return res.status(400).json({ error: 'SOS can only be sent for confirmed or active rides' });
+        }
 
         const userEmail = booking.users?.email || ((Array.isArray(booking.users) && booking.users[0]?.email) ? booking.users[0].email : null);
         const userName = booking.users?.full_name || 'User';
@@ -787,59 +790,6 @@ const handleQRScan = async (req, res) => {
                 message += `\nTOTAL PAYABLE: ₹${finalBalance}`;
             }
 
-            // --- Super Coins Logic ---
-            let coinsEarned = 0;
-            try {
-                const settings = await SupabaseDB.getLoyaltySettings();
-                console.log('Loyalty Settings:', settings); // Debug log
-
-                if (settings.system_enabled === 'true') {
-                    const earningRate = parseFloat(settings.earning_rate) || 1;
-
-                    // Use Math.round to handle seconds (e.g., 589.9 mins -> 590 mins)
-                    // uniqueMinutes ensures we don't undercount
-                    const exactMinutes = durationMs / (1000 * 60);
-                    const roundedMinutes = Math.round(exactMinutes);
-
-                    coinsEarned = Math.floor(roundedMinutes * earningRate);
-
-                    console.log(`🪙 Coin Calc: ${exactMinutes.toFixed(2)} mins -> ${roundedMinutes} rounded * ${earningRate} rate = ${coinsEarned} coins`);
-
-                    if (coinsEarned > 0) {
-                        const currentCoins = await SupabaseDB.getUserCoins(booking.user_id);
-                        const newCoinBalance = currentCoins + coinsEarned;
-                        await SupabaseDB.updateUserCoins(booking.user_id, newCoinBalance);
-                        message += `\n🌟 You earned ${coinsEarned} Super Coins!`;
-
-                        // Send Coin Notification Email
-                        try {
-                            // Only if we have user info
-                            if (booking.users && booking.users.email) {
-                                await sendRideCompletedEmail(
-                                    booking.users.email,
-                                    booking.users.full_name || 'Rider',
-                                    {
-                                        bookingId: booking.booking_id || `#${booking.id}`,
-                                        vehicleName: vehicle?.name || booking.vehicle_type,
-                                        totalAmount: finalBalance > 0 ? finalBalance : 0,
-                                        coinsEarned: coinsEarned
-                                    },
-                                    {
-                                        totalCoins: newCoinBalance,
-                                        coinsNeeded: Math.max(0, 1000 - newCoinBalance)
-                                    }
-                                );
-                                console.log('📧 Coin email sent to', booking.users.email);
-                            }
-                        } catch (emailErr) {
-                            console.error('Failed to send coin email:', emailErr);
-                        }
-                    }
-                }
-            } catch (coinError) {
-                console.error('Error crediting coins:', coinError);
-            }
-
             // 6. Update Database
             // const updatedRemainingAmount = finalBalance > 0 ? finalBalance : 0; // Uncomment after running migration
             const { error: updateError } = await supabase
@@ -851,8 +801,7 @@ const handleQRScan = async (req, res) => {
                     extra_hours: parseFloat((extraMinutes / 60).toFixed(2)),
                     extra_amount: extraAmount,
                     total_amount: actualBillableAmount,
-                    updated_at: now.toISOString(),
-                    coins_earned: coinsEarned
+                    updated_at: now.toISOString()
                 })
                 .eq('id', booking.id);
 
@@ -972,7 +921,12 @@ const getDashboardStats = async (req, res) => {
             return { type, description, timestamp: b.created_at };
         });
 
-        res.json({ totalVehicles, totalBookingsMonth, activeUsers, pendingBookings, confirmedBookings, cancelledBookings, pendingRefunds, todaysBookings, recentActivity });
+        const todayDate = new Date().toISOString();
+        const { count: activeOffers } = await supabase.from('offers').select('id', { count: 'exact', head: true })
+            .eq('is_active', true)
+            .or(`valid_until.gte.${todayDate},valid_until.is.null`);
+
+        res.json({ totalVehicles, totalBookingsMonth, activeUsers, pendingBookings, confirmedBookings, cancelledBookings, pendingRefunds, todaysBookings, activeOffers, recentActivity });
     } catch (error) {
         console.error('Error fetching dashboard stats:', error);
         res.status(500).json({ error: 'Error fetching dashboard stats' });

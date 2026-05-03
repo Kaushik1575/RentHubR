@@ -402,11 +402,7 @@ const MyBookings = () => {
                             <p><strong>Advance Payment:</strong> ₹{booking.displayAdvancePayment || '0'}</p>
                             <p><strong>Remaining Amount:</strong> ₹{booking.remainingDisplayAmount >= 0 ? booking.remainingDisplayAmount : '0'}</p>
                             <p><strong>Transaction ID:</strong> {booking.transaction_id || 'N/A'}</p>
-                            {(['completed', 'ride_completed'].includes(booking.status)) && (booking.coins_earned || 0) > 0 && (
-                                <p style={{ color: '#d97706', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
-                                    <strong>Coins Earned:</strong> {booking.coins_earned} <i className="fas fa-coins" style={{ color: '#D4AF37' }}></i>
-                                </p>
-                            )}
+                            {/* Points display removed */}
                             {booking.rewards && booking.rewards.coupon_code && (
                                 <p style={{ color: '#2e7d32', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '5px' }}>
                                     <i className="fas fa-tag"></i>

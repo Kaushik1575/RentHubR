@@ -19,8 +19,8 @@ Want to try it? Use my referral code and get rewarded!
 
 🎁 YOUR WELCOME BONUS:
 ━━━━━━━━━━━━━━━━━━━
-✅ ₹200 Bonus Coins (Instant!)
-✅ Earn 1 Coin per minute on rides
+✅ ₹200 Bonus Points (Instant!)
+✅ Earn 1 Point per minute on rides
 ✅ Redeem for FREE rides
 ✅ Access to premium bikes, scooters & cars
 
@@ -28,7 +28,7 @@ Want to try it? Use my referral code and get rewarded!
 ━━━━━━━━━━━━━━━━━━━
 1️⃣ Sign up using my link
 2️⃣ Enter referral code: ${code}
-3️⃣ Get ₹200 coins credited instantly
+3️⃣ Get ₹200 points credited instantly
 4️⃣ Start booking & earning more!
 
 🔗 CLAIM YOUR BONUS:
@@ -72,7 +72,7 @@ Happy Riding! 🚗💨`;
 
                 <h2 style={{ fontSize: '32px', fontWeight: '800', marginBottom: '10px', textShadow: '0 2px 4px rgba(0,0,0,0.2)' }}>Refer & Earn</h2>
                 <p style={{ fontSize: '16px', opacity: 0.95, marginBottom: '30px', maxWidth: '450px', margin: '0 auto 30px auto', lineHeight: '1.6' }}>
-                    Invite your friends to RentHub! They get <b>₹200</b> worth of coins on signup, and you get a <span style={{ color: '#ffd700', fontWeight: 'bold' }}>Scratch Card</span> for every friend who joins.
+                    Invite your friends to RentHub! They get <b>₹200</b> worth of reward points on signup, and you get a <span style={{ color: '#ffd700', fontWeight: 'bold' }}>Scratch Card</span> for every friend who joins.
                 </p>
 
                 <div style={{

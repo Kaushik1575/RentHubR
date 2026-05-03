@@ -53,24 +53,33 @@ class SupabaseDB {
             .from('bookings')
             .select('*, rewards:reward_id(coupon_code, reward_type)')
             .eq('user_id', userId)
-            .order('id', { ascending: false }); // Sort by ID descending (newest first)
+            .order('id', { ascending: false });
 
         if (error) throw error;
+        if (!data) return [];
 
         // Update status for past bookings
         const now = new Date();
         const updatedData = data.map(booking => {
-            if (booking.status === 'confirmed' && booking.start_date && booking.start_time) {
-                // Parse start date and time
-                const [year, month, day] = booking.start_date.split('-').map(Number);
-                const [hours, minutes] = booking.start_time.split(':').map(Number);
+            try {
+                if (booking.status === 'confirmed' && booking.start_date && booking.start_time) {
+                    const dateParts = booking.start_date.split('-');
+                    const timeParts = booking.start_time.split(':');
+                    
+                    if (dateParts.length === 3 && timeParts.length >= 2) {
+                        const [year, month, day] = dateParts.map(Number);
+                        const [hours, minutes] = timeParts.map(Number);
 
-                // Create date object (months are 0-indexed in JS Date)
-                const bookingStart = new Date(year, month - 1, day, hours, minutes);
+                        // Create date object (months are 0-indexed in JS Date)
+                        const bookingStart = new Date(year, month - 1, day, hours, minutes);
 
-                if (now > bookingStart) {
-                    return { ...booking, status: 'completed' };
+                        if (!isNaN(bookingStart.getTime()) && now > bookingStart) {
+                            return { ...booking, status: 'completed' };
+                        }
+                    }
                 }
+            } catch (err) {
+                console.error(`Error processing status for booking ${booking.id}:`, err);
             }
             return booking;
         });

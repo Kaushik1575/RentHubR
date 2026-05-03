@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { toast } from 'react-hot-toast';
+import StatusPopup from './StatusPopup';
 
 
 const STATUS_CONFIG = {
@@ -18,6 +19,11 @@ export default function AdminIssues() {
   const [replyStatus, setReplyStatus] = useState('In Progress');
   const [replyLoading, setReplyLoading] = useState(false);
   const [search, setSearch] = useState('');
+  const [popup, setPopup] = useState({ isOpen: false, type: 'success', title: '', message: '', onConfirm: null });
+
+  const showPopup = (type, title, message, onConfirm = null) => {
+    setPopup({ isOpen: true, type, title, message, onConfirm });
+  };
 
   const getToken = () => {
     const t = localStorage.getItem('token');
@@ -141,33 +147,35 @@ export default function AdminIssues() {
 
   const handleBulkResolve = async () => {
     if (!selectedIssueIds.length) return;
-    if (!window.confirm(`Are you sure you want to mark ${selectedIssueIds.length} issues as Resolved?`)) return;
     
-    setLoading(true);
-    try {
-      const t = getToken();
-      if (!t) throw new Error('Auth token missing');
+    showPopup('confirm', 'Bulk Resolve', `Are you sure you want to mark ${selectedIssueIds.length} issues as Resolved?`, async () => {
+      setLoading(true);
+      try {
+        const t = getToken();
+        if (!t) throw new Error('Auth token missing');
 
-      const promises = selectedIssueIds.map(id => 
-        fetch(`/api/support/admin/reply/${id}`, {
-          method: 'PUT',
-          headers: {
-            'Content-Type': 'application/json',
-            Authorization: `Bearer ${t}`
-          },
-          body: JSON.stringify({ admin_reply: 'Marked as resolved via bulk action.', status: 'Resolved' })
-        })
-      );
-      await Promise.all(promises);
-      toast.success(`${selectedIssueIds.length} issues resolved!`);
-      setSelectedIssueIds([]);
-      fetchIssues();
-      fetchStats();
-    } catch (e) {
-      toast.error('Bulk update failed');
-    } finally {
-      setLoading(false);
-    }
+        const promises = selectedIssueIds.map(id => 
+          fetch(`/api/support/admin/reply/${id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+              Authorization: `Bearer ${t}`
+            },
+            body: JSON.stringify({ admin_reply: 'Marked as resolved via bulk action.', status: 'Resolved' })
+          })
+        );
+        await Promise.all(promises);
+        setPopup({ ...popup, isOpen: false });
+        toast.success(`${selectedIssueIds.length} issues resolved!`);
+        setSelectedIssueIds([]);
+        fetchIssues();
+        fetchStats();
+      } catch (e) {
+        toast.error('Bulk update failed');
+      } finally {
+        setLoading(false);
+      }
+    });
   };
 
   return (
@@ -459,6 +467,18 @@ export default function AdminIssues() {
           </div>
         </div>
       )}
+
+      {/* Status Popup */}
+      <StatusPopup
+        isOpen={popup.isOpen}
+        onClose={() => setPopup({ ...popup, isOpen: false })}
+        type={popup.type}
+        title={popup.title}
+        message={popup.message}
+        onConfirm={popup.onConfirm}
+        confirmText="Yes, Proceed"
+        cancelText="Cancel"
+      />
 
       <style>{`
         @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }

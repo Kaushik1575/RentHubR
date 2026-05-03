@@ -45,6 +45,7 @@ const BookingForm = () => {
     // Loyalty Rewards
     const [rewards, setRewards] = useState([]);
     const [selectedReward, setSelectedReward] = useState(null);
+    const [appliedOffer, setAppliedOffer] = useState(null); // For general offers
     const [couponInput, setCouponInput] = useState('');
     const [termsAccepted, setTermsAccepted] = useState(false);
 
@@ -59,25 +60,7 @@ const BookingForm = () => {
                 .then(data => setRewards(data.rewards || []))
                 .catch(err => console.error(err));
 
-            // Fetch User Coins for Smart Nudge
-            fetch('/api/user/coins', {
-                headers: { 'Authorization': `Bearer ${token}` }
-            })
-                .then(res => res.json())
-                .then(data => {
-                    // Smart Nudge Logic: If coins >= 1000 and not using a reward yet, and NOT returning from profile with code
-                    if (data.coins >= 1000 && !location.state?.autoApplyCode) {
-                        setPopup({
-                            isOpen: true,
-                            type: 'info', // Using 'info' type for custom styling or just standard
-                            title: '🌟 You have Free Rides!',
-                            message: `You have ${data.coins} Super Coins! equivalent to a FREE 2-Hour Ride. Go to Rewards to redeem it now?`,
-                            isNudge: true, // Custom flag to handle actions
-                            onConfirm: () => navigate('/rewards', { state: { returnUrl: location.pathname + location.search } })
-                        });
-                    }
-                })
-                .catch(err => console.error(err));
+            // Loyalty nudge removed as per user request
         }
     }, []);
 
@@ -195,12 +178,26 @@ const BookingForm = () => {
     const duration = parseInt(formData.duration) || 0;
 
     let baseTotal = hourlyRate * duration;
-    let finalTotal = baseTotal;
+    let discountAmount = 0;
 
+    // Handle Loyalty Rewards (e.g., RHD...)
     if (selectedReward && selectedReward.reward_type === 'FREE_2_HOUR_RIDE') {
-        const billableHours = Math.max(0, duration - 2);
-        finalTotal = billableHours * hourlyRate;
+        // First 2 hours are free, user pays for the rest
+        discountAmount = Math.min(baseTotal, hourlyRate * 2);
+    } 
+    // Handle General Offers (e.g., SUMMER20)
+    else if (appliedOffer) {
+        if (appliedOffer.discount_percentage) {
+            discountAmount = (baseTotal * appliedOffer.discount_percentage) / 100;
+            if (appliedOffer.max_discount && discountAmount > appliedOffer.max_discount) {
+                discountAmount = appliedOffer.max_discount;
+            }
+        } else if (appliedOffer.flat_discount) {
+            discountAmount = Math.min(baseTotal, appliedOffer.flat_discount);
+        }
     }
+
+    let finalTotal = Math.max(0, baseTotal - discountAmount);
 
     // 30% Advance Payment
     const advancePercentage = 30;
@@ -288,7 +285,7 @@ const BookingForm = () => {
                 isOpen: true,
                 type: 'warning',
                 title: '⚠️ Minimum 4 Hours Required',
-                message: 'To use your Free 2-Hour Ride coupon, you must book for at least 4 hours. You\'ll get the first 2 hours FREE and pay for the remaining 2 hours, earning Super Coins on the paid portion!',
+                message: 'To use your Free 2-Hour Ride coupon, you must book for at least 4 hours. You\'ll get the first 2 hours FREE and pay for the remaining 2 hours!',
                 customActions: (
                     <div style={{ marginTop: '15px', textAlign: 'center' }}>
                         <button
@@ -439,6 +436,7 @@ const BookingForm = () => {
                 razorpayOrderId: paymentResponse.razorpay_order_id,
                 razorpaySignature: paymentResponse.razorpay_signature,
                 rewardId: selectedReward ? selectedReward.id : null,
+                couponCode: appliedOffer ? appliedOffer.code : null, // Pass the general coupon code
                 advancePayment,
                 remainingAmount,
                 totalAmount: finalTotal
@@ -677,60 +675,121 @@ const BookingForm = () => {
                                     />
                                     <button
                                         type="button"
-                                        onClick={() => {
+                                        disabled={processing}
+                                        onClick={async () => {
                                             const code = couponInput.trim();
-                                            const reward = rewards.find(r => r.coupon_code === code && !r.is_used);
+                                            if (!code) return;
 
-                                            if (reward) {
-                                                if (reward.reward_type === 'FREE_2_HOUR_RIDE') {
-                                                    // Check if duration is less than 4 hours
-                                                    if (formData.duration < 4) {
-                                                        setPopup({
-                                                            isOpen: true,
-                                                            type: 'warning',
-                                                            title: '⚠️ Minimum 4 Hours Required',
-                                                            message: 'To use your Free 2-Hour Ride coupon, you must book for at least 4 hours. You\'ll get the first 2 hours FREE and pay for the remaining 2 hours, earning Super Coins on the paid portion!',
-                                                            customActions: (
-                                                                <div style={{ marginTop: '15px', textAlign: 'center' }}>
-                                                                    <button
-                                                                        onClick={() => {
-                                                                            setFormData({ ...formData, duration: 4 });
-                                                                            setSelectedReward(reward);
-                                                                            setPopup({ isOpen: false });
-                                                                        }}
-                                                                        style={{
-                                                                            padding: '12px 30px',
-                                                                            background: '#E57373',
-                                                                            color: 'white',
-                                                                            border: 'none',
-                                                                            borderRadius: '50px',
-                                                                            cursor: 'pointer',
-                                                                            fontWeight: 'bold',
-                                                                            fontSize: '16px'
-                                                                        }}
-                                                                    >
-                                                                        Okay, Got it
-                                                                    </button>
-                                                                </div>
-                                                            )
-                                                        });
-                                                    } else {
-                                                        setSelectedReward(reward);
-                                                        setPopup({ isOpen: true, type: 'success', title: 'Applied!', message: 'Coupon Applied: Free 2-Hour Ride' });
-                                                    }
-                                                } else {
-                                                    setPopup({ isOpen: true, type: 'error', title: 'Invalid', message: 'This coupon is not applicable for this booking.' });
+                                            setProcessing(true);
+                                            try {
+                                                const token = localStorage.getItem('token');
+                                                
+                                                if (!token) {
+                                                    setPopup({ 
+                                                        isOpen: true, 
+                                                        type: 'error', 
+                                                        title: 'Login Required', 
+                                                        message: 'Please login to apply coupons and view your rewards.',
+                                                        isLoginNudge: true 
+                                                    });
+                                                    setProcessing(false);
+                                                    return;
                                                 }
-                                            } else {
-                                                setPopup({ isOpen: true, type: 'error', title: 'Invalid', message: 'Invalid or Used Coupon Code.' });
+
+                                                // 1. Try General Offers first
+                                                const offerRes = await fetch('/api/offers/validate', {
+                                                    method: 'POST',
+                                                    headers: { 
+                                                        'Content-Type': 'application/json',
+                                                        'Authorization': `Bearer ${token}`
+                                                    },
+                                                    body: JSON.stringify({ 
+                                                        code, 
+                                                        bookingDetails: {
+                                                            duration, 
+                                                            vehicleCategory: apiType,
+                                                            totalAmount: baseTotal,
+                                                            startDate: formData.startDate,
+                                                            startTime: formData.startTime
+                                                        }
+                                                    })
+                                                });
+
+                                                const offerData = await offerRes.json();
+
+                                                if (offerRes.ok && offerData.success) {
+                                                    const offer = offerData.offer;
+                                                    setAppliedOffer(offer);
+                                                    setSelectedReward(null); // Clear loyalty reward if using general offer
+                                                    
+                                                    let successMsg = `Coupon '${offer.code}' applied successfully!`;
+                                                    if (offer.usage_limit_per_user === 1) {
+                                                        successMsg += " (Note: This is a one-time use offer)";
+                                                    }
+                                                    
+                                                    setPopup({ isOpen: true, type: 'success', title: 'Applied!', message: successMsg });
+                                                } else {
+                                                    // 2. Fallback to Loyalty Rewards
+                                                    const reward = rewards.find(r => r.coupon_code === code && !r.is_used);
+                                                    
+                                                    if (reward) {
+                                                        if (reward.reward_type === 'FREE_2_HOUR_RIDE') {
+                                                            if (duration < 4) {
+                                                                setPopup({
+                                                                    isOpen: true,
+                                                                    type: 'warning',
+                                                                    title: '⚠️ Minimum 4 Hours Required',
+                                                                    message: 'To use your Free 2-Hour Ride coupon, you must book for at least 4 hours.',
+                                                                    customActions: (
+                                                                        <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                                                                            <button
+                                                                                onClick={() => {
+                                                                                    setFormData({ ...formData, duration: 4 });
+                                                                                    setSelectedReward(reward);
+                                                                                    setAppliedOffer(null);
+                                                                                    setPopup({ isOpen: false });
+                                                                                }}
+                                                                                style={{ padding: '12px 30px', background: '#E57373', color: 'white', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold' }}
+                                                                            >
+                                                                                Okay, Got it
+                                                                            </button>
+                                                                        </div>
+                                                                    )
+                                                                });
+                                                            } else {
+                                                                setSelectedReward(reward);
+                                                                setAppliedOffer(null);
+                                                                setPopup({ isOpen: true, type: 'success', title: 'Applied!', message: 'Coupon Applied: Free 2-Hour Ride' });
+                                                            }
+                                                        } else {
+                                                            setPopup({ isOpen: true, type: 'error', title: 'Invalid', message: 'This coupon is not applicable.' });
+                                                        }
+                                                    } else {
+                                                        // Show the exact reason why the general coupon failed
+                                                        const isLimit = offerData.error?.includes('used this coupon once');
+                                                        const isExpired = offerData.error?.toLowerCase().includes('expired');
+                                                        setPopup({ 
+                                                            isOpen: true, 
+                                                            type: 'error', 
+                                                            title: isExpired ? 'Offer Expired' : (isLimit ? 'Offer Limit Reached' : 'Offer Not Applicable'), 
+                                                            message: offerData.error || 'Invalid or used coupon code.' 
+                                                        });
+                                                    }
+                                                }
+                                            } catch (err) {
+                                                console.error(err);
+                                                setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to validate coupon.' });
+                                            } finally {
+                                                setProcessing(false);
                                             }
                                         }}
-                                        style={{ padding: '10px 15px', background: '#1976d2', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer', fontWeight: 'bold' }}
+                                        style={{ padding: '10px 15px', background: '#1976d2', color: 'white', border: 'none', borderRadius: '4px', cursor: processing ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
                                     >
-                                        Apply
+                                        {processing ? '...' : 'Apply'}
                                     </button>
                                 </div>
-                                {selectedReward && <small style={{ color: '#2e7d32', fontWeight: 'bold', marginTop: '5px', display: 'block' }}>✅ Coupon '{selectedReward.coupon_code}' Applied!</small>}
+                                {selectedReward && <small style={{ color: '#2e7d32', fontWeight: 'bold', marginTop: '5px', display: 'block' }}>✅ Reward '{selectedReward.coupon_code}' Applied!</small>}
+                                {appliedOffer && <small style={{ color: '#2e7d32', fontWeight: 'bold', marginTop: '5px', display: 'block' }}>✅ Offer '{appliedOffer.code}' Applied!</small>}
                             </div>
 
                             <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
@@ -936,14 +995,23 @@ const BookingForm = () => {
                 title={popup.title}
                 message={popup.message}
                 // Custom Actions for Smart Nudge
-                customActions={popup.isNudge ? (
+                customActions={popup.isNudge || popup.isLoginNudge ? (
                     <div style={{ display: 'flex', gap: '10px', marginTop: '15px', justifyContent: 'center', flexWrap: 'wrap' }}>
-                        <button
-                            onClick={() => navigate('/rewards', { state: { returnUrl: location.pathname + location.search } })}
-                            style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold', flex: 1, minWidth: '120px' }}
-                        >
-                            Go to Rewards & Redeem
-                        </button>
+                        {popup.isLoginNudge ? (
+                            <button
+                                onClick={() => navigate('/login', { state: { returnUrl: location.pathname + location.search } })}
+                                style={{ padding: '10px 20px', background: '#d97706', color: 'white', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold', flex: 1, minWidth: '120px' }}
+                            >
+                                Login Now
+                            </button>
+                        ) : (
+                            <button
+                                onClick={() => navigate('/rewards', { state: { returnUrl: location.pathname + location.search } })}
+                                style={{ padding: '10px 20px', background: '#28a745', color: 'white', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold', flex: 1, minWidth: '120px' }}
+                            >
+                                Go to Rewards & Redeem
+                            </button>
+                        )}
                         <button onClick={() => setPopup({ ...popup, isOpen: false })} style={{ padding: '10px 20px', background: '#e2e8f0', color: '#4a5568', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold', flex: 1, minWidth: '120px' }}>
                             Maybe Later
                         </button>

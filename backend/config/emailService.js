@@ -3,9 +3,9 @@ const { Resend } = require('resend');
 // Initialize Resend
 const resend = new Resend(process.env.RESEND_API_KEY);
 
-// Default sender - needed for Resend (use onboarding@resend.dev for testing without domain)
-const SENDER_EMAIL = 'onboarding@jitus.app';
-const SENDER_NAME = 'RentHub';
+// Default sender - pulled from .env for production/custom domains
+const SENDER_EMAIL = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
+const SENDER_NAME = process.env.SENDER_NAME || 'RentHub';
 
 // Generic function to send email via Resend
 async function sendEmail({ to, subject, html, attachments }) {
@@ -490,7 +490,7 @@ async function sendRideCompletedEmail(userEmail, userName, bookingDetails, rewar
         <div style="font-family: 'Segoe UI', Arial, sans-serif; color: #222; max-width: 600px; margin: 0 auto;">
           <div style="background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%); padding: 30px; text-align: center; border-radius: 8px 8px 0 0;">
             <div style="font-size: 40px; margin-bottom: 10px;">🪙</div>
-            <h1 style="color: #fff; margin: 0; font-size: 28px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">You Earned ${coinsEarned} Super Coins!</h1>
+            <h1 style="color: #fff; margin: 0; font-size: 28px; text-shadow: 0 1px 2px rgba(0,0,0,0.1);">You Earned ${coinsEarned} Reward Points!</h1>
           </div>
           
           <div style="background: #ffffff; padding: 30px; border: 1px solid #e5e7eb; border-top: none; border-radius: 0 0 8px 8px;">
@@ -516,7 +516,7 @@ async function sendRideCompletedEmail(userEmail, userName, bookingDetails, rewar
             </div>
 
             <div style="background: #FFFBE6; padding: 20px; border-radius: 8px; border: 1px solid #FFE58F; margin: 20px 0; text-align: center;">
-                <h3 style="margin: 0 0 10px 0; color: #D48806;">🌟 Super Coin Status</h3>
+                <h3 style="margin: 0 0 10px 0; color: #D48806;">🌟 Reward Points Status</h3>
                 
                 <div style="display: flex; justify-content: space-around; margin: 20px 0;">
                     <div>
@@ -531,19 +531,18 @@ async function sendRideCompletedEmail(userEmail, userName, bookingDetails, rewar
                 </div>
 
                 ${coinsNeeded <= 0
-            ? `<p style="color: #28a745; font-weight: bold; margin: 10px 0;">🎉 Congratulations! You have enough coins for a FREE 2-Hour Ride!</p>
+            ? `<p style="color: #28a745; font-weight: bold; margin: 10px 0;">🎉 Congratulations! You have enough reward points for a FREE 2-Hour Ride!</p>
                        <a href="https://rent-hub-r.vercel.app/rewards" style="background: #28a745; color: white; padding: 10px 20px; text-decoration: none; border-radius: 5px; display: inline-block; font-weight: bold;">Redeem Now</a>`
-            : `<p style="margin: 10px 0; color: #555;">You are only <b>${coinsNeeded} coins</b> away from a FREE Ride!</p>
+            : `<p style="margin: 10px 0; color: #555;">You are only <b>${coinsNeeded} points</b> away from a FREE Ride!</p>
                        <div style="background: #e0e0e0; height: 10px; border-radius: 5px; overflow: hidden; margin-top: 10px;">
                            <div style="background: #D48806; height: 100%; width: ${Math.min(100, (totalCoins / 1000) * 100)}%;"></div>
                        </div>
-                       <p style="font-size: 12px; color: #888; margin-top: 5px;">Goal: 1000 Coins</p>`
-        }
+                       <p style="font-size: 12px; color: #888; margin-top: 5px;">Goal: 1000 Points</p>`
+                }
             </div>
-
-            <p style="font-size: 14px; color: #666; text-align: center; margin-top: 30px;">
-                Keep riding to earn more! <br>
-                RenderHub - Your Journey, Our Priority.
+            
+            <p style="font-size: 13px; color: #888; text-align: center; margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px;">
+                Happy Riding!<br>Team RentHub
             </p>
           </div>
         </div>
@@ -551,7 +550,166 @@ async function sendRideCompletedEmail(userEmail, userName, bookingDetails, rewar
 
     return sendEmail({
         to: userEmail,
-        subject: `You Earned ${coinsEarned} Coins! - Booking #${bookingId}`,
+        subject: `You Earned Reward Points! - RentHub`,
+        html: html
+    });
+}
+
+async function sendNewOfferEmail(userEmail, userName, offerDetails, isUpdate = false) {
+    const { 
+        title, description, code, discount_percentage, flat_discount, 
+        image_url, valid_until, target_category,
+        valid_from_hour, valid_to_hour, valid_days,
+        min_duration, min_booking_amount
+    } = offerDetails;
+
+    const discountValue = discount_percentage ? `${discount_percentage}%` : `₹${flat_discount}`;
+    const expiryDate = valid_until ? new Date(valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'long', year: 'numeric' }) : 'Limited Time Only';
+
+    // Format Hours
+    const formatH = (h) => {
+        if (h === null || h === undefined || h === '') return null;
+        const hour = parseInt(h);
+        const ampm = hour >= 12 ? 'PM' : 'AM';
+        const displayHour = hour % 12 || 12;
+        return `${displayHour} ${ampm}`;
+    };
+    const timeRange = (valid_from_hour !== null && valid_to_hour !== null) ? `${formatH(valid_from_hour)} - ${formatH(valid_to_hour)}` : null;
+
+    // Format Days
+    const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+    const daysText = valid_days ? valid_days.split(',').map(d => dayNames[parseInt(d)]).join(', ') : 'Every Day';
+
+    const accentColor = '#f97316'; // Premium Orange
+
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>${isUpdate ? 'Account Update' : 'Special Invitation'} | RentHub</title>
+            <style>
+                @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap');
+                body { font-family: 'Outfit', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif !important; }
+            </style>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f8fafc; color: #0f172a;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td style="padding: 60px 15px;">
+                        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: transparent;">
+                            <!-- Header -->
+                            <tr>
+                                <td align="center" style="padding-bottom: 40px;">
+                                    <div style="font-size: 32px; font-weight: 800; color: #0f172a; letter-spacing: -1.5px;">RentHub<span style="color: ${accentColor};">.</span></div>
+                                </td>
+                            </tr>
+
+                            <!-- Main Card -->
+                            <tr>
+                                <td style="background-color: #ffffff; border-radius: 32px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.08);">
+                                    <!-- Image -->
+                                    <div style="width: 100%; height: 320px; position: relative; overflow: hidden;">
+                                        <img src="${image_url || 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&q=80&w=800'}" 
+                                             alt="Offer Image" 
+                                             style="width: 100%; height: 100%; object-fit: cover;">
+                                        <div style="position: absolute; top: 30px; left: 30px;">
+                                            <div style="background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(8px); padding: 8px 16px; border-radius: 100px; border: 1px solid rgba(255,255,255,0.5);">
+                                                <span style="color: #0f172a; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 2px;">
+                                                    ${isUpdate ? '🔄 Update' : '⭐ Exclusive'}
+                                                </span>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Content -->
+                                    <div style="padding: 45px 45px 0 45px; text-align: center;">
+                                        <h1 style="margin: 0 0 15px 0; font-size: 42px; font-weight: 800; color: #0f172a; line-height: 1; letter-spacing: -1.5px;">${title}</h1>
+                                        <p style="margin: 0; font-size: 18px; color: #64748b; line-height: 1.6;">${description}</p>
+                                    </div>
+
+                                    <!-- Digital Ticket Section -->
+                                    <div style="padding: 45px; position: relative;">
+                                        <div style="border: 2px dashed #e2e8f0; border-radius: 24px; padding: 40px; text-align: center; background-color: #fdfcfb;">
+                                            <div style="font-size: 13px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 3px; margin-bottom: 10px;">Your Benefit</div>
+                                            <div style="font-size: 84px; font-weight: 800; color: ${accentColor}; margin: 0; line-height: 1; letter-spacing: -3px;">${discountValue}</div>
+                                            <div style="font-size: 15px; font-weight: 600; color: #64748b; margin-top: 5px;">Applied to your next booking</div>
+                                            
+                                            <div style="margin: 35px auto; width: 40px; height: 2px; background-color: #e2e8f0;"></div>
+                                            
+                                            <div style="margin-bottom: 10px; font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 2px;">Use Coupon Code</div>
+                                            <div style="display: inline-block; background-color: #ffffff; border: 1px solid #e2e8f0; padding: 15px 35px; border-radius: 16px; font-family: 'Courier New', Courier, monospace; font-size: 32px; font-weight: 800; color: #0f172a; letter-spacing: 6px; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);">
+                                                ${code}
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Constraints Details -->
+                                    <div style="padding: 0 45px 50px 45px;">
+                                        <div style="background-color: #f8fafc; border-radius: 20px; padding: 25px;">
+                                            <table width="100%" cellpadding="0" cellspacing="0" style="border-collapse: collapse;">
+                                                <tr>
+                                                    <td style="padding-bottom: 15px; border-bottom: 1px solid #e2e8f0;">
+                                                        <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Category</span><br>
+                                                        <span style="font-size: 15px; font-weight: 700; color: #0f172a;">${target_category}</span>
+                                                    </td>
+                                                    <td style="padding-bottom: 15px; border-bottom: 1px solid #e2e8f0; padding-left: 20px;">
+                                                        <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Valid Days</span><br>
+                                                        <span style="font-size: 15px; font-weight: 700; color: #0f172a;">${daysText}</span>
+                                                    </td>
+                                                </tr>
+                                                <tr>
+                                                    <td style="padding-top: 15px;">
+                                                        <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Time Window</span><br>
+                                                        <span style="font-size: 15px; font-weight: 700; color: #0f172a;">${timeRange || '24/7 Availability'}</span>
+                                                    </td>
+                                                    <td style="padding-top: 15px; padding-left: 20px;">
+                                                        <span style="font-size: 11px; font-weight: 700; color: #94a3b8; text-transform: uppercase; letter-spacing: 1px;">Expires On</span><br>
+                                                        <span style="font-size: 15px; font-weight: 700; color: #0f172a;">${expiryDate}</span>
+                                                    </td>
+                                                </tr>
+                                            </table>
+                                        </div>
+                                        
+                                        <a href="https://rent-hub-r.vercel.app/" style="display: block; background-color: #0f172a; color: #ffffff; padding: 22px 30px; text-decoration: none; border-radius: 18px; font-weight: 800; font-size: 18px; text-align: center; margin-top: 40px; box-shadow: 0 20px 25px -5px rgba(15,23,42,0.2);">
+                                            Claim Offer Now
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Footer -->
+                            <tr>
+                                <td align="center" style="padding-top: 50px;">
+                                    <div style="font-size: 18px; font-weight: 800; color: #0f172a; margin-bottom: 10px;">RentHub</div>
+                                    <p style="color: #94a3b8; font-size: 14px; margin: 0 0 25px 0;">Premium Rentals. Unmatched Service.</p>
+                                    <div style="margin-bottom: 30px;">
+                                        <a href="https://rent-hub-r.vercel.app/" style="text-decoration: none; margin: 0 15px; color: #64748b; font-size: 13px; font-weight: 600;">Dashboard</a>
+                                        <a href="https://rent-hub-r.vercel.app/" style="text-decoration: none; margin: 0 15px; color: #64748b; font-size: 13px; font-weight: 600;">Support</a>
+                                        <a href="https://rent-hub-r.vercel.app/" style="text-decoration: none; margin: 0 15px; color: #64748b; font-size: 13px; font-weight: 600;">Privacy</a>
+                                    </div>
+                                    <div style="border-top: 1px solid #e2e8f0; padding-top: 30px;">
+                                        <p style="color: #cbd5e1; font-size: 11px; line-height: 1.8; text-transform: uppercase; letter-spacing: 1.5px;">
+                                            © 2026 RentHub Inc. • 123 Luxury Way, Metro City<br>
+                                            You are receiving this as a registered member.
+                                        </p>
+                                    </div>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+    `;
+
+    return sendEmail({
+        to: userEmail,
+        subject: isUpdate 
+            ? `🔄 UPDATE: Your Exclusive Offer Has Been Enhanced` 
+            : `🎁 SPECIAL GIFT: ${discountValue} OFF Your Next Ride!`,
         html: html
     });
 }
@@ -564,9 +722,9 @@ module.exports = {
     sendRefundCompleteEmail,
     sendSOSLinkEmail,
     sendSOSAlertEmail,
-    sendSOSAlertEmail,
     sendRideCompletedEmail,
     sendVehicleApprovedEmail,
+    sendNewOfferEmail,
     sendEmail,
     SENDER_EMAIL
 };

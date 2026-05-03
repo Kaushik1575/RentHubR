@@ -174,7 +174,6 @@ const Navbar = () => {
                         {isLoggedIn && (
                             <>
                                 <Link to="/profile" onClick={closeMenu} style={mobileLinkStyle}>My Profile <span style={{ fontSize: '10px', background: '#e74c3c', color: 'white', padding: '2px 6px', borderRadius: '10px', verticalAlign: 'middle', marginLeft: '5px' }}>NEW</span></Link>
-                                <Link to="/rewards" onClick={closeMenu} style={mobileLinkStyle}>My Rewards <span style={{ fontSize: '10px', background: '#f1c40f', color: 'black', padding: '2px 6px', borderRadius: '10px', verticalAlign: 'middle', marginLeft: '5px' }}>WIN</span></Link>
                                 <Link to="/my-bookings" onClick={closeMenu} style={mobileLinkStyle}>My Bookings</Link>
                             </>
                         )}

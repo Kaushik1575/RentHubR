@@ -8,6 +8,7 @@ const Home = () => {
     const [cars, setCars] = useState([]);
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('All');
+    const [offers, setOffers] = useState([]);
     const navigate = useNavigate();
 
     useEffect(() => {
@@ -33,7 +34,18 @@ const Home = () => {
             }
         };
 
+        const fetchOffers = async () => {
+            try {
+                const res = await fetch('/api/offers/active');
+                const data = await res.json();
+                if (data.success) setOffers(data.offers);
+            } catch (err) {
+                console.error('Error loading offers:', err);
+            }
+        };
+
         fetchVehicles();
+        fetchOffers();
     }, []);
 
     // Handle reward banner clicks with login check
@@ -73,6 +85,21 @@ const Home = () => {
     const VehicleCard = ({ vehicle, type }) => {
         // Mock rating if not present (random between 4.5 and 5.0)
         const rating = (4.5 + Math.random() * 0.5).toFixed(1);
+
+        // Find the best offer for this specific category
+        const matchingOffer = offers.find(o => {
+            if (!o.is_active) return false;
+
+            const target = o.target_category.toUpperCase();
+            const currentType = type.toUpperCase();
+
+            // Strict matching logic
+            if (target === 'ALL') return true;
+            if (target === 'BIKES' && currentType === 'BIKE') return true;
+            if (target === currentType) return true;
+
+            return false;
+        });
 
         return (
             <div className="vehicle-card" data-id={vehicle.id} data-type={type}>
@@ -175,139 +202,286 @@ const Home = () => {
             </section>
 
             {/* Vehicle Showcase Section */}
-            <section className="vehicle-showcase">
-                <div className="container">
-                    <div className="section-header text-center">
-                        <h2>Featured Vehicles & Bikes</h2>
-                        <p className="section-subtitle">Choose from our premium fleet of well-maintained vehicles for a safe and comfortable ride.</p>
+            <section className="vehicle-showcase" style={{ paddingTop: '20px' }}>
+                <div className="container" style={{ maxWidth: '100%', padding: '0' }}>
+
+                    {/* DYNAMIC FESTIVE OFFERS SECTION - MOVED ABOVE VEHICLE HEADER */}
+                    {offers && offers.length > 0 && (
+                        <div style={{
+                            margin: '0 0 60px 0',
+                            background: 'rgba(248, 250, 252, 0.5)',
+                            backdropFilter: 'blur(10px)',
+                            padding: '60px 0',
+                            borderRadius: '0 0 60px 60px',
+                            borderBottom: '1px solid rgba(226, 232, 240, 0.8)'
+                        }}>
+                            <div style={{
+                                width: '100%',
+                                padding: '0 5%'
+                            }}>
+                                {/* Decorative Glow Background */}
+                                <div style={{
+                                    position: 'absolute',
+                                    top: '-40px',
+                                    left: '-20px',
+                                    width: '400px',
+                                    height: '200px',
+                                    background: 'radial-gradient(circle, rgba(79, 70, 229, 0.08) 0%, rgba(255, 255, 255, 0) 70%)',
+                                    zIndex: 0,
+                                    pointerEvents: 'none'
+                                }}></div>
+
+                                <div style={{
+                                    textAlign: 'center',
+                                    marginBottom: '60px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '20px',
+                                    position: 'relative',
+                                    zIndex: 1
+                                }}>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', justifyContent: 'center' }}>
+                                        <span style={{
+                                            padding: '10px 24px',
+                                            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
+                                            color: 'white',
+                                            borderRadius: '50px',
+                                            fontSize: '12px',
+                                            fontWeight: '950',
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '2.5px',
+                                            boxShadow: '0 10px 25px rgba(79, 70, 229, 0.4)',
+                                            animation: 'pulse 2s infinite'
+                                        }}>
+                                            <style>{`
+                                                    @keyframes pulse {
+                                                        0% { transform: scale(1); box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4); }
+                                                        50% { transform: scale(1.05); box-shadow: 0 15px 35px rgba(79, 70, 229, 0.6); }
+                                                        100% { transform: scale(1); box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4); }
+                                                    }
+                                                `}</style>
+                                            Limited Time
+                                        </span>
+                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                                            <span style={{ fontSize: '42px', animation: 'float 3s ease-in-out infinite' }}>
+                                                <style>{`
+                                                        @keyframes float {
+                                                            0% { transform: translateY(0px) rotate(0deg); }
+                                                            50% { transform: translateY(-10px) rotate(5deg); }
+                                                            100% { transform: translateY(0px) rotate(0deg); }
+                                                        }
+                                                    `}</style>
+                                                🎉
+                                            </span>
+                                            <h2 style={{
+                                                fontSize: window.innerWidth < 768 ? '36px' : '58px',
+                                                fontWeight: '950',
+                                                margin: '0',
+                                                color: '#1e1b4b',
+                                                letterSpacing: '-2px',
+                                                lineHeight: '1.1'
+                                            }}>
+                                                Festive <span style={{ color: '#4f46e5' }}>Rewards</span> & Deals
+                                            </h2>
+                                        </div>
+                                    </div>
+
+                                    <p style={{
+                                        color: '#64748b',
+                                        margin: '0',
+                                        fontSize: '18px',
+                                        fontWeight: '500',
+                                        maxWidth: '750px',
+                                        lineHeight: '1.6'
+                                    }}>
+                                        Exclusive seasonal perks handcrafted for your next unforgettable journey.
+                                    </p>
+
+                                    {offers.length > 1 && (
+                                        <div style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>
+                                            <button className="scroll-btn" onClick={() => document.getElementById('offers-container').scrollBy({ left: -450, behavior: 'smooth' })} style={{ width: '56px', height: '56px', borderRadius: '18px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.04)', transition: '0.4s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className="fas fa-chevron-left" style={{ color: '#4f46e5', fontSize: '18px' }}></i></button>
+                                            <button className="scroll-btn" onClick={() => document.getElementById('offers-container').scrollBy({ left: 450, behavior: 'smooth' })} style={{ width: '56px', height: '56px', borderRadius: '18px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.04)', transition: '0.4s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className="fas fa-chevron-right" style={{ color: '#4f46e5', fontSize: '18px' }}></i></button>
+                                        </div>
+                                    )}
+                                </div>
+
+                                <div
+                                    id="offers-container"
+                                    style={{
+                                        display: 'flex',
+                                        gap: window.innerWidth < 768 ? '20px' : '40px',
+                                        overflowX: offers.length === 1 ? 'hidden' : 'auto',
+                                        padding: '20px 50px 40px 50px', // Added side padding for 'peeking' effect
+                                        scrollbarWidth: 'none',
+                                        msOverflowStyle: 'none',
+                                        scrollSnapType: 'x mandatory',
+                                        justifyContent: offers.length === 1 ? 'center' : 'flex-start',
+                                        scrollPadding: '50px' // Ensure snap accounts for padding
+                                    }}
+                                >
+                                    {offers.map((offer) => (
+                                        <div 
+                                            key={offer.id}
+                                            style={{ 
+                                                minWidth: offers.length === 1 ? 'min(600px, 92vw)' : 'min(480px, 85vw)', 
+                                                background: 'white', 
+                                                borderRadius: '32px', 
+                                                overflow: 'hidden', 
+                                                boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
+                                                border: '1px solid #f1f5f9',
+                                                scrollSnapAlign: 'center',
+                                                transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
+                                                position: 'relative',
+                                                flexShrink: 0,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                height: window.innerWidth < 768 ? 'auto' : '780px'
+                                            }}
+                                        >
+                                            {/* Top Status Header */}
+                                            <div style={{ 
+                                                padding: '20px 30px', 
+                                                borderBottom: '1px solid #f1f5f9',
+                                                display: 'flex',
+                                                justifyContent: 'space-between',
+                                                alignItems: 'center',
+                                                flexShrink: 0
+                                            }}>
+                                                <div style={{ 
+                                                    background: '#fff7ed', 
+                                                    padding: '6px 14px', 
+                                                    borderRadius: '100px', 
+                                                    fontSize: '11px', 
+                                                    fontWeight: '800', 
+                                                    color: '#c2410c',
+                                                    letterSpacing: '1px',
+                                                    textTransform: 'uppercase'
+                                                }}>
+                                                    ✨ Exclusive Deal
+                                                </div>
+                                                <div style={{ fontSize: '13px', fontWeight: '700', color: '#94a3b8' }}>
+                                                    Ends {offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon'}
+                                                </div>
+                                            </div>
+
+                                            <div style={{ display: 'flex', flexDirection: 'column', flex: 1 }}>
+                                                {/* Visual Section */}
+                                                <div style={{ width: '100%', height: '240px', position: 'relative', flexShrink: 0 }}>
+                                                    <img src={offer.image_url || 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&q=80&w=800'} alt={offer.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                                    <div style={{ 
+                                                        position: 'absolute', 
+                                                        top: '20px', 
+                                                        left: '20px',
+                                                        background: 'rgba(255, 255, 255, 0.95)',
+                                                        padding: '8px 15px',
+                                                        borderRadius: '12px',
+                                                        fontSize: '14px',
+                                                        fontWeight: '900',
+                                                        color: '#4f46e5',
+                                                        boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
+                                                    }}>
+                                                        {offer.discount_percentage ? `${offer.discount_percentage}% OFF` : `₹${offer.flat_discount} OFF`}
+                                                    </div>
+                                                </div>
+
+                                                {/* Content Section */}
+                                                <div style={{ padding: '30px', flex: 1, display: 'flex', flexDirection: 'column' }}>
+                                                    <div style={{ flex: 1 }}>
+                                                        <h3 style={{ fontSize: '32px', fontWeight: '800', margin: '0 0 10px 0', color: '#0f172a', letterSpacing: '-1px', lineHeight: '1.2' }}>{offer.title}</h3>
+                                                        <p style={{ color: '#64748b', fontSize: '16px', margin: '0 0 25px 0', lineHeight: '1.5' }}>{offer.description}</p>
+                                                        
+                                                        {/* Capsule Badges Grid */}
+                                                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '30px' }}>
+                                                            {[
+                                                                { icon: 'fa-tag', label: 'Valid For', value: offer.target_category, color: '#6366f1' },
+                                                                { icon: 'fa-calendar-alt', label: 'Availability', value: offer.valid_days ? offer.valid_days.split(',').map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d)]).join(', ') : 'Every Day', color: '#8b5cf6' },
+                                                                { icon: 'fa-clock', label: 'Min Booking', value: offer.min_duration > 0 ? `${offer.min_duration}h` : 'No Min', color: '#f59e0b', hide: offer.min_duration <= 0 },
+                                                                { icon: 'fa-wallet', label: 'Min Spend', value: offer.min_booking_amount > 0 ? `₹${offer.min_booking_amount}` : 'Any', color: '#10b981', hide: offer.min_booking_amount <= 0 },
+                                                                { icon: 'fa-hourglass-half', label: 'Expires', value: offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon', color: '#ef4444' }
+                                                            ].filter(r => !r.hide).map((rule, idx) => (
+                                                                <div key={idx} style={{ 
+                                                                    display: 'flex', 
+                                                                    alignItems: 'center', 
+                                                                    gap: '10px',
+                                                                    padding: '12px',
+                                                                    background: '#f8fafc',
+                                                                    borderRadius: '16px',
+                                                                    border: '1px solid #f1f5f9'
+                                                                }}>
+                                                                    <div style={{ color: rule.color, fontSize: '14px' }}>
+                                                                        <i className={`fas ${rule.icon}`}></i>
+                                                                    </div>
+                                                                    <div>
+                                                                        <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>{rule.label}</div>
+                                                                        <div style={{ fontSize: '13px', fontWeight: '700', color: '#1e293b' }}>{rule.value}</div>
+                                                                    </div>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Copy Code Action - Always at Bottom */}
+                                                    <div style={{ 
+                                                        display: 'flex', 
+                                                        alignItems: 'center', 
+                                                        justifyContent: 'space-between', 
+                                                        background: '#0f172a', 
+                                                        padding: '10px 10px 10px 25px', 
+                                                        borderRadius: '24px', 
+                                                        boxShadow: '0 20px 40px rgba(15, 23, 42, 0.2)',
+                                                        flexShrink: 0,
+                                                        marginTop: 'auto'
+                                                    }}>
+                                                        <div style={{ flex: 1 }}>
+                                                            <div style={{ fontSize: '9px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1.5px' }}>Promo Code</div>
+                                                            <div style={{ fontSize: '24px', fontWeight: '800', color: '#ffffff', letterSpacing: '4px', fontFamily: 'monospace' }}>{offer.code}</div>
+                                                        </div>
+                                                        <button 
+                                                            onClick={(e) => {
+                                                                navigator.clipboard.writeText(offer.code);
+                                                                const btn = e.currentTarget;
+                                                                const originalContent = btn.innerHTML;
+                                                                btn.innerHTML = '<i class="fas fa-check"></i>';
+                                                                btn.style.background = '#10b981';
+                                                                setTimeout(() => {
+                                                                    btn.innerHTML = originalContent;
+                                                                    btn.style.background = '#6366f1';
+                                                                }, 2000);
+                                                            }}
+                                                            style={{ 
+                                                                background: '#6366f1', 
+                                                                color: 'white', 
+                                                                border: 'none', 
+                                                                width: '56px',
+                                                                height: '56px',
+                                                                borderRadius: '16px', 
+                                                                fontWeight: '700',
+                                                                cursor: 'pointer',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontSize: '18px',
+                                                                transition: 'all 0.3s ease'
+                                                            }}
+                                                        >
+                                                            <i className="far fa-copy"></i>
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        </div>
+                    )}
+
+                    <div className="section-header text-center" style={{ padding: '0 20px' }}>
+                        <h2 style={{ fontSize: '48px', fontWeight: '900', color: '#1e1b4b', marginBottom: '15px' }}>Featured Vehicles & Bikes</h2>
+                        <p className="section-subtitle" style={{ fontSize: '18px', color: '#64748b', maxWidth: '800px', margin: '0 auto 40px auto' }}>Choose from our premium fleet of well-maintained vehicles for a safe and comfortable ride.</p>
                     </div>
 
-                    {/* Ride & Earn Promo Banner */}
-                    {/* Ride & Earn Promo Banner */}
-                    {/* New Split Promo Section */}
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(3, 1fr)',
-                        gap: '20px',
-                        margin: '40px 0',
-                        width: '100%'
-                    }}>
-
-                        {/* Card 1: Ride & Earn */}
-                        <div onClick={handleRewardClick} style={{ textDecoration: 'none' }}>
-                            <div style={{
-                                background: 'linear-gradient(135deg, #FFC107 0%, #FF9800 100%)',
-                                borderRadius: '20px',
-                                padding: '25px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '20px',
-                                boxShadow: '0 10px 25px rgba(255, 152, 0, 0.3)',
-                                transition: 'transform 0.2s',
-                                cursor: 'pointer',
-                                position: 'relative',
-                                overflow: 'hidden'
-                            }}
-                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'}
-                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                            >
-                                <div style={{
-                                    background: 'rgba(255,255,255,0.25)',
-                                    borderRadius: '50%',
-                                    width: '70px', height: '70px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '32px',
-                                    backdropFilter: 'blur(5px)',
-                                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
-                                }}>🪙</div>
-                                <div>
-                                    <h3 style={{ margin: '0 0 5px 0', color: 'white', fontSize: '22px', fontWeight: '800' }}>Ride & Earn</h3>
-                                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.95)', fontSize: '14px', fontWeight: '500' }}>
-                                        Get <strong>1 Coin/min</strong> on every ride.<br />Redeem for Free Rides!
-                                    </p>
-                                </div>
-                                {/* Decorative circle */}
-                                <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '100px', height: '100px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
-                            </div>
-                        </div>
-
-                        {/* Card 2: Refer & Earn */}
-                        <div onClick={handleRewardClick} style={{ textDecoration: 'none' }}>
-                            <div style={{
-                                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                                borderRadius: '20px',
-                                padding: '25px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '20px',
-                                boxShadow: '0 10px 25px rgba(102, 126, 234, 0.3)',
-                                transition: 'transform 0.2s',
-                                cursor: 'pointer',
-                                position: 'relative',
-                                overflow: 'hidden'
-                            }}
-                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'}
-                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                            >
-                                <div style={{
-                                    background: 'rgba(255,255,255,0.25)',
-                                    borderRadius: '50%',
-                                    width: '70px', height: '70px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '32px',
-                                    backdropFilter: 'blur(5px)',
-                                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
-                                }}>🗣️</div>
-                                <div>
-                                    <h3 style={{ margin: '0 0 5px 0', color: 'white', fontSize: '22px', fontWeight: '800' }}>Refer & Earn</h3>
-                                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.95)', fontSize: '14px', fontWeight: '500' }}>
-                                        Invite friends & win <strong>Scratch Cards</strong>.<br />Guaranteed Rewards!
-                                    </p>
-                                </div>
-                                {/* Decorative circle */}
-                                <div style={{ position: 'absolute', right: '-20px', bottom: '-20px', width: '120px', height: '120px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
-                            </div>
-                        </div>
-
-                        {/* Card 3: Become a Sponsor */}
-                        <div onClick={() => window.open('https://sponser-seven.vercel.app/', '_blank')} style={{ textDecoration: 'none' }}>
-                            <div style={{
-                                background: 'linear-gradient(135deg, #11998e 0%, #38ef7d 100%)',
-                                borderRadius: '20px',
-                                padding: '25px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: '20px',
-                                boxShadow: '0 10px 25px rgba(17, 153, 142, 0.3)',
-                                transition: 'transform 0.2s',
-                                cursor: 'pointer',
-                                position: 'relative',
-                                overflow: 'hidden'
-                            }}
-                                onMouseEnter={e => e.currentTarget.style.transform = 'translateY(-5px)'}
-                                onMouseLeave={e => e.currentTarget.style.transform = 'translateY(0)'}
-                            >
-                                <div style={{
-                                    background: 'rgba(255,255,255,0.25)',
-                                    borderRadius: '50%',
-                                    width: '70px', height: '70px',
-                                    display: 'flex', alignItems: 'center', justifyContent: 'center',
-                                    fontSize: '32px',
-                                    backdropFilter: 'blur(5px)',
-                                    boxShadow: '0 4px 15px rgba(0,0,0,0.1)'
-                                }}>🚗</div>
-                                <div>
-                                    <h3 style={{ margin: '0 0 5px 0', color: 'white', fontSize: '22px', fontWeight: '800' }}>Become a Sponsor</h3>
-                                    <p style={{ margin: 0, color: 'rgba(255,255,255,0.95)', fontSize: '14px', fontWeight: '500', lineHeight: '1.5' }}>
-                                        Add your vehicle & <strong>Earn Money</strong>.<br />Start earning today!
-                                    </p>
-                                </div>
-                                {/* Decorative circle */}
-                                <div style={{ position: 'absolute', right: '-20px', top: '-20px', width: '110px', height: '110px', background: 'rgba(255,255,255,0.1)', borderRadius: '50%' }}></div>
-                            </div>
-                        </div>
-
-                    </div>
 
 
                     {/* Category Filter */}

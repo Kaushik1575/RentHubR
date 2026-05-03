@@ -1,19 +1,22 @@
 import React from 'react';
 
-const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, message, confirmText = 'Yes, Logout', cancelText = 'Cancel', customActions }) => {
+const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, message, confirmText = 'Yes, Proceed', cancelText = 'Cancel', customActions }) => {
     if (!isOpen) return null;
 
     const isSuccess = type === 'success';
     const isConfirm = type === 'confirm';
     const isInfo = type === 'info';
+    const isWarning = type === 'warning';
 
-    // Design configuration matching the user's "Login Successful" image
+    // Design configuration with premium color palettes
     const config = {
-        icon: isSuccess ? 'fa-check' : (isConfirm ? 'fa-exclamation-triangle' : (isInfo ? 'fa-info' : 'fa-times')),
-        iconColor: isSuccess ? '#4caf50' : (isConfirm ? '#e53e3e' : (isInfo ? '#3182ce' : '#f44336')), // Green for success, Red for confirm/error, Blue for info
-        iconBg: isSuccess ? '#e8f5e9' : (isConfirm ? '#fff5f5' : (isInfo ? '#ebf8ff' : '#ffebee')),   // Refined light backgrounds
-        btnBg: isSuccess ? '#4caf50' : (isConfirm ? '#e53e3e' : (isInfo ? '#3182ce' : '#f44336')),     // Button matches icon color
-        defaultTitle: isSuccess ? 'Success' : (isConfirm ? 'Security Alert' : (isInfo ? 'Information' : 'Error')),
+        icon: isSuccess ? 'fa-check' : (isConfirm || isWarning ? 'fa-exclamation-triangle' : (isInfo ? 'fa-info' : 'fa-times')),
+        // Using high-contrast, professional colors
+        iconColor: isSuccess ? '#10b981' : (isWarning ? '#f59e0b' : '#ef4444'), 
+        // Soft gradients for a premium feel
+        iconBg: isSuccess ? 'linear-gradient(135deg, #ecfdf5 0%, #d1fae5 100%)' : (isWarning ? 'linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%)' : 'linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%)'),
+        btnBg: isSuccess ? '#10b981' : (isWarning ? '#f59e0b' : '#ef4444'),
+        defaultTitle: isSuccess ? 'Success' : (isWarning ? 'Notice' : (isConfirm ? 'Security Alert' : (isInfo ? 'Information' : 'Error'))),
         btnText: 'Okay, Got it'
     };
 
@@ -24,65 +27,77 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, messag
             left: 0,
             width: '100%',
             height: '100%',
-            background: 'rgba(0,0,0,0.5)', // Slightly darker overlay
+            background: 'rgba(15, 23, 42, 0.4)', // Sophisticated dark slate overlay
             zIndex: 99999,
             display: 'flex',
             justifyContent: 'center',
             alignItems: 'center',
-            backdropFilter: 'blur(3px)'
+            backdropFilter: 'blur(8px)', // More blur for premium feel
+            animation: 'fadeIn 0.3s ease-out'
         }}>
             <div style={{
                 background: 'white',
-                borderRadius: '24px', // More rounded corners as in image
+                borderRadius: '32px', // Modern, very rounded corners
                 width: '90%',
-                maxWidth: '380px', // Slightly narrower card
-                padding: '2.5rem 2rem',
+                maxWidth: '400px',
+                padding: '3rem 2.5rem',
                 textAlign: 'center',
-                boxShadow: '0 10px 40px rgba(0,0,0,0.15)',
-                animation: 'popup-scale-in 0.3s cubic-bezier(0.16, 1, 0.3, 1)',
+                boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
+                animation: 'popupEntry 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
                 display: 'flex',
                 flexDirection: 'column',
-                alignItems: 'center'
+                alignItems: 'center',
+                position: 'relative',
+                overflow: 'hidden'
             }}>
-                {/* Icon Container - Circular */}
+                {/* Subtle top accent line */}
+                <div style={{ 
+                    position: 'absolute', 
+                    top: 0, 
+                    left: 0, 
+                    width: '100%', 
+                    height: '6px', 
+                    background: config.btnBg 
+                }}></div>
+
+                {/* Icon Container */}
                 <div style={{
-                    width: '80px',
-                    height: '80px',
+                    width: '90px',
+                    height: '90px',
                     background: config.iconBg,
-                    borderRadius: '50%',
+                    borderRadius: '24px', // Squircle shape for modern look
+                    transform: 'rotate(45deg)', // Rotated container
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'center',
-                    marginBottom: '1.5rem'
+                    marginBottom: '2.5rem',
+                    boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)'
                 }}>
                     <i className={`fas ${config.icon}`} style={{
                         color: config.iconColor,
-                        fontSize: '2.2rem'
+                        fontSize: '2.5rem',
+                        transform: 'rotate(-45deg)' // Rotate icon back
                     }}></i>
                 </div>
 
                 {/* Title */}
                 <h2 style={{
-                    color: '#2d3748', // Darker gray text
-                    marginBottom: '0.5rem',
-                    fontSize: '1.5rem',
-                    fontWeight: '700',
-                    lineHeight: '1.2'
+                    color: '#0f172a',
+                    marginBottom: '0.75rem',
+                    fontSize: '1.75rem',
+                    fontWeight: '900',
+                    letterSpacing: '-0.5px'
                 }}>
                     {title || config.defaultTitle}
                 </h2>
 
                 {/* Message */}
                 <div style={{
-                    color: '#718096', // Muted text color
-                    marginBottom: '2rem',
-                    fontSize: '1rem',
-                    lineHeight: '1.5',
-                    maxWidth: '100%',
-                    whiteSpace: 'pre-wrap', // Allow newlines to render properly
-                    maxHeight: '60vh',      // Limit height for long content
-                    overflowY: 'auto',      // Enable scrolling
-                    paddingRight: '5px'     // Prevent scrollbar overlap
+                    color: '#475569',
+                    marginBottom: '2.5rem',
+                    fontSize: '1.05rem',
+                    lineHeight: '1.6',
+                    fontWeight: '500'
                 }}>
                     {message}
                 </div>
@@ -96,35 +111,37 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, messag
                     <div style={{ display: 'flex', gap: '1rem', width: '100%', justifyContent: 'center' }}>
                         <button
                             onClick={onClose}
+                            className="status-btn-secondary"
                             style={{
-                                background: '#edf2f7',
-                                color: '#4a5568',
+                                background: '#f1f5f9',
+                                color: '#475569',
                                 border: 'none',
-                                padding: '0.8rem 0',
+                                padding: '1rem 0',
                                 flex: 1,
-                                borderRadius: '50px',
-                                fontSize: '1.05rem',
-                                fontWeight: '600',
+                                borderRadius: '16px',
+                                fontSize: '1.1rem',
+                                fontWeight: '700',
                                 cursor: 'pointer',
-                                transition: 'transform 0.1s ease',
+                                transition: 'all 0.2s ease'
                             }}
                         >
                             {cancelText}
                         </button>
                         <button
                             onClick={onConfirm}
+                            className="status-btn-primary"
                             style={{
                                 background: config.btnBg,
                                 color: 'white',
                                 border: 'none',
-                                padding: '0.8rem 0',
+                                padding: '1rem 0',
                                 flex: 1,
-                                borderRadius: '50px',
-                                fontSize: '1.05rem',
-                                fontWeight: '600',
+                                borderRadius: '16px',
+                                fontSize: '1.1rem',
+                                fontWeight: '700',
                                 cursor: 'pointer',
-                                transition: 'transform 0.1s ease, box-shadow 0.2s',
-                                boxShadow: '0 4px 12px rgba(49, 130, 206, 0.4)'
+                                transition: 'all 0.2s ease',
+                                boxShadow: `0 10px 15px -3px ${config.btnBg}40`
                             }}
                         >
                             {confirmText}
@@ -133,22 +150,20 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, messag
                 ) : (
                     <button
                         onClick={onClose}
+                        className="status-btn-primary"
                         style={{
                             background: config.btnBg,
                             color: 'white',
                             border: 'none',
-                            padding: '0.8rem 0',
-                            width: '80%', // Not full width, but wide
-                            borderRadius: '50px', // Fully rounded pill button
-                            fontSize: '1.05rem',
-                            fontWeight: '600',
+                            padding: '1.1rem 2rem',
+                            width: '100%',
+                            borderRadius: '16px',
+                            fontSize: '1.1rem',
+                            fontWeight: '700',
                             cursor: 'pointer',
-                            transition: 'transform 0.1s ease, box-shadow 0.2s',
-                            boxShadow: `0 4px 12px ${isSuccess ? 'rgba(76, 175, 80, 0.4)' : (isConfirm || isInfo ? 'rgba(49, 130, 206, 0.4)' : 'rgba(244, 67, 54, 0.4)')}`
+                            transition: 'all 0.2s ease',
+                            boxShadow: `0 10px 15px -3px ${config.btnBg}40`
                         }}
-                        onMouseOver={e => e.currentTarget.style.transform = 'translateY(-1px)'}
-                        onMouseOut={e => e.currentTarget.style.transform = 'translateY(0)'}
-                        onMouseDown={e => e.currentTarget.style.transform = 'translateY(1px)'}
                     >
                         {config.btnText}
                     </button>
@@ -157,9 +172,25 @@ const StatusPopup = ({ isOpen, onClose, onConfirm, type = 'error', title, messag
 
             <style>
                 {`
-                @keyframes popup-scale-in {
-                    0% { opacity: 0; transform: scale(0.9); }
-                    100% { opacity: 1; transform: scale(1); }
+                @keyframes fadeIn {
+                    from { opacity: 0; }
+                    to { opacity: 1; }
+                }
+                @keyframes popupEntry {
+                    from { opacity: 0; transform: translateY(30px) scale(0.95); }
+                    to { opacity: 1; transform: translateY(0) scale(1); }
+                }
+                .status-btn-primary:hover {
+                    transform: translateY(-2px);
+                    filter: brightness(1.1);
+                    box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+                }
+                .status-btn-primary:active {
+                    transform: translateY(0);
+                }
+                .status-btn-secondary:hover {
+                    background: #e2e8f0;
+                    color: #1e293b;
                 }
                 `}
             </style>

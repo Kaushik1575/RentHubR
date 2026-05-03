@@ -1,10 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
-import ConfirmationPopup from '../components/ConfirmationPopup';
 import { Scanner } from '@yudiel/react-qr-scanner';
 import './AdminPanelStyles.css';
 import AdminIssues from '../components/AdminIssues';
+import AdminOffers from '../components/AdminOffers';
 
 
 const AdminPanel = () => {
@@ -17,6 +17,7 @@ const AdminPanel = () => {
     const [stats, setStats] = useState({
         totalVehicles: 0, pendingBookings: 0, todaysBookings: 0, activeUsers: 0,
         confirmedBookings: 0, totalBookingsMonth: 0, cancelledBookings: 0, pendingRefunds: 0,
+        activeOffers: 0,
         recentActivity: []
     });
 
@@ -32,6 +33,8 @@ const AdminPanel = () => {
 
     // Vehicles
     const [vehicles, setVehicles] = useState([]);
+    const [vehicleSearch, setVehicleSearch] = useState('');
+    const [vehicleTypeFilter, setVehicleTypeFilter] = useState('all');
     const [requests, setRequests] = useState([]); // New state for requests
     const [earnings, setEarnings] = useState([]); // Sponsor Earnings
     const [withdrawalRequests, setWithdrawalRequests] = useState([]); // Withdrawal Requests
@@ -134,6 +137,15 @@ const AdminPanel = () => {
             if (res.ok) setEarnings(await res.json());
         } catch (e) { console.error(e); }
     };
+
+    // Filtered Vehicles
+    const filteredVehicles = vehicles.filter(v => {
+        const matchesSearch = v.name.toLowerCase().includes(vehicleSearch.toLowerCase()) || 
+                             v.id.toString().includes(vehicleSearch) ||
+                             (v.category && v.category.toLowerCase().includes(vehicleSearch.toLowerCase()));
+        const matchesType = vehicleTypeFilter === 'all' || v.type === vehicleTypeFilter;
+        return matchesSearch && matchesType;
+    });
 
     const loadWithdrawalRequests = async () => {
         try {
@@ -423,8 +435,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
         setModal({ type: 'addVehicle' });
     };
 
-    const handleRejectRequest = async (id) => {
-        if (!window.confirm('Are you sure you want to reject this request?')) return;
+    const executeRejectRequest = async (id) => {
         try {
             const res = await fetch(`/api/admin/vehicle-requests/${id}/reject`, {
                 method: 'POST',
@@ -432,6 +443,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
             });
             if (res.ok) {
                 loadRequests();
+                setModal({ type: null });
                 setPopup({ isOpen: true, type: 'success', title: 'Rejected', message: 'Request rejected/removed' });
             } else {
                 setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to reject' });
@@ -439,8 +451,11 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error rejecting request' }); }
     };
 
-    const handleDeleteRequest = async (id) => {
-        if (!window.confirm('Are you sure you want to delete this request permanently?')) return;
+    const handleRejectRequest = (id) => {
+        setModal({ type: 'confirmRejectRequest', data: { id } });
+    };
+
+    const executeDeleteRequest = async (id) => {
         try {
             const res = await fetch(`/api/admin/vehicle-requests/${id}`, {
                 method: 'DELETE',
@@ -448,11 +463,16 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
             });
             if (res.ok) {
                 loadRequests();
+                setModal({ type: null });
                 setPopup({ isOpen: true, type: 'success', title: 'Deleted', message: 'Request deleted' });
             } else {
                 setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to delete' });
             }
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error deleting request' }); }
+    };
+
+    const handleDeleteRequest = (id) => {
+        setModal({ type: 'confirmDeleteRequest', data: { id } });
     };
 
     // --- Filtering ---
@@ -504,7 +524,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                 <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
                     <div className="sidebar-header">
                         <h2>Admin</h2>
-                        <span style={{ display: 'block', fontSize: '1rem', fontWeight: 'normal', marginTop: '6px' }}>{adminUser.adminName}</span>
+                        <span className="admin-name-sub">{adminUser.adminName}</span>
                     </div>
                     <nav className="sidebar-nav">
                         <ul>
@@ -512,12 +532,12 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <li><a className={`nav-link ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}><i className="fas fa-users"></i> User Management</a></li>
                             <li><a className={`nav-link ${activeTab === 'bookings' ? 'active' : ''}`} onClick={() => { setActiveTab('bookings'); setIsSidebarOpen(false); }}><i className="fas fa-calendar-check"></i> Bookings</a></li>
                             <li><a className={`nav-link ${activeTab === 'vehicles' ? 'active' : ''}`} onClick={() => { setActiveTab('vehicles'); setIsSidebarOpen(false); }}><i className="fas fa-motorcycle"></i> Vehicles</a></li>
+                            <li><a className={`nav-link ${activeTab === 'offers' ? 'active' : ''}`} onClick={() => { setActiveTab('offers'); setIsSidebarOpen(false); }}><i className="fas fa-gift"></i> Manage Offers</a></li>
                             <li><a className={`nav-link ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => { setActiveTab('requests'); setIsSidebarOpen(false); }}><i className="fas fa-clipboard-list"></i> Requests {requests.length > 0 && <span className="badge">{requests.length}</span>}</a></li>
                             <li><a className={`nav-link ${activeTab === 'policies' ? 'active' : ''}`} onClick={() => { setActiveTab('policies'); setIsSidebarOpen(false); }}><i className="fas fa-file-alt"></i> Policies</a></li>
                             <li><a className={`nav-link ${activeTab === 'earnings' ? 'active' : ''}`} onClick={() => { setActiveTab('earnings'); setIsSidebarOpen(false); }}><i className="fas fa-chart-line"></i> Sponsor Reports</a></li>
                             <li><a className={`nav-link ${activeTab === 'withdrawals' ? 'active' : ''}`} onClick={() => { setActiveTab('withdrawals'); setIsSidebarOpen(false); }}><i className="fas fa-money-bill-wave"></i> Withdrawals</a></li>
                             <li><a className={`nav-link ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { setActiveTab('issues'); setIsSidebarOpen(false); }}><i className="fas fa-headset"></i> Support Issues</a></li>
-                            <li><a className={`nav-link`} onClick={() => { navigate('/admin/loyalty-settings'); setIsSidebarOpen(false); }}><i className="fas fa-coins"></i> Loyalty Settings</a></li>
                         </ul>
                     </nav>
                     <div className="sidebar-footer">
@@ -537,6 +557,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 <div className="card"><div className="card-icon"><i className="fas fa-users"></i></div><div className="card-info"><h4>Active Users</h4><p>{stats.activeUsers}</p></div></div>
                                 <div className="card"><div className="card-icon"><i className="fas fa-motorcycle"></i></div><div className="card-info"><h4>Confirmed Bookings</h4><p>{stats.confirmedBookings}</p></div></div>
                                 <div className="card"><div className="card-icon"><i className="fas fa-calendar-alt"></i></div><div className="card-info"><h4>Monthly Bookings</h4><p>{stats.totalBookingsMonth}</p></div></div>
+                                <div className="card" onClick={() => setActiveTab('offers')} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, #fff 0%, #f5f3ff 100%)' }}><div className="card-icon" style={{ color: '#4f46e5' }}><i className="fas fa-gift"></i></div><div className="card-info"><h4>Active Offers</h4><p>{stats.activeOffers || 0}</p></div></div>
                                 <div className="card"><div className="card-icon"><i className="fas fa-ban"></i></div><div className="card-info"><h4>Cancelled Bookings</h4><p>{stats.cancelledBookings}</p></div></div>
                                 <div className="card"><div className="card-icon"><i className="fas fa-hand-holding-usd"></i></div><div className="card-info"><h4>Pending Refunds</h4><p>{stats.pendingRefunds}</p></div></div>
                             </div>
@@ -565,38 +586,99 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {/* USERS */}
                     {activeTab === 'users' && (
                         <div id="users" className="content-section active">
-                            <h2>Users</h2>
-                            <div className="user-filters">
+                            <div className="section-header-modern">
                                 <div>
-                                    <label>Search:</label>
-                                    <input type="text" placeholder="Name, Email, or Phone" value={usersFilter} onChange={e => setUsersFilter(e.target.value)} />
+                                    <h2>User Directory</h2>
+                                    <p className="section-subtitle">Manage system users and administrators</p>
                                 </div>
                             </div>
-                            <div className="table-container">
-                                <table id="users-table">
-                                    <thead><tr><th>ID</th><th>Name</th><th>Email</th><th>Phone</th><th>Role</th><th>Status</th><th>Actions</th></tr></thead>
-                                    <tbody>
-                                        {filteredUsers.map(u => (
-                                            <tr key={u.id}>
-                                                <td>{u.id}</td>
-                                                <td>{u.fullName || u.adminName || ''}</td>
-                                                <td>{u.email}</td>
-                                                <td>{u.phoneNumber}</td>
-                                                <td>{u.isAdmin ? 'Admin' : 'User'}</td>
-                                                <td>{u.isBlocked ? <span style={{ color: 'red' }}>Blocked</span> : <span style={{ color: 'green' }}>Active</span>}</td>
-                                                <td>
-                                                    <div style={{ display: 'flex', gap: '10px' }}>
-                                                        <button className="action-btn btn-view-user" onClick={() => setModal({ type: 'viewUser', data: u })}><i className="fas fa-eye"></i> View</button>
-                                                        <button className="action-btn btn-edit-user" onClick={() => { setEditUserData(u); setModal({ type: 'editUser' }); }}><i className="fas fa-edit"></i> Edit</button>
-                                                        <button className={`action-btn ${u.isBlocked ? 'btn-unblock-user' : 'btn-block-user'}`} onClick={() => handleBlockUser(u.id, u.isBlocked)}>
-                                                            <i className="fas fa-ban"></i> {u.isBlocked ? 'Unblock' : 'Block'}
-                                                        </button>
-                                                    </div>
-                                                </td>
+
+                            <div className="inventory-controls">
+                                <div className="search-box-modern">
+                                    <i className="fas fa-search"></i>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search by name, email, or phone..." 
+                                        value={usersFilter} 
+                                        onChange={e => setUsersFilter(e.target.value)} 
+                                    />
+                                </div>
+                            </div>
+
+                            <div className="modern-table-card">
+                                <div className="table-responsive">
+                                    <table className="modern-data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>User Profile</th>
+                                                <th>Contact Info</th>
+                                                <th>Access Level</th>
+                                                <th>Account Status</th>
+                                                <th className="text-right">Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {filteredUsers.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="5" className="text-center py-5">
+                                                        <div className="no-results">
+                                                            <i className="fas fa-users-slash"></i>
+                                                            <p>No users found matching your search.</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : filteredUsers.map(u => (
+                                                <tr key={u.id}>
+                                                    <td>
+                                                        <div className="user-profile-cell">
+                                                            <div className="user-avatar-circle">
+                                                                {(u.fullName || u.adminName || '?').charAt(0).toUpperCase()}
+                                                            </div>
+                                                            <div className="user-meta">
+                                                                <span className="u-name">{u.fullName || u.adminName || 'Unknown User'}</span>
+                                                                <span className="u-id">User ID: #{u.id}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div className="contact-cell-modern">
+                                                            <span className="contact-info-bit"><i className="fas fa-envelope"></i> {u.email}</span>
+                                                            <span className="contact-info-bit"><i className="fas fa-phone"></i> {u.phoneNumber || 'No phone'}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`role-pill ${u.isAdmin ? 'admin' : 'user'}`}>
+                                                            {u.isAdmin ? <><i className="fas fa-user-shield"></i> Admin</> : <><i className="fas fa-user"></i> User</>}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`status-pill ${u.isBlocked ? 'busy' : 'available'}`}>
+                                                            {u.isBlocked ? 'Blocked' : 'Active'}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div className="actions-cell">
+                                                            <button className="icon-btn-modern view" onClick={() => setModal({ type: 'viewUser', data: u })} title="View Profile">
+                                                                <i className="fas fa-eye"></i>
+                                                            </button>
+                                                            <button className="icon-btn-modern edit" onClick={() => { setEditUserData(u); setModal({ type: 'editUser' }); }} title="Edit User">
+                                                                <i className="fas fa-user-edit"></i>
+                                                            </button>
+                                                            <button 
+                                                                className={`icon-btn-modern ${u.isBlocked ? 'available' : 'delete'}`} 
+                                                                style={u.isBlocked ? { background: '#ecfdf5', color: '#10b981' } : {}}
+                                                                onClick={() => handleBlockUser(u.id, u.isBlocked)} 
+                                                                title={u.isBlocked ? 'Unblock User' : 'Block User'}
+                                                            >
+                                                                <i className={`fas ${u.isBlocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -628,7 +710,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             </div>
                             <div className="table-container">
                                 <table id="bookings-table">
-                                    <thead><tr><th>ID</th><th>Customer</th><th>Vehicle</th><th>Start Date</th><th>Duration</th><th>Amount</th><th>Coins</th><th>Status</th><th>Refund</th><th>Actions</th></tr></thead>
+                                    <thead><tr><th>ID</th><th>Customer</th><th>Vehicle</th><th>Start Date</th><th>Duration</th><th>Amount</th><th>Status</th><th>Refund</th><th>Actions</th></tr></thead>
                                     <tbody>
                                         {filteredBookings.map(b => (
                                             <tr key={b.id}>
@@ -638,9 +720,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                 <td>{b.start_date}</td>
                                                 <td>{b.duration} hrs</td>
                                                 <td>₹{b.total_amount}</td>
-                                                <td>
-                                                    {(['completed', 'ride_completed'].includes(b.status)) ? (b.coins_earned || 0) : 0} <i className="fas fa-coins" style={{ color: '#D4AF37', marginLeft: '4px', fontSize: '14px' }}></i>
-                                                </td>
+                                                {/* Points column data removed */}
                                                 <td><span className={`status-badge status-${(b.status || 'pending').toLowerCase()}`}>{b.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span></td>
                                                 <td>
                                                     {(b.status === 'cancelled') ? (
@@ -725,29 +805,117 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {/* VEHICLES */}
                     {activeTab === 'vehicles' && (
                         <div id="vehicles" className="content-section active">
-                            <h2>Vehicles</h2>
-                            <button className="action-btn btn-confirm" style={{ marginBottom: '18px' }} onClick={() => { setVehicleFormData({ type: 'bike' }); setModal({ type: 'addVehicle' }); }}>+ Add Vehicle</button>
-                            <div className="table-container">
-                                <table id="vehicles-table">
-                                    <thead><tr><th>ID</th><th>Name</th><th>Type</th><th>Category</th><th>Price</th><th>Status</th><th>Actions</th></tr></thead>
-                                    <tbody>
-                                        {vehicles.map(v => (
-                                            <tr key={v.id}>
-                                                <td>{v.id}</td>
-                                                <td>{v.name}</td>
-                                                <td>{v.type}</td>
-                                                <td>{v.category}</td>
-                                                <td>₹{v.price}</td>
-                                                <td>{v.status}</td>
-                                                <td>
-                                                    <button className="action-btn btn-view-vehicle" onClick={() => setModal({ type: 'viewVehicle', data: v })}><i className="fas fa-eye"></i> View</button>
-                                                    <button className="action-btn btn-edit-vehicle" onClick={() => { setVehicleFormData(v); setModal({ type: 'editVehicle' }); }}><i className="fas fa-edit"></i> Edit</button>
-                                                    <button className="action-btn btn-delete-vehicle" onClick={() => handleDeleteVehicle(v.id, v.type)}><i className="fas fa-trash"></i> Delete</button>
-                                                </td>
+                            <div className="section-header-modern">
+                                <div>
+                                    <h2>Vehicles Inventory</h2>
+                                    <p className="section-subtitle">Manage and track all rental fleet</p>
+                                </div>
+                                <button className="add-vehicle-btn" onClick={() => { setVehicleFormData({ type: 'bike' }); setModal({ type: 'addVehicle' }); }}>
+                                    <i className="fas fa-plus"></i> Add New Vehicle
+                                </button>
+                            </div>
+
+                            <div className="inventory-controls">
+                                <div className="search-box-modern">
+                                    <i className="fas fa-search"></i>
+                                    <input 
+                                        type="text" 
+                                        placeholder="Search by name, ID, or category..." 
+                                        value={vehicleSearch} 
+                                        onChange={(e) => setVehicleSearch(e.target.value)} 
+                                    />
+                                </div>
+                                <div className="filter-group-modern">
+                                    <button 
+                                        className={`filter-pill ${vehicleTypeFilter === 'all' ? 'active' : ''}`} 
+                                        onClick={() => setVehicleTypeFilter('all')}
+                                    >All</button>
+                                    <button 
+                                        className={`filter-pill ${vehicleTypeFilter === 'bike' ? 'active' : ''}`} 
+                                        onClick={() => setVehicleTypeFilter('bike')}
+                                    ><i className="fas fa-motorcycle"></i> Bikes</button>
+                                    <button 
+                                        className={`filter-pill ${vehicleTypeFilter === 'car' ? 'active' : ''}`} 
+                                        onClick={() => setVehicleTypeFilter('car')}
+                                    ><i className="fas fa-car"></i> Cars</button>
+                                    <button 
+                                        className={`filter-pill ${vehicleTypeFilter === 'scooty' ? 'active' : ''}`} 
+                                        onClick={() => setVehicleTypeFilter('scooty')}
+                                    ><i className="fas fa-moped"></i> Scooters</button>
+                                </div>
+                            </div>
+
+                            <div className="modern-table-card">
+                                <div className="table-responsive">
+                                    <table className="modern-data-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Vehicle Info</th>
+                                                <th>Specs</th>
+                                                <th>Price / Hr</th>
+                                                <th>Status</th>
+                                                <th className="text-right">Actions</th>
                                             </tr>
-                                        ))}
-                                    </tbody>
-                                </table>
+                                        </thead>
+                                        <tbody>
+                                            {filteredVehicles.length === 0 ? (
+                                                <tr>
+                                                    <td colSpan="5" className="text-center py-5">
+                                                        <div className="no-results">
+                                                            <i className="fas fa-search"></i>
+                                                            <p>No vehicles match your search criteria.</p>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ) : filteredVehicles.map(v => (
+                                                <tr key={v.id}>
+                                                    <td>
+                                                        <div className="vehicle-cell">
+                                                            <div className="vehicle-thumb">
+                                                                {v.image_url ? (
+                                                                    <img src={v.image_url} alt={v.name} />
+                                                                ) : (
+                                                                    <i className={`fas ${v.type === 'car' ? 'fa-car' : 'fa-motorcycle'}`}></i>
+                                                                )}
+                                                            </div>
+                                                            <div className="vehicle-meta">
+                                                                <span className="v-name">{v.name}</span>
+                                                                <span className="v-id">ID: #{v.id} • {v.category || 'Standard'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div className="specs-cell">
+                                                            <span className="spec-item"><i className="fas fa-tag"></i> {v.type}</span>
+                                                            <span className="spec-item"><i className="fas fa-cog"></i> {v.engine || 'N/A'}</span>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <span className="price-tag-modern">₹{v.price}</span>
+                                                    </td>
+                                                    <td>
+                                                        <span className={`status-pill ${v.status === 'Available' ? 'available' : 'busy'}`}>
+                                                            {v.status || 'Active'}
+                                                        </span>
+                                                    </td>
+                                                    <td>
+                                                        <div className="actions-cell">
+                                                            <button className="icon-btn-modern view" onClick={() => setModal({ type: 'viewVehicle', data: v })} title="View Details">
+                                                                <i className="fas fa-eye"></i>
+                                                            </button>
+                                                            <button className="icon-btn-modern edit" onClick={() => { setVehicleFormData(v); setModal({ type: 'editVehicle' }); }} title="Edit Vehicle">
+                                                                <i className="fas fa-edit"></i>
+                                                            </button>
+                                                            <button className="icon-btn-modern delete" onClick={() => handleDeleteVehicle(v.id, v.type)} title="Delete Vehicle">
+                                                                <i className="fas fa-trash"></i>
+                                                            </button>
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
                             </div>
                         </div>
                     )}
@@ -1216,6 +1384,13 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <AdminIssues />
                         </div>
                     )}
+
+                    {/* OFFERS MANAGEMENT */}
+                    {activeTab === 'offers' && (
+                        <div id="offers" className="content-section active">
+                            <AdminOffers />
+                        </div>
+                    )}
                 </main>
 
             </div>
@@ -1246,7 +1421,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <p><strong>Advance Payment:</strong> ₹{modal.data.advance_payment}</p>
                             <p><strong>Advance Payment:</strong> ₹{modal.data.advance_payment}</p>
                             <p><strong>Remaining Amount:</strong> ₹{modal.data.total_amount - modal.data.advance_payment}</p>
-                            <p><strong>Coins Earned:</strong> {(['completed', 'ride_completed'].includes(modal.data.status) ? (modal.data.coins_earned || 0) : 0)} <i className="fas fa-coins" style={{ color: '#D4AF37', marginLeft: '4px', fontSize: '14px' }}></i></p>
+                            {/* Points earned removed */}
                             {modal.data.coupon_code && (
                                 <p style={{ color: '#2e7d32', fontWeight: 'bold' }}>
                                     <i className="fas fa-tag"></i> Coupon Used: {modal.data.coupon_code} ({modal.data.reward_type === 'FREE_2_HOUR_RIDE' ? 'Free 2 Hours' : 'Reward'})
@@ -1500,15 +1675,15 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
             )}
 
             {/* CONFIRM DELETE BOOKING */}
-            <ConfirmationPopup
+            <StatusPopup
                 isOpen={modal.type === 'deleteBooking'}
                 onClose={() => setModal({ type: null })}
                 onConfirm={() => handleDeleteBooking(modal.data?.id)}
+                type="confirm"
                 title="Confirm Delete"
                 message="Are you sure you want to delete this booking?"
                 confirmText="Yes, Delete"
                 cancelText="Cancel"
-                type="danger"
             />
 
             {modal.type === 'viewUser' && (
@@ -1835,50 +2010,76 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
             {/* Custom Confirmation Modals */}
             {/* Active User Block/Unblock Confirmation */}
-            <ConfirmationPopup
+            {/* Confirm Block User */}
+            <StatusPopup
                 isOpen={modal.type === 'confirmBlockUser'}
                 onClose={() => setModal({ type: null })}
                 onConfirm={executeBlockUser}
+                type="confirm"
                 title={modal.data?.isBlocked ? 'Unblock User' : 'Block User'}
-                message={`Are you sure you want to ${modal.data?.isBlocked ? 'unblock' : 'block'} this user?`}
-                confirmText={`Yes, ${modal.data?.isBlocked ? 'Unblock' : 'Block'}`}
-                type={modal.data?.isBlocked ? 'warning' : 'danger'}
-                icon={modal.data?.isBlocked ? 'fa-user-check' : 'fa-user-slash'}
+                message={`Are you sure you want to ${modal.data?.isBlocked ? 'unblock' : 'block'} this user? This will ${modal.data?.isBlocked ? 'restore their access' : 'prevent them from logging in'}.`}
+                confirmText={modal.data?.isBlocked ? 'Yes, Unblock' : 'Yes, Block'}
+                cancelText="Cancel"
             />
 
             {/* Refund Complete Confirmation */}
-            <ConfirmationPopup
+            <StatusPopup
                 isOpen={modal.type === 'confirmRefundComplete'}
                 onClose={() => setModal({ type: null })}
                 onConfirm={executeRefundComplete}
+                type="confirm"
                 title="Confirm Refund"
-                message="Are you sure you want to mark this refund as COMPLETED? This action cannot be undone."
-                confirmText="Yes, Complete Refund"
-                type="warning"
-                icon="fa-check-circle"
+                message="Are you sure you want to mark this refund as COMPLETED? This action confirms you have sent the money to the user."
+                confirmText="Yes, Completed"
+                cancelText="Cancel"
             />
 
             {/* SOS Confirmation */}
-            <ConfirmationPopup
+            <StatusPopup
                 isOpen={modal.type === 'confirmSOS'}
                 onClose={() => setModal({ type: null })}
                 onConfirm={executeSendSOS}
-                title="Confirm SOS"
-                message="Are you sure you want to trigger SOS for this booking? This will send emergency alerts."
+                type="warning"
+                title="Trigger SOS Alert"
+                message="Are you sure you want to trigger an SOS for this booking? This will send emergency alerts to relevant authorities."
                 confirmText="Yes, Send SOS"
-                type="danger"
-                icon="fa-bell"
+                cancelText="Cancel"
             />
 
             {/* Delete Vehicle Confirmation */}
-            <ConfirmationPopup
+            <StatusPopup
                 isOpen={modal.type === 'confirmDeleteVehicle'}
                 onClose={() => setModal({ type: null })}
                 onConfirm={executeDeleteVehicle}
-                title="Confirm Delete"
-                message="Are you sure you want to delete this vehicle?"
+                type="confirm"
+                title="Delete Vehicle"
+                message="Are you sure you want to delete this vehicle? This action cannot be undone."
                 confirmText="Yes, Delete"
-                type="danger"
+                cancelText="Cancel"
+            />
+
+            {/* Reject Request Confirmation */}
+            <StatusPopup
+                isOpen={modal.type === 'confirmRejectRequest'}
+                onClose={() => setModal({ type: null })}
+                onConfirm={() => executeRejectRequest(modal.data.id)}
+                type="confirm"
+                title="Reject Request"
+                message="Are you sure you want to reject this vehicle request?"
+                confirmText="Yes, Reject"
+                cancelText="Cancel"
+            />
+
+            {/* Delete Request Confirmation */}
+            <StatusPopup
+                isOpen={modal.type === 'confirmDeleteRequest'}
+                onClose={() => setModal({ type: null })}
+                onConfirm={() => executeDeleteRequest(modal.data.id)}
+                type="confirm"
+                title="Delete Request"
+                message="Are you sure you want to delete this request permanently?"
+                confirmText="Yes, Delete"
+                cancelText="Cancel"
             />
 
             <StatusPopup
