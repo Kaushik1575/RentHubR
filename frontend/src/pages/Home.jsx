@@ -9,7 +9,16 @@ const Home = () => {
     const [loading, setLoading] = useState(true);
     const [activeCategory, setActiveCategory] = useState('All');
     const [offers, setOffers] = useState([]);
+    const [currentTime, setCurrentTime] = useState(new Date());
     const navigate = useNavigate();
+
+    // Live Timer for auto-refreshing offer states
+    useEffect(() => {
+        const timer = setInterval(() => {
+            setCurrentTime(new Date());
+        }, 30000);
+        return () => clearInterval(timer);
+    }, []);
 
     useEffect(() => {
         const fetchVehicles = async () => {
@@ -87,8 +96,13 @@ const Home = () => {
         const rating = (4.5 + Math.random() * 0.5).toFixed(1);
 
         // Find the best offer for this specific category
-        const matchingOffer = offers.find(o => {
+        const matchingOffer = (offers || []).find(o => {
             if (!o.is_active) return false;
+            
+            // Check if it's actually live (not future and not expired)
+            const isLive = (!o.valid_from || new Date(o.valid_from) <= currentTime) && 
+                           (!o.valid_until || new Date(o.valid_until) >= currentTime);
+            if (!isLive) return false;
 
             const target = o.target_category.toUpperCase();
             const currentType = type.toUpperCase();
@@ -320,9 +334,16 @@ const Home = () => {
                                         scrollPadding: '50px' // Ensure snap accounts for padding
                                     }}
                                 >
-                                    {offers.map((offer) => {
+                                {offers && offers
+                                    .filter(offer => {
+                                        // 1. Hide if completely expired (valid_until passed)
+                                        if (offer.valid_until && new Date(offer.valid_until) < currentTime) return false;
+                                        // 2. Hide if it's too far in the future (optional, but keep it for now)
+                                        return true;
+                                    })
+                                    .map((offer, idx) => {
+                                        const isFuture = offer.valid_from && new Date(offer.valid_from) > currentTime;
                                         const isMobile = window.innerWidth < 768;
-                                        const isFuture = offer.valid_from && new Date(offer.valid_from) > new Date();
                                         const launchDateTime = isFuture 
                                             ? new Date(offer.valid_from).toLocaleString('en-IN', { 
                                                 day: 'numeric', 
