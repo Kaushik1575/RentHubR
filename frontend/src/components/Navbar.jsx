@@ -13,6 +13,8 @@ const Navbar = () => {
     const [isAdmin, setIsAdmin] = useState(false);
     const [showRegisterModal, setShowRegisterModal] = useState(false);
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
+    const [supportDropdownOpen, setSupportDropdownOpen] = useState(false);
+
 
     // Scroll state for shadow effect
     const [scrolled, setScrolled] = useState(false);
@@ -104,8 +106,34 @@ const Navbar = () => {
                                 <Link to="/my-bookings" style={linkStyle}>My Bookings</Link>
                             </div>
                         )}
-                        <Link to="/support" style={linkStyle}>Support</Link>
-                        <Link to="/track-issue" style={linkStyle}>Track Issue</Link>
+                        {/* E-Query Link */}
+                        <Link 
+                            to="/e-query"
+                            style={{ 
+                                ...linkStyle, 
+                                display: 'flex', 
+                                alignItems: 'center', 
+                                gap: '8px', 
+                                color: '#2ecc71', // Highlight green
+                                background: 'rgba(46, 204, 113, 0.1)',
+                                padding: '8px 16px',
+                                borderRadius: '50px',
+                                transition: 'all 0.3s'
+                            }}
+                            onMouseOver={e => {
+                                e.currentTarget.style.background = 'rgba(46, 204, 113, 0.2)';
+                                e.currentTarget.style.transform = 'translateY(-1px)';
+                            }}
+                            onMouseOut={e => {
+                                e.currentTarget.style.background = 'rgba(46, 204, 113, 0.1)';
+                                e.currentTarget.style.transform = 'translateY(0)';
+                            }}
+                        >
+                            <span>E-Query</span>
+                            <span style={{ fontSize: '14px' }}>⚡</span>
+                        </Link>
+
+
                     </div>
 
                     {/* Language Selector - Desktop */}
@@ -177,8 +205,63 @@ const Navbar = () => {
                                 <Link to="/my-bookings" onClick={closeMenu} style={mobileLinkStyle}>My Bookings</Link>
                             </>
                         )}
-                        <Link to="/support" onClick={closeMenu} style={{ ...mobileLinkStyle, color: '#6366f1' }}>🛟 Support</Link>
-                        <Link to="/track-issue" onClick={closeMenu} style={{ ...mobileLinkStyle, color: '#6366f1' }}>🔍 Track Issue</Link>
+                        {/* E-Query Section Mobile */}
+                        <div style={{ width: '100%', marginTop: '5px' }}>
+                            <div 
+                                onClick={() => { navigate('/e-query'); closeMenu(); }}
+                                style={{ 
+                                    fontSize: '12px', 
+                                    fontWeight: '800', 
+                                    color: '#6366f1', 
+                                    textTransform: 'uppercase', 
+                                    letterSpacing: '1.5px', 
+                                    marginBottom: '15px',
+                                    textAlign: 'center',
+                                    cursor: 'pointer',
+                                    padding: '5px',
+                                    borderRadius: '8px',
+                                    background: 'rgba(99, 102, 241, 0.05)'
+                                }}>⚡ E-Query System</div>
+
+                            
+                            <div style={{ 
+                                display: 'grid', 
+                                gridTemplateColumns: '1fr 1fr', 
+                                gap: '12px',
+                                width: '100%'
+                            }}>
+                                <Link to="/support" onClick={closeMenu} style={{ 
+                                    textDecoration: 'none',
+                                    background: '#f8fafc',
+                                    padding: '15px 10px',
+                                    borderRadius: '16px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    border: '1px solid #f1f5f9'
+                                }}>
+                                    <span style={{ fontSize: '24px' }}>🛟</span>
+                                    <span style={{ fontWeight: '700', fontSize: '14px', color: '#1e293b' }}>Support</span>
+                                </Link>
+                                
+                                <Link to="/track-issue" onClick={closeMenu} style={{ 
+                                    textDecoration: 'none',
+                                    background: '#f8fafc',
+                                    padding: '15px 10px',
+                                    borderRadius: '16px',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    gap: '8px',
+                                    border: '1px solid #f1f5f9'
+                                }}>
+                                    <span style={{ fontSize: '24px' }}>🔍</span>
+                                    <span style={{ fontWeight: '700', fontSize: '14px', color: '#1e293b' }}>Track</span>
+                                </Link>
+                            </div>
+                        </div>
+
                         <div style={{ width: '100%', height: '1px', background: '#f0f0f0', margin: '10px 0' }}></div>
 
                         {/* Language Selector - Mobile */}
@@ -298,7 +381,14 @@ const Navbar = () => {
                 }
                 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
                 @keyframes slideUp { from { transform: translateY(30px) scale(0.95); opacity: 0; } to { transform: translateY(0) scale(1); opacity: 1; } }
+                @keyframes slideDown { from { transform: translateY(-10px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+                
+                .dropdown-item:hover {
+                    background-color: #f8fafc !important;
+                    transform: translateX(5px);
+                }
             `}</style>
+
         </>
     );
 };
@@ -320,4 +410,16 @@ const mobileLinkStyle = {
     padding: '10px 0'
 };
 
+const dropdownLinkStyle = {
+    textDecoration: 'none',
+    color: '#2c3e50',
+    padding: '10px',
+    borderRadius: '12px',
+    display: 'flex',
+    alignItems: 'center',
+    gap: '12px',
+    transition: 'all 0.2s',
+};
+
 export default Navbar;
+

@@ -23,6 +23,8 @@ import RewardsPage from './pages/RewardsPage';
 import Chatbot from './components/Chatbot';
 import SupportPage from './pages/SupportPage';
 import TrackIssue from './pages/TrackIssue';
+import EQueryPortal from './pages/EQueryPortal';
+
 
 import GoogleTranslateLoader from './components/GoogleTranslateLoader'; // Removed to disable auto-translate
 import './components/GoogleTranslate.css'; // Removed
@@ -104,6 +106,8 @@ function Layout() {
         <Route path="/vehicle/:type/:id" element={<VehicleDetails />} />
         <Route path="/support" element={<SupportPage />} />
         <Route path="/track-issue" element={<TrackIssue />} />
+        <Route path="/e-query" element={<EQueryPortal />} />
+
       </Routes>
       {/* WhatsApp Floating Button - Show ONLY on Contact Page */}
       {location.pathname === '/contact' && (

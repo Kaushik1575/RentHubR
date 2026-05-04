@@ -85,7 +85,8 @@ export default function TrackIssue() {
       {/* Hero */}
       <div className="support-hero">
         <div className="support-hero-icon">🔍</div>
-        <h1 className="support-title">Track Status</h1>
+        <h1 className="support-title">E-Query Tracker</h1>
+
         <p className="support-subtitle">Get real-time updates on your support request. Enter your unique Ticket ID below.</p>
       </div>
 

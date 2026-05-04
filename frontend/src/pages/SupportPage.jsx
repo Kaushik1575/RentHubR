@@ -288,7 +288,8 @@ export default function SupportPage() {
 
       <div className="support-hero">
         <div className="support-hero-icon">🛟</div>
-        <h1 className="support-title">Support Center</h1>
+        <h1 className="support-title">E-Query Support</h1>
+
         <p className="support-subtitle">Experiencing an issue? We're here to help you get back on the road. Submit your query and track it in real-time.</p>
       </div>
 
