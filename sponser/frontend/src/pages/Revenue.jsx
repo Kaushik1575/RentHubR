@@ -338,8 +338,13 @@ const Revenue = () => {
                             <Activity className="w-5 h-5 text-indigo-600" />
                         </div>
                         <div>
-                            <h3 className="text-lg font-bold text-gray-900">Ride Analytics Breakdown</h3>
-                            <p className="text-xs text-gray-500">Detailed breakdown of operational performance and revenue sources</p>
+                            <h3 className="text-lg font-bold text-gray-900">
+                                Ride Analytics Breakdown 
+                                <span className="text-sm font-medium text-gray-500 ml-2 bg-gray-100 px-2 py-1 rounded-md">
+                                    {selectedMonth === -1 ? selectedYear : `${months[selectedMonth]} ${selectedYear}`}
+                                </span>
+                            </h3>
+                            <p className="text-xs text-gray-500 mt-1">Detailed breakdown of operational performance and revenue sources for the selected period</p>
                         </div>
                     </div>
                     
