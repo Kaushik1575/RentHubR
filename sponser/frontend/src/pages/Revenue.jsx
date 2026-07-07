@@ -1,7 +1,7 @@
 import { useEffect, useState, useMemo } from 'react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
-import { DollarSign, Download, TrendingDown, CreditCard, Calendar, ChevronDown, Clock, TrendingUp } from 'lucide-react';
+import { DollarSign, Download, TrendingDown, CreditCard, Calendar, ChevronDown, Clock, TrendingUp, CheckCircle2, XCircle, UserX, Activity } from 'lucide-react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
 
 const Revenue = () => {
@@ -103,10 +103,10 @@ const Revenue = () => {
             months.forEach((_, idx) => monthMap.set(idx, 0)); // Init all months to 0
 
             activeTxns.forEach(t => {
+                if (t.type === 'Debit') return;
                 const d = new Date(t.raw_date || t.date);
                 const mIdx = d.getMonth();
-                const amt = (t.type === 'Credit' ? t.amount : -t.amount);
-                monthMap.set(mIdx, (monthMap.get(mIdx) || 0) + amt);
+                monthMap.set(mIdx, (monthMap.get(mIdx) || 0) + t.amount);
             });
 
             chartData = Array.from(monthMap.entries()).map(([mIdx, amount]) => ({
@@ -122,8 +122,9 @@ const Revenue = () => {
                 dailyMap.set(i, 0);
             }
             activeTxns.forEach(t => {
+                if (t.type === 'Debit') return;
                 const d = new Date(t.raw_date || t.date).getDate();
-                dailyMap.set(d, (dailyMap.get(d) || 0) + (t.type === 'Credit' ? t.amount : -t.amount));
+                dailyMap.set(d, (dailyMap.get(d) || 0) + t.amount);
             });
             chartData = Array.from(dailyMap.entries()).map(([day, amount]) => ({
                 name: `${day}`, // Just the day number
@@ -160,11 +161,35 @@ const Revenue = () => {
         // Determine "hours" is tricky without duration in txn. 
         // We'll trust the summary is financial. Display duration might need backend support on txn object or we omit it for period view.
 
+        // 5. Calculate Ride Analytics Breakdown
+        const rideAnalytics = {
+            completed: { count: 0, revenue: 0 },
+            cancelled: { count: 0, revenue: 0 },
+            noShow: { count: 0, revenue: 0 },
+        };
+
+        activeTxns.forEach(t => {
+            if (t.type === 'Debit') return;
+            
+            const desc = t.description || '';
+            if (desc.includes('Completed')) {
+                rideAnalytics.completed.count += 1;
+                rideAnalytics.completed.revenue += t.amount;
+            } else if (desc.includes('Cancelled')) {
+                rideAnalytics.cancelled.count += 1;
+                rideAnalytics.cancelled.revenue += t.amount;
+            } else if (desc.includes('No-Show')) {
+                rideAnalytics.noShow.count += 1;
+                rideAnalytics.noShow.revenue += t.amount;
+            }
+        });
+
         return {
             transactions: activeTxns,
             summary: { gross, commission, net, totalWithdrawn },
             chartData,
-            vehicleStats: Array.from(vStatsMap.values())
+            vehicleStats: Array.from(vStatsMap.values()),
+            rideAnalytics
         };
 
     }, [originalData, selectedMonth, selectedYear]);
@@ -303,6 +328,75 @@ const Revenue = () => {
                             <h3 className="text-3xl font-bold mt-1">₹{filteredData.summary.net?.toLocaleString() || 0}</h3>
                         </div>
                         <p className="text-xs text-indigo-200">Payout eligible</p>
+                    </div>
+                </div>
+
+                {/* Advanced Analytics Breakdown */}
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+                    <div className="flex items-center gap-3 mb-6 pb-4 border-b border-gray-50">
+                        <div className="p-2 bg-indigo-50 rounded-lg">
+                            <Activity className="w-5 h-5 text-indigo-600" />
+                        </div>
+                        <div>
+                            <h3 className="text-lg font-bold text-gray-900">Ride Analytics Breakdown</h3>
+                            <p className="text-xs text-gray-500">Detailed breakdown of operational performance and revenue sources</p>
+                        </div>
+                    </div>
+                    
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        {/* Completed Rides */}
+                        <div className="flex items-start gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                            <div className="p-3 bg-emerald-50 text-emerald-600 rounded-xl shrink-0">
+                                <CheckCircle2 className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Completed Rides</p>
+                                <div className="flex items-baseline gap-2">
+                                    <h4 className="text-2xl font-bold text-gray-900">{filteredData.rideAnalytics?.completed.count || 0}</h4>
+                                    <span className="text-sm text-gray-400 font-medium">rides</span>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
+                                    <span className="text-xs text-gray-500 font-medium">Generated Revenue</span>
+                                    <span className="text-sm font-bold text-emerald-600">₹{filteredData.rideAnalytics?.completed.revenue.toLocaleString() || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Cancellations */}
+                        <div className="flex items-start gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                            <div className="p-3 bg-orange-50 text-orange-500 rounded-xl shrink-0">
+                                <XCircle className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">Cancellations</p>
+                                <div className="flex items-baseline gap-2">
+                                    <h4 className="text-2xl font-bold text-gray-900">{filteredData.rideAnalytics?.cancelled.count || 0}</h4>
+                                    <span className="text-sm text-gray-400 font-medium">rides</span>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
+                                    <span className="text-xs text-gray-500 font-medium">Retained Fees</span>
+                                    <span className="text-sm font-bold text-orange-500">₹{filteredData.rideAnalytics?.cancelled.revenue.toLocaleString() || 0}</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* No Shows */}
+                        <div className="flex items-start gap-4 p-4 rounded-xl hover:bg-gray-50 transition-colors border border-transparent hover:border-gray-100">
+                            <div className="p-3 bg-red-50 text-red-500 rounded-xl shrink-0">
+                                <UserX className="w-6 h-6" />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                                <p className="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-1">No-Shows</p>
+                                <div className="flex items-baseline gap-2">
+                                    <h4 className="text-2xl font-bold text-gray-900">{filteredData.rideAnalytics?.noShow.count || 0}</h4>
+                                    <span className="text-sm text-gray-400 font-medium">rides</span>
+                                </div>
+                                <div className="mt-2 pt-2 border-t border-gray-100 flex justify-between items-center">
+                                    <span className="text-xs text-gray-500 font-medium">Advances Retained</span>
+                                    <span className="text-sm font-bold text-red-500">₹{filteredData.rideAnalytics?.noShow.revenue.toLocaleString() || 0}</span>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -447,7 +541,7 @@ const Revenue = () => {
                                                     <div className="text-[10px] text-gray-400">{new Date(txn.raw_date || txn.date).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</div>
                                                 </td>
                                                 <td className="px-6 py-3">
-                                                    <p className="text-sm font-medium text-gray-900 truncate max-w-[150px]">{txn.description}</p>
+                                                    <p className="text-sm font-medium text-gray-900 line-clamp-2 max-w-[250px]" title={txn.description}>{txn.description}</p>
                                                     <p className="text-xs text-gray-500 font-mono">#{txn.booking_id || txn.id}</p>
                                                 </td>
                                                 <td className={`px-6 py-3 text-sm font-mono font-bold text-right ${txn.type === 'Debit' ? 'text-red-500' : 'text-green-600'}`}>

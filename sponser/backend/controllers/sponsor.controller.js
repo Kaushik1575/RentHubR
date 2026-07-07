@@ -98,16 +98,16 @@ exports.getDashboard = async (req, res) => {
             const d = new Date(t.raw_date || t.date);
             if (d.getFullYear() === currentYear) {
                 const monthIdx = d.getMonth();
-                monthlyRevenue[monthIdx].revenue += t.amount;
+                monthlyRevenue[monthIdx].revenue += (t.amount * 0.70); // Show Net Earnings on chart
                 monthlyRevenue[monthIdx].bookings += 1;
             }
         });
 
-        // Prepare Top Vehicles for Pie Chart
+        // Prepare Top Vehicles for Pie Chart (Show Net Earnings)
         const topVehicles = vehicleStats
             .sort((a, b) => b.total - a.total)
             .slice(0, 5)
-            .map(v => ({ name: v.name, value: v.total }));
+            .map(v => ({ name: v.name, value: (v.total * 0.70) }));
 
         // Calculate Total Ride Hours from vehicle stats
         const totalRideHours = vehicleStats.reduce((acc, curr) => acc + (curr.hours || 0), 0);

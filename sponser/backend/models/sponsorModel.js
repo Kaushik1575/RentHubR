@@ -342,7 +342,7 @@ class SponsorModel {
         // We select potential type columns to match correctly
         const { data: bookings, error } = await supabase
             .from('bookings')
-            .select('vehicle_id, vehicle_type, total_amount, status, duration')
+            .select('vehicle_id, vehicle_type, total_amount, status, duration, advance_payment, refund_amount, refund_deduction')
             .in('vehicle_id', vehicleIds);
 
         if (error) {
@@ -388,9 +388,17 @@ class SponsorModel {
                     totalRideHours += rideDuration;
                 }
 
-                // Count Revenue (Completed/Ended only)
+                // Count Revenue
                 if (['completed', 'ride_completed', 'ride_ended', 'payment_success'].includes(b.status)) {
                     totalRevenue += (parseFloat(b.total_amount) || 0);
+                } else if (b.status === 'cancelled') {
+                    const advance = parseFloat(b.advance_payment) || 0;
+                    const refund = parseFloat(b.refund_amount) || 0;
+                    const deduction = parseFloat(b.refund_deduction) || 0;
+                    const feeRetained = deduction > 0 ? deduction : Math.max(0, advance - refund);
+                    totalRevenue += feeRetained;
+                } else if (b.status === 'rider_not_come') {
+                    totalRevenue += (parseFloat(b.advance_payment) || 0);
                 }
             }
         });
@@ -449,10 +457,30 @@ class SponsorModel {
         const oneMonthAgo = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
 
         bookings.forEach(b => {
-            // Filter for Completed earnings
-            if (!['completed', 'ride_completed', 'ride_ended', 'payment_success'].includes(b.status)) return;
+            // Filter for Completed, Cancelled, or No-Show earnings
+            if (!['completed', 'ride_completed', 'ride_ended', 'payment_success', 'cancelled', 'rider_not_come'].includes(b.status)) return;
 
-            const amount = parseFloat(b.total_amount) || 0;
+            let amount = 0;
+            let transactionDescription = '';
+
+            if (b.status === 'cancelled') {
+                const advance = parseFloat(b.advance_payment) || 0;
+                const refund = parseFloat(b.refund_amount) || 0;
+                const deduction = parseFloat(b.refund_deduction) || 0;
+                
+                // If there's an explicit deduction recorded, use it, else fallback to advance - refund
+                amount = deduction > 0 ? deduction : Math.max(0, advance - refund);
+                
+                if (amount <= 0) return; // If 0 fee retained, skip this transaction for revenue
+                transactionDescription = `❌ Cancelled (Fee Retained)`;
+            } else if (b.status === 'rider_not_come') {
+                amount = parseFloat(b.advance_payment) || 0;
+                transactionDescription = `🚫 No-Show (Advance Retained)`;
+            } else {
+                amount = parseFloat(b.total_amount) || parseFloat(b.total_price) || 0;
+                transactionDescription = `✅ Completed Ride`;
+            }
+
             const bookingDate = new Date(b.created_at || b.booking_date || now);
 
             // Normalize type using utility function
@@ -472,13 +500,17 @@ class SponsorModel {
             if (vStat) {
                 // Calculate Duration
                 let rideDuration = parseFloat(b.duration) || 0;
-                if (b.ride_start_time && b.ride_end_time) {
-                    const start = new Date(b.ride_start_time);
-                    const end = new Date(b.ride_end_time);
-                    const diffMs = end - start;
-                    if (diffMs > 0) {
-                        rideDuration = diffMs / (1000 * 60 * 60); // Hours with decimals
+                if (['completed', 'ride_completed', 'ride_ended', 'payment_success'].includes(b.status)) {
+                    if (b.ride_start_time && b.ride_end_time) {
+                        const start = new Date(b.ride_start_time);
+                        const end = new Date(b.ride_end_time);
+                        const diffMs = end - start;
+                        if (diffMs > 0) {
+                            rideDuration = diffMs / (1000 * 60 * 60); // Hours with decimals
+                        }
                     }
+                } else {
+                    rideDuration = 0; // Cancelled or no-show have 0 ride hours
                 }
 
                 // Counts towards revenue
@@ -497,7 +529,7 @@ class SponsorModel {
                     raw_date: bookingDate.toISOString(), // For filtering
                     amount: amount,
                     type: 'Credit',
-                    description: `Rent: ${vStat.name} (${vStat.regNo || b.vehicle_id})`,
+                    description: `${transactionDescription}: ${vStat.name} (${vStat.regNo || b.vehicle_id})`,
                     vehicle_id: b.vehicle_id,
                     vehicle_name: vStat.name,
                     vehicle_image: vStat.image,
@@ -633,8 +665,8 @@ class SponsorModel {
         // 3. Fetch all completed bookings (MUST match filter in getDetailedRevenueStats)
         const { data: bookings, error: bookingError } = await supabase
             .from('bookings')
-            .select('vehicle_id, vehicle_type, total_amount, status')
-            .in('status', ['completed', 'ride_completed', 'ride_ended', 'payment_success']);
+            .select('vehicle_id, vehicle_type, total_amount, status, advance_payment, refund_amount, refund_deduction')
+            .in('status', ['completed', 'ride_completed', 'ride_ended', 'payment_success', 'cancelled', 'rider_not_come']);
 
         if (bookingError) throw bookingError;
 
@@ -705,7 +737,17 @@ class SponsorModel {
                 stats = sponsorStats.get(UNASSIGNED_ID);
             }
 
-            stats.revenue += (parseFloat(b.total_amount) || 0);
+            if (['completed', 'ride_completed', 'ride_ended', 'payment_success'].includes(b.status)) {
+                stats.revenue += (parseFloat(b.total_amount) || 0);
+            } else if (b.status === 'cancelled') {
+                const advance = parseFloat(b.advance_payment) || 0;
+                const refund = parseFloat(b.refund_amount) || 0;
+                const deduction = parseFloat(b.refund_deduction) || 0;
+                const feeRetained = deduction > 0 ? deduction : Math.max(0, advance - refund);
+                stats.revenue += feeRetained;
+            } else if (b.status === 'rider_not_come') {
+                stats.revenue += (parseFloat(b.advance_payment) || 0);
+            }
             stats.bookings += 1;
         });
 

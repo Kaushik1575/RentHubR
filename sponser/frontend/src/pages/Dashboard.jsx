@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, PieChart, Pie, Cell } from 'recharts';
-import { DollarSign, Truck, Calendar, Clock, CreditCard } from 'lucide-react';
+import { DollarSign, Truck, Calendar, Clock, CreditCard, Sparkles, Wrench, CalendarDays, TrendingUp } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
 
@@ -152,59 +152,126 @@ const Dashboard = () => {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-                <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-1">
-                    <h2 className="text-lg font-semibold mb-4 text-gray-700">Most Rented Vehicles</h2>
-                    <div className="h-72 md:h-80">
-                        <ResponsiveContainer width="100%" height="100%">
-                            {stats.vehicleChart && stats.vehicleChart.length > 0 ? (
-                                <PieChart>
-                                    <Pie
-                                        data={stats.vehicleChart}
-                                        cx="50%"
-                                        cy="50%"
-                                        innerRadius={60}
-                                        outerRadius={80}
-                                        paddingAngle={5}
-                                        dataKey="value"
-                                    >
-                                        {stats.vehicleChart.map((entry, index) => (
-                                            <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                                        ))}
-                                    </Pie>
-                                    <Tooltip formatter={(value) => [`₹${value}`, "Revenue"]} />
-                                </PieChart>
-                            ) : (
-                                <div className="flex items-center justify-center h-full text-gray-400 text-sm">
-                                    No vehicle data available
-                                </div>
-                            )}
-                        </ResponsiveContainer>
-                        <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                            {stats.vehicleChart.map((entry, index) => (
-                                <div key={index} className="flex items-center gap-1 text-xs text-gray-600">
-                                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
-                                    <span>{entry.name}</span>
+                {/* Most Rented Vehicles */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-1 flex flex-col">
+                    <h2 className="text-lg font-bold mb-6 text-gray-900 flex items-center gap-2">
+                        <div className="p-1.5 bg-brand-50 text-brand-600 rounded-lg">
+                            <Truck className="w-5 h-5" />
+                        </div>
+                        Most Rented Vehicles
+                    </h2>
+                    
+                    <div className="flex-1 flex flex-col justify-center">
+                        <div className="h-64 relative mb-4">
+                            <ResponsiveContainer width="100%" height="100%">
+                                {stats.vehicleChart && stats.vehicleChart.length > 0 ? (
+                                    <PieChart>
+                                        <Pie
+                                            data={stats.vehicleChart}
+                                            cx="50%"
+                                            cy="50%"
+                                            innerRadius={70}
+                                            outerRadius={90}
+                                            paddingAngle={4}
+                                            dataKey="value"
+                                            stroke="none"
+                                        >
+                                            {stats.vehicleChart.map((entry, index) => (
+                                                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                                            ))}
+                                        </Pie>
+                                        <Tooltip 
+                                            formatter={(value) => [`₹${value}`, "Revenue"]}
+                                            contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                                        />
+                                    </PieChart>
+                                ) : (
+                                    <div className="flex items-center justify-center h-full text-gray-400 text-sm">
+                                        No vehicle data available
+                                    </div>
+                                )}
+                            </ResponsiveContainer>
+                        </div>
+
+                        {/* Custom Clean Legend */}
+                        <div className="space-y-3 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                            {stats.vehicleChart?.map((entry, index) => (
+                                <div key={index} className="flex items-center justify-between group hover:bg-gray-50 p-2 rounded-lg transition-colors">
+                                    <div className="flex items-center gap-3">
+                                        <div className="w-3 h-3 rounded-full shadow-sm" style={{ backgroundColor: COLORS[index % COLORS.length] }}></div>
+                                        <span className="text-sm font-medium text-gray-700 truncate max-w-[140px]" title={entry.name}>{entry.name}</span>
+                                    </div>
+                                    <span className="text-sm font-bold text-gray-900">₹{entry.value.toLocaleString()}</span>
                                 </div>
                             ))}
                         </div>
                     </div>
                 </div>
 
-                <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 lg:col-span-2">
-                    <h2 className="text-lg font-semibold mb-4 text-gray-700">AI Insights</h2>
-                    <div className="space-y-4">
-                        <div className="p-4 bg-brand-50 border-l-4 border-brand-500 rounded-r-lg">
-                            <p className="text-sm text-brand-800 font-medium">🚀 Revenue Insight</p>
-                            <p className="text-gray-600 text-sm mt-1">Your revenue has increased by <span className="font-bold text-green-600">12%</span> compared to last month. Keep up the good work!</p>
+                {/* AI Insights */}
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-2 flex flex-col">
+                    <h2 className="text-lg font-bold mb-6 text-gray-900 flex items-center gap-2">
+                        <div className="p-1.5 bg-indigo-50 text-indigo-600 rounded-lg">
+                            <Sparkles className="w-5 h-5" />
                         </div>
-                        <div className="p-4 bg-orange-50 border-l-4 border-orange-500 rounded-r-lg">
-                            <p className="text-sm text-orange-800 font-medium">🔧 Maintenance Alert</p>
-                            <p className="text-gray-600 text-sm mt-1">Vehicle <span className="font-semibold">Yamaha R15 (KA-01-AB-1234)</span> has crossed 200 ride hours. Consider scheduling a service check.</p>
+                        AI Insights
+                    </h2>
+                    <div className="space-y-4 flex-1">
+                        
+                        {/* Insight 1: Revenue */}
+                        <div className="group relative overflow-hidden rounded-xl border border-emerald-100 bg-gradient-to-r from-emerald-50/50 to-transparent p-5 transition-all hover:shadow-md hover:border-emerald-200">
+                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <TrendingUp className="w-16 h-16 text-emerald-600" />
+                            </div>
+                            <div className="flex gap-4 relative z-10">
+                                <div className="shrink-0 p-3 bg-emerald-100/50 text-emerald-600 rounded-xl shadow-sm ring-1 ring-emerald-200/50 group-hover:scale-110 transition-transform">
+                                    <TrendingUp className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-emerald-900">Revenue Optimization</h3>
+                                    <p className="text-sm text-emerald-700/90 mt-1 leading-relaxed">
+                                        Your revenue has increased by <strong className="text-emerald-800">12%</strong> compared to last month. Consider promoting your top 2 performing vehicles to maximize this trend.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
-                        <div className="p-4 bg-purple-50 border-l-4 border-purple-500 rounded-r-lg">
-                            <p className="text-sm text-purple-800 font-medium">📅 Booking Pattern</p>
-                            <p className="text-gray-600 text-sm mt-1">Your vehicles are booked <span className="font-bold">40% more</span> on weekends. Consider adjusting pricing for Saturday and Sunday.</p>
+
+                        {/* Insight 2: Maintenance */}
+                        <div className="group relative overflow-hidden rounded-xl border border-orange-100 bg-gradient-to-r from-orange-50/50 to-transparent p-5 transition-all hover:shadow-md hover:border-orange-200">
+                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <Wrench className="w-16 h-16 text-orange-600" />
+                            </div>
+                            <div className="flex gap-4 relative z-10">
+                                <div className="shrink-0 p-3 bg-orange-100/50 text-orange-600 rounded-xl shadow-sm ring-1 ring-orange-200/50 group-hover:scale-110 transition-transform">
+                                    <Wrench className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-orange-900">Proactive Maintenance</h3>
+                                    <p className="text-sm text-orange-700/90 mt-1 leading-relaxed">
+                                        Vehicle <strong>Yamaha R15 (KA-01-AB-1234)</strong> has crossed 200 total ride hours. Schedule a routine service check soon to prevent unplanned downtime.
+                                    </p>
+                                </div>
+                            </div>
                         </div>
+
+                        {/* Insight 3: Pattern */}
+                        <div className="group relative overflow-hidden rounded-xl border border-violet-100 bg-gradient-to-r from-violet-50/50 to-transparent p-5 transition-all hover:shadow-md hover:border-violet-200">
+                            <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
+                                <CalendarDays className="w-16 h-16 text-violet-600" />
+                            </div>
+                            <div className="flex gap-4 relative z-10">
+                                <div className="shrink-0 p-3 bg-violet-100/50 text-violet-600 rounded-xl shadow-sm ring-1 ring-violet-200/50 group-hover:scale-110 transition-transform">
+                                    <CalendarDays className="w-6 h-6" />
+                                </div>
+                                <div>
+                                    <h3 className="text-sm font-bold text-violet-900">Booking Patterns</h3>
+                                    <p className="text-sm text-violet-700/90 mt-1 leading-relaxed">
+                                        Your fleet sees a <strong>40% spike</strong> in utilization during weekends. Consider implementing dynamic surge pricing on Saturdays and Sundays to increase yields.
+                                    </p>
+                                </div>
+                            </div>
+                        </div>
+
                     </div>
                 </div>
             </div>
