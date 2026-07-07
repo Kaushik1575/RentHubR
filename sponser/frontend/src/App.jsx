@@ -14,6 +14,7 @@ import TermsConditions from './pages/TermsConditions';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
+import ScrollToTop from './components/ScrollToTop';
 
 import FleetManager from './pages/FleetManager';
 import AdminWithdrawals from './pages/AdminWithdrawals';
@@ -22,6 +23,7 @@ import AdminSponsorReport from './pages/AdminSponsorReport';
 function App() {
   return (
     <Router>
+      <ScrollToTop />
       <ErrorBoundary>
         <Toaster
           position="top-right"

@@ -5,11 +5,13 @@ import AdminPanel from './pages/AdminPanel';
 import Login from './pages/Login';
 import RegisterAdmin from './pages/RegisterAdmin';
 import HomePortal from './pages/HomePortal';
+import ScrollToTop from './components/ScrollToTop';
 
 function App() {
   const token = localStorage.getItem('token');
   return (
     <Router>
+      <ScrollToTop />
       <Toaster
         position="top-center"
         reverseOrder={false}

@@ -33,7 +33,10 @@ function Layout() {
   const navigate = useNavigate();
   const [isChatOpen, setIsChatOpen] = useState(false);
 
-
+  // Scroll to top on route change
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [location.pathname]);
 
   // Capture Referral Code from URL
   useEffect(() => {
