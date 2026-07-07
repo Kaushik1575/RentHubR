@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title>API Test</title>
+</head>
+
+<body>
+    <h1>Testing API Connection</h1>
+    <button onclick="testAPI()">Test API</button>
+    <pre id="result"></pre>
+
+    <script>
+        async function testAPI() {
+            const resultEl = document.getElementById('result');
+            resultEl.textContent = 'Testing...\n\n';
+
+            try {
+                // Test 1: Check if backend is running
+                resultEl.textContent += '1. Testing backend health...\n';
+                const healthCheck = await fetch('http://localhost:3005/');
+                const healthText = await healthCheck.text();
+                resultEl.textContent += `   Status: ${healthCheck.status}\n`;
+                resultEl.textContent += `   Response: ${healthText}\n\n`;
+
+                // Test 2: Get withdrawal requests
+                resultEl.textContent += '2. Testing withdrawal requests API...\n';
+                const response = await fetch('http://localhost:3005/api/admin/withdrawal/requests');
+                resultEl.textContent += `   Status: ${response.status}\n`;
+                resultEl.textContent += `   Content-Type: ${response.headers.get('content-type')}\n\n`;
+
+                const responseText = await response.text();
+                resultEl.textContent += '   Response:\n';
+                resultEl.textContent += responseText;
+
+                // Try to parse as JSON
+                try {
+                    const data = JSON.parse(responseText);
+                    resultEl.textContent += '\n\n✅ Valid JSON! Data:\n';
+                    resultEl.textContent += JSON.stringify(data, null, 2);
+                } catch (e) {
+                    resultEl.textContent += '\n\n❌ Not valid JSON!';
+                }
+
+            } catch (error) {
+                resultEl.textContent += '\n\n❌ ERROR: ' + error.message;
+                console.error('Error:', error);
+            }
+        }
+    </script>
+</body>
+
+</html>

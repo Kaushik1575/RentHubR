@@ -1,7 +1,8 @@
-node_modules
+node_modules/
+**/node_modules/
 .env
-backend/.env
-frontend/.env
+**/.env
 .DS_Store
-dist
-build
+**/dist/
+**/build/
+**/uploads/
