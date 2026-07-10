@@ -621,7 +621,7 @@ const sendSOS = async (req, res) => {
         if (!userEmail) return res.status(404).json({ error: 'User email not found' });
 
         const sosToken = crypto.randomBytes(32).toString('hex');
-        const frontendUrl = process.env.FRONTEND_URL || 'https://rent-hub-r.vercel.app';
+        const frontendUrl = (process.env.FRONTEND_URL || 'https://rent-hub-r.vercel.app').replace(/\/+$/, '');
         // Use RH format for frontend display if available
         const displayBookingId = booking.booking_id || booking.id;
         const sosActivationLink = `${frontendUrl}/sos-activate?token=${sosToken}&bookingId=${displayBookingId}`;
