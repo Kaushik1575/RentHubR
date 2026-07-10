@@ -67,9 +67,8 @@ const SOSActivate = () => {
             if (e.code === 2) errorMsg = "Location signal unavailable.";
             if (e.code === 3 || (e.message && e.message.includes('time'))) errorMsg = "Location request timed out.";
 
-            setLocationStats(`Location unavailable: ${errorMsg}`);
-            // Automatically send SOS without location so the emergency alert isn't delayed
-            sendSOS(null);
+            setMessage(errorMsg);
+            setStatus('location_error');
         }
     };
 
@@ -129,7 +128,22 @@ const SOSActivate = () => {
                     </div>
                 )}
 
+                {status === 'location_error' && (
+                    <div className="status-box status-warning">
+                        <span className="status-title">Location Needed</span>
+                        <p>{message}</p>
+                        <p style={{ marginTop: '8px', opacity: 0.8 }}>For precise assistance, please turn on your device location or allow location permissions.</p>
 
+                        <div className="secondary-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
+                            <button className="btn-secondary" onClick={activateSOS} style={{ padding: '10px', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.5)', color: 'white', borderRadius: '5px', cursor: 'pointer' }}>
+                                ⟳ Retry Location
+                            </button>
+                            <button className="btn-secondary" onClick={() => sendSOS(null)} style={{ padding: '10px', background: 'rgba(255,0,0,0.4)', border: '1px solid rgba(255,0,0,0.8)', color: 'white', borderRadius: '5px', cursor: 'pointer' }}>
+                                Send Without Location &rarr;
+                            </button>
+                        </div>
+                    </div>
+                )}
 
                 {status === 'ready' && (
                     <>
