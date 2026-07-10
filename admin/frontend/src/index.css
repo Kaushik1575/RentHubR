@@ -402,7 +402,8 @@ code {
 }
 
 .status-cancelled,
-.status-rejected {
+.status-rejected,
+.status-rider_not_come {
     background: linear-gradient(90deg, #ff5858 0%, #f09819 100%);
     color: #fff;
 }
@@ -1852,7 +1853,8 @@ code {
     color: #1B5E20;
 }
 
-.status-badge.status-rejected {
+.status-badge.status-rejected,
+.status-badge.status-rider_not_come {
     background: #FFEBEE;
     color: #C62828;
 }

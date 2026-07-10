@@ -699,6 +699,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                         <option value="ride_started">Ride Started</option>
                                         <option value="ride_completed">Ride Completed</option>
                                         <option value="cancelled">Cancelled</option>
+                                        <option value="rider_not_come">Rider Not Come</option>
 
                                     </select>
                                 </div>
