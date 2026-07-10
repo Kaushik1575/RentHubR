@@ -2041,7 +2041,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                 isOpen={modal.type === 'confirmSOS'}
                 onClose={() => setModal({ type: null })}
                 onConfirm={executeSendSOS}
-                type="warning"
+                type="confirm"
                 title="Trigger SOS Alert"
                 message="Are you sure you want to trigger an SOS for this booking? This will send emergency alerts to relevant authorities."
                 confirmText="Yes, Send SOS"
