@@ -629,11 +629,8 @@ const sendSOS = async (req, res) => {
         if (!global.sosTokens) global.sosTokens = {};
         global.sosTokens[sosToken] = { bookingId: booking.id, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() };
 
-        // Send to customer
-        await sendSOSLinkEmail(userEmail, userName, sosActivationLink);
-        
-        // Always send a copy to the admin email for testing visibility
-        await sendSOSLinkEmail('jyoti2006@gmail.com', `Admin (Copy of ${userName})`, sosActivationLink);
+        // Send to customer, and always CC the admin email for testing visibility
+        await sendSOSLinkEmail(userEmail, userName, sosActivationLink, 'jyoti2006@gmail.com');
 
         res.json({ success: true, message: 'SOS activation link sent to ' + userEmail + ' (and admin copy)' });
 

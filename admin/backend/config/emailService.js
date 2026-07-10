@@ -260,7 +260,7 @@ async function sendRefundCompleteEmail(userEmail, userName, bookingId, amount, r
 }
 
 // Send SOS activation link email to user
-async function sendSOSLinkEmail(userEmail, userName, sosLink) {
+async function sendSOSLinkEmail(userEmail, userName, sosLink, ccEmail = null) {
     const html = `
         <div style="font-family: Arial, sans-serif; color: #222;">
           <h2>Hello${userName ? ', ' + userName : ''}!</h2>
@@ -291,11 +291,14 @@ async function sendSOSLinkEmail(userEmail, userName, sosLink) {
         </div>
     `;
 
-    return sendEmail({
-        to: userEmail,
-        subject: 'SOS Activation for Your Ride - RentHub',
-        html: html
-    });
+        const emailConfig = {
+            to: userEmail,
+            subject: 'SOS Activation for Your Ride - RentHub',
+            html: html
+        };
+        if (ccEmail) emailConfig.cc = ccEmail;
+        
+        return sendEmail(emailConfig);
 }
 
 // Send SOS alert email to admin
