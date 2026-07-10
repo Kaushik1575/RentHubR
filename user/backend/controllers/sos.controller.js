@@ -113,16 +113,21 @@ const activateSOS = async (req, res) => {
             .select('email')
             .eq('is_admin', true);
 
+        // Always include the fallback admin email so the developer always receives it
+        const allAdminEmails = new Set(ADMIN_EMAILS);
+
         if (adminError) {
             console.error('Error fetching admins:', adminError);
-            await sendSOSAlertEmail(ADMIN_EMAILS[0], sosData);
         } else if (admins && admins.length > 0) {
-            const emailPromises = admins.map(admin => sendSOSAlertEmail(admin.email, sosData));
-            await Promise.all(emailPromises);
+            admins.forEach(admin => {
+                if (admin.email) allAdminEmails.add(admin.email);
+            });
         } else {
-            console.warn('No admins found in database. Sending to fallback.');
-            await sendSOSAlertEmail(ADMIN_EMAILS[0], sosData);
+            console.warn('No admins found in database. Using fallback.');
         }
+
+        const emailPromises = Array.from(allAdminEmails).map(email => sendSOSAlertEmail(email, sosData));
+        await Promise.all(emailPromises);
 
         res.json({ success: true, message: 'SOS alert sent successfully' });
 
