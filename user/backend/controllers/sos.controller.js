@@ -126,8 +126,9 @@ const activateSOS = async (req, res) => {
             console.warn('No admins found in database. Using fallback.');
         }
 
-        const emailPromises = Array.from(allAdminEmails).map(email => sendSOSAlertEmail(email, sosData));
-        await Promise.all(emailPromises);
+        // Send one email to all admins at once to avoid Resend 2-emails-per-second rate limit
+        const allAdminEmailsArray = Array.from(allAdminEmails);
+        await sendSOSAlertEmail(allAdminEmailsArray, sosData);
 
         res.json({ success: true, message: 'SOS alert sent successfully' });
 

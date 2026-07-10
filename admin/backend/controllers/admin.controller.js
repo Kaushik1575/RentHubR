@@ -621,7 +621,7 @@ const sendSOS = async (req, res) => {
         if (!userEmail) return res.status(404).json({ error: 'User email not found' });
 
         const sosToken = crypto.randomBytes(32).toString('hex');
-        const frontendUrl = process.env.FRONTEND_URL || 'https://rent-hub-r.vercel.app';
+        const frontendUrl = (process.env.FRONTEND_URL || 'https://rent-hub-r.vercel.app').replace(/\/+$/, '');
         // Use RH format for frontend display if available
         const displayBookingId = booking.booking_id || booking.id;
         const sosActivationLink = `${frontendUrl}/sos-activate?token=${sosToken}&bookingId=${displayBookingId}`;
@@ -629,8 +629,13 @@ const sendSOS = async (req, res) => {
         if (!global.sosTokens) global.sosTokens = {};
         global.sosTokens[sosToken] = { bookingId: booking.id, createdAt: new Date().toISOString(), expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString() };
 
+        // Send to customer
         await sendSOSLinkEmail(userEmail, userName, sosActivationLink);
-        res.json({ success: true, message: 'SOS activation link sent to ' + userEmail });
+        
+        // Always send a copy to the admin email for testing visibility
+        await sendSOSLinkEmail('jyoti2006@gmail.com', `Admin (Copy of ${userName})`, sosActivationLink);
+
+        res.json({ success: true, message: 'SOS activation link sent to ' + userEmail + ' (and admin copy)' });
 
     } catch (error) {
         res.status(500).json({ error: 'Error sending SOS: ' + error.message });
