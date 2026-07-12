@@ -89,7 +89,7 @@ exports.createOffer = async (req, res) => {
         let validDaysStr = valid_days;
         if (Array.isArray(valid_days)) {
             validDaysStr = valid_days.join(',');
-        } else if (valid_days === undefined || valid_days === null) {
+        } else if (valid_days === undefined || valid_days === null || valid_days === '') {
             validDaysStr = null;
         }
 
@@ -214,6 +214,9 @@ exports.updateOffer = async (req, res) => {
                 updates.valid_days = updates.valid_days.join(',');
             } else if (typeof updates.valid_days === 'string') {
                 updates.valid_days = updates.valid_days.trim();
+                if (updates.valid_days === '') updates.valid_days = null;
+            } else if (updates.valid_days === null) {
+                updates.valid_days = null;
             }
         }
 
