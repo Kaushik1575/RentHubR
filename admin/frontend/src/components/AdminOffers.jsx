@@ -280,9 +280,17 @@ const AdminOffers = () => {
                     <div key={offer.id} style={{ background: 'white', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 15px 35px rgba(0,0,0,0.05)', border: '1px solid #f1f5f9', display: 'flex', flexDirection: 'column' }}>
                         <div style={{ height: '180px', background: '#f8fafc', position: 'relative' }}>
                             <img src={offer.image_url || 'https://via.placeholder.com/400x200'} alt={offer.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                            <div style={{ position: 'absolute', top: '15px', right: '15px', background: offer.is_active ? '#dcfce7' : '#fee2e2', color: offer.is_active ? '#166534' : '#991b1b', padding: '6px 14px', borderRadius: '50px', fontSize: '12px', fontWeight: '800', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
-                                {offer.is_active ? '● Active' : '○ Inactive'}
-                            </div>
+                            {(() => {
+                                const isExpired = offer.valid_until && new Date(offer.valid_until) < new Date(new Date().setHours(0,0,0,0));
+                                const bg = isExpired ? '#fee2e2' : (offer.is_active ? '#dcfce7' : '#f1f5f9');
+                                const color = isExpired ? '#991b1b' : (offer.is_active ? '#166534' : '#64748b');
+                                const text = isExpired ? '● Expired' : (offer.is_active ? '● Active' : '○ Inactive');
+                                return (
+                                    <div style={{ position: 'absolute', top: '15px', right: '15px', background: bg, color: color, padding: '6px 14px', borderRadius: '50px', fontSize: '12px', fontWeight: '800', boxShadow: '0 4px 10px rgba(0,0,0,0.1)' }}>
+                                        {text}
+                                    </div>
+                                );
+                            })()}
                             <div style={{ position: 'absolute', bottom: '15px', left: '15px', background: 'rgba(30, 27, 75, 0.8)', backdropFilter: 'blur(8px)', color: 'white', padding: '6px 14px', borderRadius: '12px', fontSize: '11px', fontWeight: '700' }}>
                                 {offer.offer_type}
                             </div>
@@ -689,6 +697,31 @@ const AdminOffers = () => {
                                         />
                                     </div>
                                     <div className="form-group" style={{ marginTop: '20px', background: '#f8fafc', padding: '15px', borderRadius: '12px', border: '1px solid #e2e8f0' }}>
+                                        {editingId && (
+                                            <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', margin: '0 0 15px 0' }}>
+                                                <div style={{ position: 'relative', width: '44px', height: '24px' }}>
+                                                    <input 
+                                                        type="checkbox" 
+                                                        checked={formData.is_active !== undefined ? formData.is_active : true}
+                                                        onChange={e => setFormData({ ...formData, is_active: e.target.checked })}
+                                                        style={{ opacity: 0, width: 0, height: 0 }} 
+                                                    />
+                                                    <span style={{ 
+                                                        position: 'absolute', cursor: 'pointer', top: 0, left: 0, right: 0, bottom: 0, 
+                                                        backgroundColor: (formData.is_active !== false) ? '#16a34a' : '#cbd5e1', 
+                                                        transition: '0.4s', borderRadius: '34px' 
+                                                    }}></span>
+                                                    <span style={{ 
+                                                        position: 'absolute', height: '18px', width: '18px', left: (formData.is_active !== false) ? '22px' : '4px', bottom: '3px', 
+                                                        backgroundColor: 'white', transition: '0.4s', borderRadius: '50%' 
+                                                    }}></span>
+                                                </div>
+                                                <div>
+                                                    <div style={{ fontWeight: '700', color: '#1e1b4b', fontSize: '14px' }}>Offer is Active</div>
+                                                    <div style={{ fontSize: '11px', color: '#64748b' }}>If unchecked, this offer will be hidden from users.</div>
+                                                </div>
+                                            </label>
+                                        )}
                                         <label style={{ display: 'flex', alignItems: 'center', gap: '12px', cursor: 'pointer', margin: 0 }}>
                                             <div style={{ position: 'relative', width: '44px', height: '24px' }}>
                                                 <input 
