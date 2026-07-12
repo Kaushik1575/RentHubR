@@ -126,6 +126,9 @@ exports.createOffer = async (req, res) => {
 
         if (error) {
             console.error('Supabase Insert Error:', error);
+            if (error.code === '23505') {
+                return res.status(400).json({ success: false, error: 'An offer with this promotional code already exists. Please use a unique code.' });
+            }
             return res.status(400).json({ success: false, error: error.message });
         }
 
@@ -232,6 +235,9 @@ exports.updateOffer = async (req, res) => {
 
         if (error) {
             console.error('Supabase error:', error);
+            if (error.code === '23505') {
+                throw new Error('An offer with this promotional code already exists. Please use a unique code.');
+            }
             throw error;
         }
         // --- BROADCAST EMAIL TO ALL USERS (on update) ---
