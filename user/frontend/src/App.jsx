@@ -21,7 +21,7 @@ import Chatbot from './components/Chatbot';
 import SupportPage from './pages/SupportPage';
 import TrackIssue from './pages/TrackIssue';
 import EQueryPortal from './pages/EQueryPortal';
-
+import SplashScreen from './components/SplashScreen';
 
 import GoogleTranslateLoader from './components/GoogleTranslateLoader'; // Removed to disable auto-translate
 import './components/GoogleTranslate.css'; // Removed
@@ -117,21 +117,30 @@ function Layout() {
 }
 
 function App() {
+  const [showSplash, setShowSplash] = useState(true);
+
+  const handleSplashComplete = () => {
+    setShowSplash(false);
+  };
+
   return (
     <Router>
-      <Toaster
-        position="top-center"
-        reverseOrder={false}
-        toastOptions={{
-          duration: 4000,
-          style: {
-            borderRadius: '10px',
-            background: '#333',
-            color: '#fff',
-          },
-        }}
-      />
-      <Layout />
+      {showSplash && <SplashScreen onComplete={handleSplashComplete} />}
+      <div style={{ display: showSplash ? 'none' : 'block' }}>
+        <Toaster
+          position="top-center"
+          reverseOrder={false}
+          toastOptions={{
+            duration: 4000,
+            style: {
+              borderRadius: '10px',
+              background: '#333',
+              color: '#fff',
+            },
+          }}
+        />
+        <Layout />
+      </div>
     </Router>
   );
 }
