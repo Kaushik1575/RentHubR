@@ -19,13 +19,12 @@ const SplashScreen = ({ onComplete }) => {
 
   // Setup Audio Elements
   useEffect(() => {
-    // Placeholders - replace these with actual files in your public folder
+    // Linked to actual files in the public folder
     audioContext.current = {
-      ambient: new Audio('/assets/sounds/ambient.mp3'),
-      ignition: new Audio('/assets/sounds/ignition.mp3'),
-      whoosh: new Audio('/assets/sounds/whoosh.mp3'),
-      reveal: new Audio('/assets/sounds/reveal.mp3'),
+      ignition: new Audio('/assets/sounds/ignition.wav'),
+      whoosh: new Audio('/assets/sounds/whoosh.wav'),
       ready: new Audio('/assets/sounds/ready.mp3'),
+      reveal: new Audio('/assets/sounds/reveal.mp3'),
     };
     
     Object.values(audioContext.current).forEach(audio => {
@@ -33,15 +32,20 @@ const SplashScreen = ({ onComplete }) => {
     });
 
     return () => {
-      Object.values(audioContext.current).forEach(audio => {
-        audio.pause();
-        audio.currentTime = 0;
+      // Pause all sounds except the final 'reveal' sound 
+      // so it can gracefully bleed into the homepage without abruptly cutting off.
+      Object.entries(audioContext.current).forEach(([name, audio]) => {
+        if (name !== 'reveal') {
+          audio.pause();
+          audio.currentTime = 0;
+        }
       });
     };
   }, []);
 
   const playSound = (name) => {
     if (!isMutedRef.current && audioContext.current[name]) {
+      audioContext.current[name].currentTime = 0;
       audioContext.current[name].play().catch(() => {
         // Silently fail if autoplay blocked
       });
@@ -62,21 +66,29 @@ const SplashScreen = ({ onComplete }) => {
   // Timeline Orchestration
   useEffect(() => {
     const timeline = [
-      { time: 10, scene: 1, sound: 'ambient' },     // 0s: Complete darkness
-      { time: 600, scene: 2, sound: 'ignition' },   // 0.6s: Headlights slowly reveal
-      { time: 2000, scene: 3, sound: 'whoosh' },    // 2.0s: Vehicle drives slowly
-      { time: 6000, scene: 4, sound: 'reveal' },    // 6.0s: Logo Reveal
-      { time: 6500, scene: 5, sound: 'ready' },     // 6.5s: Brand Identity + Checklist
-      { time: 7000, scene: 6 },                     // 7.0s: Homepage Transition Start
-      { time: 7800, scene: 7 }                      // 7.8s: Complete
+      { time: 10, scene: 1 },                       // 0s: Complete darkness
+      { time: 600, scene: 2, sound: 'ready' },      // 0.6s: Headlights slowly reveal
+      { time: 2000, scene: 3, sound: 'ignition' },  // 2.0s: Vehicle drives slowly (Car Start)
+      { time: 6000, scene: 4, sound: 'whoosh' },    // 6.0s: Letters begin flying in
+      { time: 10500, scene: 4.1, sound: 'reveal' }, // 10.5s: Energy pulse + Sweep
+      { time: 12500, scene: 5 },                    // 12.5s: Brand Identity + Checklist
+      { time: 14500, scene: 6 },                    // 14.5s: Fade to homepage
+      { time: 16000, scene: 7 }                     // 16.0s: Complete
     ];
 
     const timeouts = timeline.map(({ time, scene: s, sound }) =>
       setTimeout(() => {
         if (s === 7) {
+          // Explicitly stop early sounds when animation finishes
+          Object.entries(audioContext.current).forEach(([name, audio]) => {
+            if (name !== 'reveal') {
+              audio.pause();
+              audio.currentTime = 0;
+            }
+          });
           onComplete();
         } else {
-          setScene(s);
+          if (s !== undefined) setScene(s);
           if (sound) playSound(sound);
         }
       }, time)
@@ -329,23 +341,153 @@ const SplashScreen = ({ onComplete }) => {
               </motion.svg>
             </motion.div>
 
-            {/* Scene 4 & 5: Logo Reveal & Shrink */}
+            {/* Scene 4 - 6: Premium Logo Reveal & Assembly */}
             <motion.div
-              style={{ position: 'absolute', top: '35%', y: '-50%' }}
+              className="premium-logo-container"
+              style={{ position: 'absolute', top: '35%', y: '-50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ 
-                opacity: scene >= 4 ? 1 : 0,
+                opacity: scene >= 4 && scene < 6 ? 1 : 0,
                 scale: scene >= 4 ? 1 : 0.9 
               }}
-              transition={{ duration: 0.6, ease: "backOut" }}
+              transition={{ duration: 0.6, ease: "easeOut" }}
             >
-              <motion.h1 
-                className="splash-logo"
-                animate={{ scale: scene >= 4 ? [1, 1.03, 1] : 1 }}
-                transition={{ repeat: Infinity, duration: 1.5, ease: "easeInOut" }}
-              >
-                RentHub
-              </motion.h1>
+              {scene >= 4 && scene < 6 && <div className="cinematic-mist" />}
+              <AnimatePresence>
+                {scene >= 4 && scene < 6 && (
+                  <motion.div className="drawing-particles-wrapper" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
+                    {[...Array(40)].map((_, i) => (
+                      <motion.div 
+                        key={`dp-${i}`}
+                        className="drawing-particle"
+                        style={{
+                           left: `${Math.random() * 100}%`,
+                           top: `${Math.random() * 100}%`,
+                           filter: `blur(${Math.random() > 0.5 ? 2 : 0}px)`
+                        }}
+                        animate={{
+                          y: [0, -60],
+                          opacity: [0, 1, 0],
+                          scale: [0.5, 2.5, 0.5]
+                        }}
+                        transition={{ duration: Math.random() * 1.5 + 0.8, repeat: Infinity }}
+                      />
+                    ))}
+                  </motion.div>
+                )}
+              </AnimatePresence>
+
+              <div className={`logo-flex-wrapper ${scene >= 4.1 ? 'energy-pulse-active' : ''}`}>
+                {[
+                  { char: 'R', initial: { x: '-100vw', y: 0, rotate: -15, filter: 'blur(20px)', opacity: 0 }, duration: 1.2, delay: 0.0 },
+                  { char: 'e', initial: { x: 0, y: '-100vh', rotate: 10, filter: 'blur(20px)', opacity: 0 }, duration: 1.5, delay: 0.3 },
+                  { char: 'n', initial: { x: '100vw', y: 0, rotate: -12, filter: 'blur(20px)', opacity: 0 }, duration: 1.2, delay: 0.6 },
+                  { char: 't', initial: { x: 0, y: '100vh', rotate: 15, filter: 'blur(20px)', opacity: 0 }, duration: 2.0, delay: 0.9 },
+                  { char: 'H', initial: { x: '-100vw', y: '-100vh', rotate: -8, filter: 'blur(20px)', opacity: 0 }, duration: 1.5, delay: 1.2 },
+                  { char: 'u', initial: { x: '100vw', y: '100vh', rotate: 12, filter: 'blur(20px)', opacity: 0 }, duration: 1.2, delay: 1.5 },
+                  { char: 'b', initial: { x: 0, y: 0, scale: 0.1, rotate: -10, filter: 'blur(20px)', opacity: 0 }, duration: 2.5, delay: 1.8 },
+                ].map((item, idx) => (
+                  <div key={idx} style={{ position: 'relative', display: 'inline-block' }}>
+                    {/* Blue Light Trail Effect */}
+                    <AnimatePresence>
+                      {scene >= 4 && scene < 6 && (
+                        <motion.div
+                          style={{
+                            position: 'absolute',
+                            top: 0, left: 0,
+                            color: 'transparent',
+                            textShadow: '0 0 20px #00C3FF, 0 0 40px #00C3FF, 0 0 60px #00C3FF',
+                            zIndex: -1,
+                            pointerEvents: 'none'
+                          }}
+                          initial={item.initial}
+                          animate={{
+                            x: [item.initial.x, 0, 0], 
+                            y: [item.initial.y, 0, 0],
+                            scale: item.initial.scale !== undefined ? [item.initial.scale, 1.05, 1] : [1, 1.05, 1],
+                            rotate: [item.initial.rotate, 0, 0],
+                            opacity: [0, 0.8, 0]
+                          }}
+                          transition={{
+                            duration: item.duration,
+                            ease: "easeOut",
+                            delay: item.delay,
+                          }}
+                        >
+                          {item.char}
+                        </motion.div>
+                      )}
+                    </AnimatePresence>
+
+                    <motion.span
+                      className="flying-letter"
+                      initial={item.initial}
+                      animate={
+                        scene >= 4
+                          ? { 
+                              x: [item.initial.x, 0, 0], 
+                              y: [item.initial.y, 0, 0],
+                              scale: item.initial.scale !== undefined ? [item.initial.scale, 1.05, 1] : [1, 1.05, 1],
+                              rotate: [item.initial.rotate, 0, 0], 
+                              filter: [
+                                item.initial.filter, 
+                                'blur(2px) drop-shadow(0 0 30px #00C3FF)', 
+                                'blur(0px) drop-shadow(0 0 10px rgba(0, 195, 255, 0.5))'
+                              ],
+                              opacity: 1 
+                            }
+                          : item.initial
+                      }
+                      transition={{
+                        duration: item.duration,
+                        ease: "easeOut",
+                        delay: item.delay,
+                      }}
+                    >
+                      {item.char}
+                    </motion.span>
+                    
+                    {/* Landing Particles & Glow */}
+                    <AnimatePresence>
+                      {scene >= 4 && scene < 6 && (
+                        <>
+                          <motion.div 
+                            className="letter-landing-particles"
+                            initial={{ opacity: 0, scale: 0 }}
+                            animate={{ opacity: [0, 0.8, 0], scale: [0.2, 1.5] }}
+                            transition={{ duration: 0.5, delay: item.delay + item.duration }}
+                          />
+                          {[...Array(5)].map((_, pIdx) => (
+                            <motion.div
+                              key={`part-${idx}-${pIdx}`}
+                              style={{
+                                position: 'absolute',
+                                top: '50%', left: '50%',
+                                width: '3px', height: '3px',
+                                background: '#00C3FF',
+                                borderRadius: '50%',
+                                boxShadow: '0 0 8px #00C3FF',
+                                zIndex: 20,
+                                pointerEvents: 'none'
+                              }}
+                              initial={{ x: 0, y: 0, opacity: 0, scale: 0 }}
+                              animate={{
+                                x: (Math.random() - 0.5) * 80,
+                                y: (Math.random() - 0.5) * 80,
+                                opacity: [0, 1, 0],
+                                scale: [0, 1.5, 0]
+                              }}
+                              transition={{ duration: 0.6, delay: item.delay + item.duration, ease: "easeOut" }}
+                            />
+                          ))}
+                        </>
+                      )}
+                    </AnimatePresence>
+                  </div>
+                ))}
+                
+                {scene >= 4.1 && <div className="light-sweep" />}
+              </div>
             </motion.div>
 
             {/* Scene 5: Brand Tagline and Loading Checklist */}
