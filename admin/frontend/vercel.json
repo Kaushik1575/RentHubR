@@ -6,11 +6,11 @@
   "rewrites": [
     {
       "source": "/api/:path*",
-      "destination": "https://renthub-admin-backend.onrender.com/api/:path*"
+      "destination": "https://renthub-admin-backend-9809.onrender.com/api/:path*"
     },
     {
       "source": "/uploads/:path*",
-      "destination": "https://renthub-admin-backend.onrender.com/uploads/:path*"
+      "destination": "https://renthub-admin-backend-9809.onrender.com/uploads/:path*"
     },
     {
       "source": "/(.*)",
