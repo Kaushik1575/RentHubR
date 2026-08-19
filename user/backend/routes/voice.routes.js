@@ -31,11 +31,7 @@ router.all('/welcome', (req, res) => {
 
     const userEmail = req.query.userEmail || req.body.userEmail || 'your email';
 
-    const promptText = `Hello ${userName}! This is RentHub calling regarding your booking request for ${vehicleName} (Booking ID: ${bookingId}). ` +
-        `Your pickup is scheduled for ${startDate} at ${startTime} for ${duration} hours. ` +
-        `We have sent your initial booking summary to ${userEmail}. ` +
-        `Please press 1 on your phone keypad or say confirm to confirm your booking request. ` +
-        `Or press 2 on your phone keypad or say cancel to cancel your booking.`;
+    const promptText = `Hello ${userName}! Calling from RentHub regarding your booking for ${vehicleName}. Please press 1 to confirm your booking, or press 2 to cancel.`;
 
     gather.say({ voice: 'Polly.Aditi', language: 'en-IN' }, promptText);
 
@@ -78,8 +74,8 @@ router.post('/process-keypress', async (req, res) => {
 
     if (digit === '1') {
         twiml.say(
-            { voice: 'Polly.Aditi', language: 'hi-IN' },
-            "Booking confirm karne ke liye dhanyavaad! Kripya pickup ke samay ek valid government ID card saath laana na bhulein. RentHub ke saath aapka safar shubh ho! Alvida."
+            { voice: 'Polly.Aditi', language: 'en-IN' },
+            "Thank you for confirming! Please remember to bring a valid government ID at pickup. Goodbye!"
         );
 
         // Update DB status to confirmed
@@ -108,9 +104,10 @@ router.post('/process-keypress', async (req, res) => {
 
     } else if (digit === '2') {
         twiml.say(
-            { voice: 'Polly.Aditi', language: 'hi-IN' },
-            `Aapki booking request cancel kar di gayi hai. Refund details ki jankari ${userEmailParam || 'apke email'} par bhej di gayi hai. RentHub par aane ke liye dhanyavaad! Alvida.`
+            { voice: 'Polly.Aditi', language: 'en-IN' },
+            "Your booking is cancelled. We sent refund details to your email. Goodbye!"
         );
+
 
         try {
             if (bookingId) {
