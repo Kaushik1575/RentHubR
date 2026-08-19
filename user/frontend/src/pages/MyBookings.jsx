@@ -12,10 +12,17 @@ const MyBookings = () => {
     const [error, setError] = useState(null);
 
     // Modal States
+    const [showCancellationModal, setShowCancellationModal] = useState(false);
+    const [showRefundDetailsModal, setShowRefundDetailsModal] = useState(false);
+    const [currentBookingId, setCurrentBookingId] = useState(null);
+    const [isCancelling, setIsCancelling] = useState(false);
+    const [refundFlowMode, setRefundFlowMode] = useState('rejected'); // 'rejected' or 'cancellation'
+
     // Re-confirmation modal state
     const [showReconfirmModal, setShowReconfirmModal] = useState(false);
     const [isReconfirming, setIsReconfirming] = useState(false);
     const [reconfirmBookingObj, setReconfirmBookingObj] = useState(null);
+
 
     // Auto-open Refund Details Modal if url param openRefund is present
     useEffect(() => {
