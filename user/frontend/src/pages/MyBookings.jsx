@@ -464,12 +464,38 @@ const MyBookings = () => {
                                 </div>
                             )}
 
-                            {booking.status === 'cancelled' && booking.refund_amount && (
-                                <div className="refund-info" style={{ marginTop: '0.5rem', color: '#4CAF50', fontWeight: 'bold', padding: '0.5rem', backgroundColor: '#e8f5e9', borderRadius: '5px', fontSize: '0.9rem' }}>
-                                    <p><strong>Refund Amount:</strong> ₹{booking.refund_amount}</p>
-                                    <p><strong>Refund Status:</strong> {booking.refund_status || 'Processing'}</p>
+                            {booking.status === 'cancelled' && (booking.refund_amount > 0 || booking.displayAdvancePayment > 0 || booking.refund_status) && (
+                                <div className="refund-info" style={{ marginTop: '0.5rem', color: '#2e7d32', fontWeight: 'bold', padding: '0.8rem', backgroundColor: '#e8f5e9', borderRadius: '8px', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                                    <p style={{ margin: 0 }}><strong>Refund Amount:</strong> ₹{booking.refund_amount !== undefined && booking.refund_amount !== null ? booking.refund_amount : (booking.displayAdvancePayment || '0')}</p>
+                                    <p style={{ margin: 0 }}><strong>Refund Status:</strong> {booking.refund_status ? booking.refund_status.toUpperCase() : 'PROCESSING'}</p>
+
+                                    {booking.refund_details ? (
+                                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#2e7d32', background: '#ffffff', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid #c8e6c9' }}>
+                                            ✅ Refund Details Submitted ({booking.refund_details.method === 'upi' ? `UPI: ${booking.refund_details.upiId}` : `Bank: ${booking.refund_details.accountNumber}`})
+                                        </p>
+                                    ) : (
+                                        <p style={{ margin: 0, fontSize: '0.85rem', color: '#c62828', background: '#ffebee', padding: '0.4rem 0.6rem', borderRadius: '4px', border: '1px solid #ffcdd2' }}>
+                                            ⚠️ Refund details not submitted yet
+                                        </p>
+                                    )}
+
+                                    {booking.refund_status !== 'completed' && (
+                                        <button
+                                            onClick={() => {
+                                                setCurrentBookingId(booking.id);
+                                                setRefundFlowMode('cancellation');
+                                                setShowRefundDetailsModal(true);
+                                            }}
+                                            style={{
+                                                backgroundColor: '#1565c0', color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', alignSelf: 'flex-start', marginTop: '0.3rem'
+                                            }}
+                                        >
+                                            💳 {booking.refund_details ? 'Edit Refund Details' : 'Submit Refund Details (UPI / Bank)'}
+                                        </button>
+                                    )}
                                 </div>
                             )}
+
 
                             {booking.status === 'rejected' && (
                                 <div className="refund-info" style={{ marginTop: '0.5rem', color: '#4CAF50', fontWeight: 'bold', padding: '0.5rem', backgroundColor: '#e8f5e9', borderRadius: '5px', fontSize: '0.9rem' }}>

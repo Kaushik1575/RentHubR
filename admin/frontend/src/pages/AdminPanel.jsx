@@ -741,8 +741,8 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                                     {b.refund_id}
                                                                 </p>
                                                             )}
-                                                            {/* Show Refund Details if present */}
-                                                            {b.refund_details && (
+                                                            {/* Show Refund Details if present, otherwise show pending submission warning */}
+                                                            {b.refund_details ? (
                                                                 <div style={{ marginTop: '5px', fontSize: '0.9em', color: '#555', background: '#f5f5f5', padding: '5px', borderRadius: '4px' }}>
                                                                     {(b.refund_details.method === 'upi' || b.refund_details.method === 'UPI') && (
                                                                         <p><strong>UPI:</strong> {b.refund_details.upiId}</p>
@@ -760,7 +760,12 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                                         </p>
                                                                     )}
                                                                 </div>
+                                                            ) : (
+                                                                <div style={{ marginTop: '5px', fontSize: '0.85em', color: '#c62828', background: '#ffebee', padding: '5px 8px', borderRadius: '4px', borderLeft: '3px solid #f44336', fontWeight: 'bold' }}>
+                                                                    ⚠️ User has not submitted refund details yet
+                                                                </div>
                                                             )}
+
                                                         </div>
                                                     ) : 'N/A'}
                                                 </td>
