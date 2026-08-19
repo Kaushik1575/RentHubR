@@ -43,12 +43,12 @@ router.all('/welcome', (req, res) => {
     const promptText = `Hello ${userName}! This is RentHub calling regarding your booking request for ${vehicleName}. ` +
         `Booking ID is ${bookingId}, scheduled for ${startDate} at ${startTime} for ${duration} hours. ` +
         (userEmail ? `We have sent your booking summary to ${userEmail}. ` : `We have sent your booking summary to your email. `) +
-        `Please press 1 on your phone keypad or say confirm to confirm your booking. ` +
-        `Or press 2 on your phone keypad or say cancel to cancel your booking. ` +
-        `Please remember to bring a valid government ID at pickup. ` +
+        `Please state if you would like to confirm your booking or cancel your booking. ` +
+        `You can also press 1 to confirm or press 2 to cancel. ` +
         `Thank you for choosing RentHub!`;
 
     gather.say({ voice: 'Polly.Aditi', language: 'en-IN' }, promptText);
+
 
 
     // If user doesn't press anything within timeout
