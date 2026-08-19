@@ -9,10 +9,12 @@ const initScheduler = () => {
     if (USE_INTERNAL_CRON) {
         console.log('🔔 Starting internal scheduler (Reminders, No-Shows & Offer Launch)...');
 
-        // Run immediately on startup
-        checkAndSendReminders().catch(err => console.error('Error in initial reminder check:', err));
-        checkAndCancelNoShows().catch(err => console.error('Error in initial no-show check:', err));
-        checkAndLaunchOffers().catch(err => console.error('Error in initial launch check:', err));
+        // Run initial check after 10 seconds to allow server network to fully initialize
+        setTimeout(() => {
+            checkAndSendReminders().catch(err => console.error('Error in initial reminder check:', err));
+            checkAndCancelNoShows().catch(err => console.error('Error in initial no-show check:', err));
+            checkAndLaunchOffers().catch(err => console.error('Error in initial launch check:', err));
+        }, 10000);
 
         // Then run every 1 minute to ensure timely delivery
         const CHECK_INTERVAL = 1 * 60 * 1000; // 1 minute in milliseconds
