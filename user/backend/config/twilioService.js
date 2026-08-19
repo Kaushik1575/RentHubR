@@ -57,6 +57,45 @@ const sendSMS = async (to, body) => {
     }
 };
 
-module.exports = {
-    sendSMS
+const makeConfirmationCall = async ({ to, bookingId, userName, vehicleName, vehicleType, startDate, startTime, duration, callbackBaseUrl }) => {
+    try {
+        if (!client) {
+            console.error('Twilio credentials missing');
+            return { success: false, error: 'Twilio not configured' };
+        }
+
+        const formattedNumber = formatPhoneNumber(to);
+        const baseUrl = callbackBaseUrl || process.env.BASE_URL || process.env.BACKEND_URL || 'http://localhost:5000';
+
+        const params = new URLSearchParams({
+            bookingId: bookingId || '',
+            userName: userName || 'Customer',
+            vehicleName: vehicleName || 'Vehicle',
+            vehicleType: vehicleType || 'Vehicle',
+            startDate: startDate || '',
+            startTime: startTime || '',
+            duration: duration || '1'
+        });
+
+        const twimlUrl = `${baseUrl}/api/voice/welcome?${params.toString()}`;
+        console.log(`📞 Placing outbound confirmation call to ${formattedNumber} via TwiML URL: ${twimlUrl}`);
+
+        const call = await client.calls.create({
+            url: twimlUrl,
+            to: formattedNumber,
+            from: fromPhoneNumber
+        });
+
+        console.log('Voice call placed successfully:', call.sid);
+        return { success: true, sid: call.sid };
+    } catch (error) {
+        console.error('Error placing voice call:', error);
+        return { success: false, error: error.message };
+    }
 };
+
+module.exports = {
+    sendSMS,
+    makeConfirmationCall
+};
+

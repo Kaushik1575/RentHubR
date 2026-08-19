@@ -6,6 +6,7 @@ const { getISTTimestamp } = require('../utils/dateUtils');
 const { generateInvoiceBuffer } = require('../utils/invoiceGenerator');
 const { sendImmediateReminderIfNeeded } = require('../services/reminderService');
 const { makeBookingConfirmationCall } = require('../config/retellCallService');
+const { makeConfirmationCall } = require('../config/twilioService');
 const { generateBookingId } = require('../utils/bookingIdGenerator');
 const { normalizeVehicleType } = require('../utils/vehicleTypeNormalizer');
 const Razorpay = require('razorpay');
@@ -512,10 +513,10 @@ const createBooking = async (req, res) => {
                     console.error('❌ Error generating invoice or sending email:', emailError);
                 }
 
-                // 5. Trigger Retell AI Call
+                // 5. Trigger Retell AI Outbound Confirmation Call
                 if (userDetails.phone_number) {
                     const detailsForCall = {
-                        bookingId: data.booking_id,
+                        bookingId: data.booking_id || data.id,
                         vehicleName: vehicleName,
                         vehicleType: vehicleType,
                         startDate: startDate,
@@ -523,8 +524,9 @@ const createBooking = async (req, res) => {
                         duration: duration,
                         userName: userDetails.full_name
                     };
-                    await makeBookingConfirmationCall(userDetails.phone_number, detailsForCall);
-                    console.log(`📞 Confirmation call triggered for ${userDetails.phone_number}`);
+                    // Trigger Retell AI Outbound Voice Call
+                    const callResult = await makeBookingConfirmationCall(userDetails.phone_number, detailsForCall);
+                    console.log(`📞 Retell AI confirmation call triggered for ${userDetails.phone_number}:`, callResult);
                 }
 
                 // 6. Check if immediate reminder needed (for bookings within 2 hours)

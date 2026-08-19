@@ -753,9 +753,38 @@ async function sendNewOfferEmail(userEmail, userName, offerDetails, isUpdate = f
     });
 }
 
+async function sendBookingCancelledEmail(userEmail, userName, bookingId, vehicleName) {
+    const frontendUrl = process.env.FRONTEND_URL || 'https://rent-hub-r.vercel.app';
+    const html = `
+        <div style="font-family: Arial, sans-serif; color: #222; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+          <div style="background-color: #dc3545; color: white; padding: 20px; text-align: center;">
+            <h2 style="margin: 0;">Booking Cancelled</h2>
+          </div>
+          <div style="padding: 25px;">
+            <p>Hello <b>${userName || 'Valued Customer'}</b>,</p>
+            <p>Your booking request <b>#${bookingId}</b> for <b>${vehicleName || 'Vehicle'}</b> has been cancelled as requested during the call verification.</p>
+            <p>If an advance payment was made, you can submit your refund details (UPI ID / Bank Account) on RentHub to receive your refund immediately.</p>
+            <p style="text-align: center; margin: 25px 0;">
+              <a href="${frontendUrl}" style="background-color: #0b5cff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Submit Refund Details / Manage Booking</a>
+            </p>
+            <p style="font-size: 13px; color: #666;">If you did not initiate this cancellation, please contact our support team immediately.</p>
+            <br>
+            <p>Thank you,<br>The RentHub Team</p>
+          </div>
+        </div>
+    `;
+
+    return sendEmail({
+        to: userEmail,
+        subject: `Booking #${bookingId} Cancelled - RentHub Refund Info`,
+        html: html
+    });
+}
+
 module.exports = {
     generateOTP,
     sendBookingConfirmationEmail,
+    sendBookingCancelledEmail,
     sendPasswordResetOTP,
     sendRegistrationOTP,
     sendRefundCompleteEmail,
