@@ -139,9 +139,8 @@ router.post('/process-keypress', async (req, res) => {
     res.send(twiml.toString());
 });
 
-// GET / POST /api/voice/retell-webhook
-// Handles Retell AI webhooks & custom tool calls (speech recognition confirmation/cancellation)
-router.all('/retell-webhook', async (req, res) => {
+// Handler for Retell AI Webhooks & Custom Tool Calls
+const handleRetellWebhook = async (req, res) => {
     try {
         const body = req.body || {};
         console.log('🎙️ [Retell AI Webhook] Payload received:', JSON.stringify(body));
@@ -191,11 +190,16 @@ router.all('/retell-webhook', async (req, res) => {
             return res.json({ success: true, message: 'Booking cancelled via Retell AI' });
         }
 
-        res.json({ success: true, message: 'Webhook received' });
+        res.json({ success: true, message: 'Retell AI Webhook Connected Successfully' });
     } catch (error) {
         console.error('❌ Error handling Retell AI webhook:', error);
         res.status(500).json({ error: error.message });
     }
-});
+};
+
+// Mount handlers across multiple URL path variations
+router.all('/retell-webhook', handleRetellWebhook);
+router.all('/webhook', handleRetellWebhook);
+router.all('/', (req, res) => res.json({ success: true, message: 'Voice API Active' }));
 
 module.exports = router;

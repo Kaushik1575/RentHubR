@@ -46,6 +46,7 @@ const offerRoutes = require('./routes/offer.routes');
 app.use('/api/offers', offerRoutes);
 const voiceRoutes = require('./routes/voice.routes');
 app.use('/api/voice', voiceRoutes);
+app.use('/api', voiceRoutes);
 
 // Explicitly register cron route to match original path exactly
 const adminController = require('./controllers/admin.controller');
