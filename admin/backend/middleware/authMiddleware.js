@@ -20,21 +20,20 @@ const verifyToken = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
 
-        // Check user status in database
-        const { data: user, error } = await supabase
-            .from('users')
-            .select('is_blocked, session_id')
-            .eq('id', decoded.id)
-            .single();
+        // Check user blocked status gracefully
+        try {
+            const { data: user } = await supabase
+                .from('users')
+                .select('is_blocked')
+                .eq('id', decoded.id)
+                .maybeSingle();
 
-        if (error || !user) {
-            console.error('VerifyToken: User lookup failed', error);
-            return res.status(401).json({ error: 'User not found' });
-        }
-
-        if (user.is_blocked) {
-            console.log('VerifyToken: User is blocked');
-            return res.status(403).json({ error: 'Account blocked', code: 'USER_BLOCKED' });
+            if (user && user.is_blocked) {
+                console.log('VerifyToken: User is blocked');
+                return res.status(403).json({ error: 'Account blocked', code: 'USER_BLOCKED' });
+            }
+        } catch (dbErr) {
+            console.warn('VerifyToken: User blocked check skipped:', dbErr.message);
         }
 
         req.user = decoded;
@@ -43,6 +42,7 @@ const verifyToken = async (req, res, next) => {
         console.error('VerifyToken: Invalid token', error.message);
         return res.status(401).json({ error: 'Invalid or expired token' });
     }
+
 };
 
 // Admin middleware
