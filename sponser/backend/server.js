@@ -20,6 +20,9 @@ app.use((req, res, next) => {
 
 // Routes
 app.use('/api', apiRoutes);
+const voiceRoutes = require('./routes/voice.routes');
+app.use('/api/voice', voiceRoutes);
+app.use('/api', voiceRoutes);
 
 // Health Check
 app.get('/', (req, res) => {
