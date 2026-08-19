@@ -41,7 +41,6 @@ const NavbarProfile = () => {
         localStorage.removeItem('user');
         window.dispatchEvent(new Event('storage')); // Trigger update for other components
         navigate('/login');
-        window.location.reload();
     };
 
     if (!user) return null;

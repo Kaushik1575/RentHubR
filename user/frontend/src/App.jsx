@@ -117,11 +117,16 @@ function Layout() {
 }
 
 function App() {
-  const [showSplash, setShowSplash] = useState(true);
+  const [showSplash, setShowSplash] = useState(() => {
+    // Only show splash screen once per browser session
+    return !sessionStorage.getItem('renthub_splash_shown');
+  });
 
   const handleSplashComplete = () => {
+    sessionStorage.setItem('renthub_splash_shown', 'true');
     setShowSplash(false);
   };
+
 
   return (
     <Router>

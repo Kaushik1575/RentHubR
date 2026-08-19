@@ -58,11 +58,11 @@ const Navbar = () => {
     const confirmLogout = () => {
         localStorage.removeItem('token');
         localStorage.removeItem('user');
+        window.dispatchEvent(new Event('storage'));
         setIsLoggedIn(false);
         setIsAdmin(false);
         setShowLogoutConfirm(false);
         navigate('/login');
-        window.location.reload();
     };
 
     const closeMenu = () => setIsMenuOpen(false);
