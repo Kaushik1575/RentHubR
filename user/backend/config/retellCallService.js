@@ -119,11 +119,13 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
                 start_time: String(callMetadata.start_time || callMetadata.startTime || ''),
                 duration: String(callMetadata.duration || ''),
                 user_name: String(callMetadata.user_name || callMetadata.userName || ''),
+                user_email: String(callMetadata.user_email || callMetadata.userEmail || ''),
                 total_amount: String(callMetadata.total_amount || callMetadata.totalAmount || ''),
                 advance_payment: String(callMetadata.advance_payment || callMetadata.advancePayment || ''),
                 remaining_amount: String(callMetadata.remaining_amount || callMetadata.remainingAmount || '')
             };
         }
+
 
         console.log('Making Retell AI outbound call:', {
             to: formattedToNumber,
@@ -191,8 +193,10 @@ async function makeBookingConfirmationCall(userPhoneNumber, bookingDetails = {})
             start_date: bookingDetails.startDate || null,
             start_time: bookingDetails.startTime || null,
             duration: bookingDetails.duration || null,
-            user_name: bookingDetails.userName || null
+            user_name: bookingDetails.userName || null,
+            user_email: bookingDetails.userEmail || null
         };
+
 
         const result = await makeOutboundCall(userPhoneNumber, callMetadata);
 

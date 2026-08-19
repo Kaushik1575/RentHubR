@@ -29,21 +29,18 @@ router.all('/welcome', (req, res) => {
         timeout: 10
     });
 
-    const userEmail = req.query.userEmail || req.body.userEmail || '';
+    const userEmail = req.query.userEmail || req.body.userEmail || 'your email';
 
-    const promptText = `Hello ${userName}! This is RentHub calling regarding your booking request for ${vehicleName}. ` +
-        `Booking ID is ${bookingId}, scheduled for ${startDate} at ${startTime} for ${duration} hours. ` +
-        (userEmail ? `We have sent your booking summary to ${userEmail}. ` : `We have sent your booking summary to your email. `) +
-        `Please state if you would like to confirm your booking or cancel your booking. ` +
-        `You can also press 1 to confirm or press 2 to cancel. ` +
-        `Thank you for choosing RentHub!`;
+    const promptText = `Hello ${userName}! This is RentHub calling regarding your booking request for ${vehicleName} (Booking ID: ${bookingId}). ` +
+        `Your pickup is scheduled for ${startDate} at ${startTime} for ${duration} hours. ` +
+        `We have sent your initial booking summary to ${userEmail}. ` +
+        `Please press 1 on your phone keypad or say confirm to confirm your booking request. ` +
+        `Or press 2 on your phone keypad or say cancel to cancel your booking.`;
 
     gather.say({ voice: 'Polly.Aditi', language: 'en-IN' }, promptText);
 
-
-
     // If user doesn't press anything within timeout
-    twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, "We didn't receive any keypress input. Thank you for choosing RentHub! Goodbye!");
+    twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, "We didn't receive any input. Thank you for visiting RentHub! Goodbye!");
 
     res.type('text/xml');
     res.send(twiml.toString());
@@ -59,13 +56,14 @@ router.post('/process-keypress', async (req, res) => {
     const bookingId = req.query.bookingId || req.body.bookingId;
     const userNameParam = req.query.userName || 'Customer';
     const vehicleNameParam = req.query.vehicleName || 'Vehicle';
+    const userEmailParam = req.query.userEmail || req.body.userEmail || 'your email';
 
     console.log(`🎙️ [Twilio Voice] Keypress received: Digits='${digit}' for Booking ID: ${bookingId}`);
 
     if (digit === '1') {
         twiml.say(
             { voice: 'Polly.Aditi', language: 'en-IN' },
-            "Thank you for confirming! Please remember to bring a valid government ID at pickup. Thank you for choosing RentHub!"
+            "Thank you for confirming your booking! Please remember to bring a valid government ID at pickup. Have a great ride with RentHub! Goodbye."
         );
 
         // Update DB status to confirmed
@@ -99,8 +97,9 @@ router.post('/process-keypress', async (req, res) => {
     } else if (digit === '2') {
         twiml.say(
             { voice: 'Polly.Aditi', language: 'en-IN' },
-            "Your booking request has been cancelled. An email has been sent to submit your refund details if applicable. Thank you for visiting RentHub!"
+            `Your booking request has been cancelled. An email with refund details has been sent to ${userEmailParam}. Thank you for visiting RentHub! Goodbye.`
         );
+
 
         try {
             if (bookingId) {
