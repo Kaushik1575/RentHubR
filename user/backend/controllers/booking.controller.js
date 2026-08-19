@@ -812,11 +812,143 @@ const getBookingById = async (req, res) => {
     }
 };
 
+const reconfirmBooking = async (req, res) => {
+    try {
+        const bookingId = req.params.id;
+        const userId = req.user.id;
+
+        console.log('Processing booking re-confirmation for ID:', bookingId);
+
+        let query = supabase.from('bookings').select('*, users:user_id(*)');
+        const numId = Number(bookingId);
+        if (!isNaN(numId) && String(numId) === String(bookingId).trim()) {
+            query = query.or(`id.eq.${numId},booking_id.eq.${bookingId}`);
+        } else {
+            query = query.eq('booking_id', String(bookingId).trim());
+        }
+
+        const { data: booking, error: fetchError } = await query.single();
+
+        if (fetchError || !booking) {
+            console.error('Error fetching booking for reconfirm:', fetchError);
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+
+        if (booking.user_id !== userId) {
+            return res.status(403).json({ error: 'Unauthorized: Booking belongs to another user.' });
+        }
+
+        const nowConfirmed = new Date().toISOString();
+        const { data: updatedBooking, error: updateError } = await supabase
+            .from('bookings')
+            .update({
+                status: 'confirmed',
+                confirmation_timestamp: nowConfirmed,
+                refund_status: null,
+                refund_amount: 0,
+                refund_deduction: 0
+            })
+            .eq('id', booking.id)
+            .select('*, users:user_id(*)')
+            .single();
+
+        if (updateError) {
+            console.error('Error re-confirming booking:', updateError);
+            return res.status(500).json({ error: 'Failed to re-confirm booking' });
+        }
+
+        // Update vehicle availability back to false (booked)
+        if (booking.vehicle_id && booking.vehicle_type) {
+            let vehicleTable = booking.vehicle_type;
+            if (vehicleTable === 'car') vehicleTable = 'cars';
+            if (vehicleTable === 'bike') vehicleTable = 'bikes';
+            if (vehicleTable === 'scooty') vehicleTable = 'scooty';
+
+            await supabase
+                .from(vehicleTable)
+                .update({ is_available: false })
+                .eq('id', booking.vehicle_id);
+        }
+
+        // Send fresh confirmation email with PDF invoice
+        (async () => {
+            try {
+                const userDetails = updatedBooking.users || {};
+                const userEmail = userDetails.email || updatedBooking.user_email;
+                const userName = userDetails.full_name || 'Customer';
+
+                let vehicleName = updatedBooking.vehicle_name || 'Vehicle';
+                try {
+                    let vehicleTable = updatedBooking.vehicle_type;
+                    if (vehicleTable === 'car') vehicleTable = 'cars';
+                    if (vehicleTable === 'bike') vehicleTable = 'bikes';
+                    if (vehicleTable === 'scooty') vehicleTable = 'scooty';
+                    const { data: vData } = await supabase.from(vehicleTable).select('name').eq('id', updatedBooking.vehicle_id).single();
+                    if (vData) vehicleName = vData.name;
+                } catch (e) {}
+
+                if (userEmail) {
+                    const pdfBuffer = await generateInvoiceBuffer(
+                        updatedBooking.booking_id || updatedBooking.id,
+                        userName,
+                        userEmail,
+                        vehicleName,
+                        updatedBooking.duration || 1,
+                        `${updatedBooking.start_date} ${updatedBooking.start_time}`,
+                        updatedBooking.total_amount || 0,
+                        updatedBooking.advance_payment || 0
+                    );
+
+                    const mailOptions = {
+                        to: userEmail,
+                        subject: `Booking #${updatedBooking.booking_id || updatedBooking.id} Re-Confirmed! – RentHub`,
+                        html: `
+                            <div style="font-family: Arial, sans-serif; color: #222; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
+                                <div style="background-color: #28a745; color: white; padding: 20px; text-align: center;">
+                                    <h2 style="margin: 0;">Booking Re-Confirmed!</h2>
+                                </div>
+                                <div style="padding: 25px;">
+                                    <p>Hello <b>${userName}</b>,</p>
+                                    <p>Your booking request <b>#${updatedBooking.booking_id || updatedBooking.id}</b> for <b>${vehicleName}</b> has been successfully <b>re-confirmed</b>!</p>
+                                    <p>Your pickup is scheduled for <b>${updatedBooking.start_date}</b> at <b>${updatedBooking.start_time}</b> for <b>${updatedBooking.duration} hours</b>.</p>
+                                    <p>We have attached your updated official PDF invoice to this email.</p>
+                                    <br>
+                                    <p>Have a great ride with RentHub!<br>The RentHub Team</p>
+                                </div>
+                            </div>
+                        `,
+                        attachments: [
+                            { filename: 'booking_invoice.pdf', content: pdfBuffer }
+                        ]
+                    };
+
+                    const { sendEmail } = require('../config/emailService');
+                    await sendEmail(mailOptions);
+                    console.log(`📧 Re-confirmation email sent to ${userEmail}`);
+                }
+            } catch (emailErr) {
+                console.error('Error sending re-confirmation email:', emailErr);
+            }
+        })();
+
+        res.json({
+            success: true,
+            message: 'Booking re-confirmed successfully! Fresh invoice sent to email.',
+            booking: updatedBooking
+        });
+
+    } catch (error) {
+        console.error('Error in reconfirmBooking:', error);
+        res.status(500).json({ error: 'Internal server error re-confirming booking' });
+    }
+};
+
 module.exports = {
     checkAvailability,
     createBooking,
     getUserBookings,
+    getBookingById,
     cancelBooking,
     submitRefundDetails,
-    getBookingById
+    reconfirmBooking
 };

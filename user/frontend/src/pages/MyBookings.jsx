@@ -12,11 +12,69 @@ const MyBookings = () => {
     const [error, setError] = useState(null);
 
     // Modal States
-    const [showCancellationModal, setShowCancellationModal] = useState(false);
-    const [showRefundDetailsModal, setShowRefundDetailsModal] = useState(false);
-    const [currentBookingId, setCurrentBookingId] = useState(null);
-    const [isCancelling, setIsCancelling] = useState(false);
-    const [refundFlowMode, setRefundFlowMode] = useState('rejected'); // 'rejected' or 'cancellation'
+    // Re-confirmation modal state
+    const [showReconfirmModal, setShowReconfirmModal] = useState(false);
+    const [isReconfirming, setIsReconfirming] = useState(false);
+    const [reconfirmBookingObj, setReconfirmBookingObj] = useState(null);
+
+    // Auto-open Refund Details Modal if url param openRefund is present
+    useEffect(() => {
+        if (bookings && bookings.length > 0) {
+            const params = new URLSearchParams(window.location.search);
+            const openRefundId = params.get('openRefund');
+            if (openRefundId) {
+                const target = bookings.find(b => String(b.booking_id) === openRefundId || String(b.id) === openRefundId);
+                if (target) {
+                    setCurrentBookingId(target.id);
+                    setRefundFlowMode('cancellation');
+                    setShowRefundDetailsModal(true);
+                }
+            }
+        }
+    }, [bookings]);
+
+    const handleReconfirmClick = (booking) => {
+        setReconfirmBookingObj(booking);
+        setShowReconfirmModal(true);
+    };
+
+    const executeReconfirm = async () => {
+        if (!reconfirmBookingObj) return;
+        setIsReconfirming(true);
+        try {
+            const token = localStorage.getItem('token');
+            const res = await fetch(`/api/bookings/${reconfirmBookingObj.id}/reconfirm`, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            const data = await res.json();
+            if (!res.ok) throw new Error(data.error || 'Failed to re-confirm booking');
+
+            setShowReconfirmModal(false);
+            setPopup({
+                isOpen: true,
+                type: 'success',
+                title: 'Booking Re-Confirmed!',
+                message: `Booking #${reconfirmBookingObj.booking_id || reconfirmBookingObj.id} has been re-confirmed. A fresh confirmation email & invoice PDF has been sent!`
+            });
+
+            fetchUserBookings();
+        } catch (err) {
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Re-Confirmation Failed',
+                message: err.message
+            });
+        } finally {
+            setIsReconfirming(false);
+        }
+    };
+
 
     // Success Popup State
     const [showSuccessPopup, setShowSuccessPopup] = useState(false);
@@ -482,21 +540,33 @@ const MyBookings = () => {
                                     )}
 
                                     {booking.refund_status !== 'completed' && (
-                                        <button
-                                            onClick={() => {
-                                                setCurrentBookingId(booking.id);
-                                                setRefundFlowMode('cancellation');
-                                                setShowRefundDetailsModal(true);
-                                            }}
-                                            style={{
-                                                backgroundColor: '#1565c0', color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', alignSelf: 'flex-start', marginTop: '0.3rem'
-                                            }}
-                                        >
-                                            💳 {booking.refund_details ? 'Edit Refund Details' : 'Submit Refund Details (UPI / Bank)'}
-                                        </button>
+                                        <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '0.3rem' }}>
+                                            <button
+                                                onClick={() => {
+                                                    setCurrentBookingId(booking.id);
+                                                    setRefundFlowMode('cancellation');
+                                                    setShowRefundDetailsModal(true);
+                                                }}
+                                                style={{
+                                                    backgroundColor: '#1565c0', color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem'
+                                                }}
+                                            >
+                                                💳 {booking.refund_details ? 'Edit Refund Details' : 'Submit Refund Details (UPI / Bank)'}
+                                            </button>
+
+                                            <button
+                                                onClick={() => handleReconfirmClick(booking)}
+                                                style={{
+                                                    backgroundColor: '#2e7d32', color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem', display: 'flex', alignItems: 'center', gap: '0.3rem'
+                                                }}
+                                            >
+                                                <span>✅</span> Re-Confirm Booking
+                                            </button>
+                                        </div>
                                     )}
                                 </div>
                             )}
+
 
 
                             {booking.status === 'rejected' && (
@@ -574,6 +644,21 @@ const MyBookings = () => {
                     </div>
                 }
             />
+
+            {/* Re-Confirm Booking Confirmation Modal */}
+            <ConfirmationPopup
+                isOpen={showReconfirmModal}
+                onClose={() => setShowReconfirmModal(false)}
+                onConfirm={executeReconfirm}
+                title="Re-Confirm Booking"
+                confirmText="Yes, Re-Confirm Booking"
+                cancelText="Go Back"
+                type="success"
+                isLoading={isReconfirming}
+                icon="fa-check-circle"
+                message={`Are you sure you want to re-confirm Booking #${reconfirmBookingObj?.booking_id || reconfirmBookingObj?.id}? A fresh confirmation email and PDF invoice will be sent to your email, and the status will update to CONFIRMED.`}
+            />
+
 
 
             {/* Refund Details Modal (Matches Confirmation Style) */}
