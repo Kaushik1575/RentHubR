@@ -524,10 +524,25 @@ const createBooking = async (req, res) => {
                         duration: duration,
                         userName: userDetails.full_name
                     };
-                    // Trigger Retell AI Outbound Voice Call
-                    const callResult = await makeBookingConfirmationCall(userDetails.phone_number, detailsForCall);
-                    console.log(`📞 Retell AI confirmation call triggered for ${userDetails.phone_number}:`, callResult);
+                    // Trigger Voice Call (Retell AI or Twilio Voice Keypress fallback)
+                    let callResult = await makeBookingConfirmationCall(userDetails.phone_number, detailsForCall);
+                    if (!callResult || !callResult.success) {
+                        console.log('⚠️ Retell AI call skipped/failed. Placed Twilio Voice Keypress call (Press 1 to confirm, 2 to cancel)...');
+                        const { makeConfirmationCall } = require('../config/twilioService');
+                        callResult = await makeConfirmationCall({
+                            to: userDetails.phone_number,
+                            bookingId: data.booking_id || data.id,
+                            userName: userDetails.full_name,
+                            vehicleName: vehicleName,
+                            vehicleType: vehicleType,
+                            startDate: startDate,
+                            startTime: formattedStartTime,
+                            duration: duration
+                        });
+                    }
+                    console.log(`📞 Confirmation call result for ${userDetails.phone_number}:`, callResult);
                 }
+
 
                 // 6. Check if immediate reminder needed (for bookings within 2 hours)
                 try {
