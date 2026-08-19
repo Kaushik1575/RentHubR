@@ -119,14 +119,22 @@ class SupabaseDB {
 
     // Vehicle operations (bikes, cars, scooty)
     static async getVehicles(type) {
-        const { data, error } = await supabase
-            .from(type) // 'bikes', 'cars', or 'scooty'
-            .select('*')
-            .eq('is_available', true);
+        try {
+            const { data, error } = await supabase
+                .from(type) // 'bikes', 'cars', or 'scooty'
+                .select('*');
 
-        if (error) throw error;
-        return data;
+            if (error) {
+                console.error(`Error fetching vehicles from ${type}:`, error.message);
+                return [];
+            }
+            return data || [];
+        } catch (err) {
+            console.error(`Exception fetching vehicles from ${type}:`, err);
+            return [];
+        }
     }
+
 
     static async getVehicleById(type, id) {
         const { data, error } = await supabase

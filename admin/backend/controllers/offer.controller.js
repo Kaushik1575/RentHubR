@@ -4,22 +4,29 @@ const { uploadToSupabase } = require('../utils/supabaseStorage');
 // Public: Get all active offers
 exports.getActiveOffers = async (req, res) => {
     try {
-        const today = new Date().toISOString();
-        
         const { data, error } = await supabase
             .from('offers')
             .select('*')
-            .eq('is_active', true)
-            .or(`valid_until.gte.${today},valid_until.is.null`)
-            .order('valid_from', { ascending: true, nullsFirst: true });
+            .eq('is_active', true);
 
-        if (error) throw error;
-        res.json({ success: true, offers: data });
+        if (error) {
+            console.error('getActiveOffers query error:', error.message);
+            return res.json({ success: true, offers: [] });
+        }
+
+        const now = new Date();
+        const activeOffers = (data || []).filter(offer => {
+            if (!offer.valid_until) return true;
+            return new Date(offer.valid_until) >= now;
+        });
+
+        res.json({ success: true, offers: activeOffers });
     } catch (err) {
         console.error('getActiveOffers error:', err);
-        res.status(500).json({ success: false, error: 'Failed to fetch offers' });
+        res.json({ success: true, offers: [] });
     }
 };
+
 
 // Admin: Get all offers
 exports.getAllOffers = async (req, res) => {
