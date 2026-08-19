@@ -1,5 +1,7 @@
+// RentHub MyBookings Component - Force Clean Vercel Build
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+
 import StatusPopup from '../components/StatusPopup';
 import ConfirmationPopup from '../components/ConfirmationPopup';
 import RefundDetailsPopup from '../components/RefundDetailsPopup';
