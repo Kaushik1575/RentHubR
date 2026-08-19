@@ -31,12 +31,12 @@ router.all('/welcome', (req, res) => {
 
     const userEmail = req.query.userEmail || req.body.userEmail || 'your email';
 
-    const promptText = `Hello ${userName}! Calling from RentHub regarding your booking for ${vehicleName}. Please press 1 to confirm your booking, or press 2 to cancel.`;
+    const promptText = `Namaste ${userName} ji! Mai RentHub se bol rahi hu aapki ${vehicleName} ki booking verification ke liye. Booking confirm karne ke liye 1 dabaye, ya cancel karne ke liye 2 dabaye.`;
 
-    gather.say({ voice: 'Polly.Aditi', language: 'en-IN' }, promptText);
+    gather.say({ voice: 'Polly.Aditi', language: 'hi-IN' }, promptText);
 
     // If user doesn't press anything within timeout
-    twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, "We didn't receive any input. Thank you for visiting RentHub! Goodbye!");
+    twiml.say({ voice: 'Polly.Aditi', language: 'hi-IN' }, "Aapka koi response nahi mila. RentHub par aane ke liye dhanyavaad! Alvida!");
 
     res.type('text/xml');
     res.send(twiml.toString());
@@ -74,8 +74,8 @@ router.post('/process-keypress', async (req, res) => {
 
     if (digit === '1') {
         twiml.say(
-            { voice: 'Polly.Aditi', language: 'en-IN' },
-            "Thank you for confirming! Please remember to bring a valid government ID at pickup. Goodbye!"
+            { voice: 'Polly.Aditi', language: 'hi-IN' },
+            "Booking confirm karne ke liye dhanyavaad! Kripya pickup ke samay ek valid government ID card saath laana na bhulein. RentHub ke saath aapka safar shubh ho! Alvida."
         );
 
         // Update DB status to confirmed
@@ -104,9 +104,10 @@ router.post('/process-keypress', async (req, res) => {
 
     } else if (digit === '2') {
         twiml.say(
-            { voice: 'Polly.Aditi', language: 'en-IN' },
-            "Your booking is cancelled. We sent refund details to your email. Goodbye!"
+            { voice: 'Polly.Aditi', language: 'hi-IN' },
+            `Aapki booking request cancel kar di gayi hai. Refund details ki jankari aapke email par bhej di gayi hai. RentHub par aane ke liye dhanyavaad! Alvida.`
         );
+
 
 
         try {
