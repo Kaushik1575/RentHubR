@@ -106,7 +106,7 @@ router.post('/process-keypress', async (req, res) => {
                 const localCancelTimestamp = new Date().toISOString();
                 const { data, error } = await supabase
                     .from('bookings')
-                    .update({ 
+                    .update({
                         status: 'cancelled',
                         cancelled_timestamp: localCancelTimestamp
                     })

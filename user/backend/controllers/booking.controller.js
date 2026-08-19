@@ -607,8 +607,8 @@ const cancelBooking = async (req, res) => {
             return res.status(403).json({ error: 'Unauthorized: This booking belongs to a different user.' });
         }
 
-        if (booking.status !== 'confirmed') {
-            return res.status(400).json({ error: 'Only confirmed bookings can be cancelled' });
+        if (booking.status === 'cancelled') {
+            return res.status(400).json({ error: 'Booking is already cancelled' });
         }
 
         // Calculate refund amount based on time since confirmation
@@ -653,9 +653,6 @@ const cancelBooking = async (req, res) => {
 
         if (refundAmount === 0) {
             refundStatus = 'not_applicable';
-        } else if (!refundDetails) {
-            // Require refund details if there is a refund amount
-            return res.status(400).json({ error: 'Refund details are required for cancellation with refund.' });
         }
 
         // Update booking status to cancelled with refund details, timestamps, and deduction
@@ -699,6 +696,22 @@ const cancelBooking = async (req, res) => {
 
         console.log('Booking cancelled successfully (Manual Refund Initiated):', updatedBooking);
 
+        // Send cancellation refund email
+        try {
+            const { sendBookingCancelledEmail } = require('../config/emailService');
+            const userEmail = (updatedBooking.users && updatedBooking.users.email) || updatedBooking.user_email;
+            const userName = (updatedBooking.users && updatedBooking.users.full_name) || 'Customer';
+            const vehicleName = updatedBooking.vehicle_name || 'Vehicle';
+
+            if (userEmail) {
+                sendBookingCancelledEmail(userEmail, userName, updatedBooking.booking_id || updatedBooking.id, vehicleName)
+                    .then(() => console.log(`✉️ Cancellation refund email sent to ${userEmail}`))
+                    .catch(e => console.error('Error sending cancellation email:', e));
+            }
+        } catch (eErr) {
+            console.error('Failed to trigger cancellation email:', eErr);
+        }
+
         res.json({
             message: 'Booking cancelled successfully. Refund processing initiated.',
             refundAmount,
@@ -706,6 +719,7 @@ const cancelBooking = async (req, res) => {
             refundStatus,
             booking: updatedBooking
         });
+
 
     } catch (error) {
         console.error('Error cancelling booking:', error);
