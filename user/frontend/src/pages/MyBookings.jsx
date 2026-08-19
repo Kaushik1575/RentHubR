@@ -389,10 +389,6 @@ const MyBookings = () => {
     const submitRefundWithArgs = async (details) => {
         if (!currentBookingId) return;
 
-        // "details" is passed directly from RefundDetailsPopup
-        // Structure: { method: 'upi', upiId: '...' } OR { method: 'bank', accountHolder: ... }
-
-        // Map to the format backend expects
         const detailsToSend = { method: details.method };
         if (details.method === 'upi') {
             detailsToSend.upiId = details.upiId;
@@ -402,10 +398,10 @@ const MyBookings = () => {
             detailsToSend.ifsc = details.ifsc;
         }
 
-        if (refundFlowMode === 'cancellation') {
-            await executeCancellation(detailsToSend);
-        } else {
-            // REJECTED Flow (Existing) flow
+        const targetBooking = bookings.find(b => b.id === currentBookingId);
+
+        // If booking is ALREADY cancelled or rejected, simply save refund details via refund-details API
+        if (targetBooking && (targetBooking.status === 'cancelled' || targetBooking.status === 'rejected')) {
             try {
                 const token = localStorage.getItem('token');
                 const response = await fetch(`/api/bookings/${currentBookingId}/refund-details`, {
@@ -417,7 +413,31 @@ const MyBookings = () => {
                     body: JSON.stringify({ refundDetails: detailsToSend })
                 });
 
-                if (!response.ok) throw new Error('Failed to submit refund details');
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to submit refund details');
+
+                setPopup({ isOpen: true, type: 'success', title: 'Submitted', message: 'Refund details submitted successfully!' });
+                setShowRefundDetailsModal(false);
+                fetchUserBookings();
+            } catch (error) {
+                setPopup({ isOpen: true, type: 'error', title: 'Submission Error', message: error.message });
+            }
+        } else if (refundFlowMode === 'cancellation') {
+            await executeCancellation(detailsToSend);
+        } else {
+            try {
+                const token = localStorage.getItem('token');
+                const response = await fetch(`/api/bookings/${currentBookingId}/refund-details`, {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${token}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({ refundDetails: detailsToSend })
+                });
+
+                const data = await response.json();
+                if (!response.ok) throw new Error(data.error || 'Failed to submit refund details');
 
                 setPopup({ isOpen: true, type: 'success', title: 'Submitted', message: 'Refund details submitted successfully!' });
                 setShowRefundDetailsModal(false);
@@ -427,6 +447,7 @@ const MyBookings = () => {
             }
         }
     };
+
 
     // Keep this for backward compatibility or direct calls if state was used, 
     // but we are switching to "submitRefundWithArgs" for the new popup.
@@ -541,18 +562,20 @@ const MyBookings = () => {
 
                                     {booking.refund_status !== 'completed' && (
                                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '0.3rem' }}>
-                                            <button
-                                                onClick={() => {
-                                                    setCurrentBookingId(booking.id);
-                                                    setRefundFlowMode('cancellation');
-                                                    setShowRefundDetailsModal(true);
-                                                }}
-                                                style={{
-                                                    backgroundColor: '#1565c0', color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem'
-                                                }}
-                                            >
-                                                💳 {booking.refund_details ? 'Edit Refund Details' : 'Submit Refund Details (UPI / Bank)'}
-                                            </button>
+                                            {!booking.refund_details && (
+                                                <button
+                                                    onClick={() => {
+                                                        setCurrentBookingId(booking.id);
+                                                        setRefundFlowMode('cancellation');
+                                                        setShowRefundDetailsModal(true);
+                                                    }}
+                                                    style={{
+                                                        backgroundColor: '#1565c0', color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem'
+                                                    }}
+                                                >
+                                                    💳 Submit Refund Details (UPI / Bank)
+                                                </button>
+                                            )}
 
                                             <button
                                                 onClick={() => handleReconfirmClick(booking)}
@@ -564,6 +587,7 @@ const MyBookings = () => {
                                             </button>
                                         </div>
                                     )}
+
                                 </div>
                             )}
 
