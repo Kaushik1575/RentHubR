@@ -38,17 +38,18 @@ router.all('/welcome', (req, res) => {
         timeout: 10
     });
 
-    const promptText = `Hello ${userName}! This is a friendly booking confirmation assistant for RentHub. ` +
-        `You have a new booking request: ` +
-        `Booking ID: ${bookingId}. ` +
-        `Vehicle: ${vehicleName}, ${vehicleType}. ` +
-        `Pickup: ${startDate} at ${startTime}. ` +
-        `Duration: ${duration} hours. ` +
-        `Please press 1 on your phone keypad to confirm your booking, or press 2 to cancel. ` +
+    const userEmail = req.query.userEmail || req.body.userEmail || '';
+
+    const promptText = `Hello ${userName}! This is RentHub calling regarding your booking request for ${vehicleName}. ` +
+        `Booking ID is ${bookingId}, scheduled for ${startDate} at ${startTime} for ${duration} hours. ` +
+        (userEmail ? `We have sent your booking summary to ${userEmail}. ` : `We have sent your booking summary to your email. `) +
+        `Please press 1 on your phone keypad or say confirm to confirm your booking. ` +
+        `Or press 2 on your phone keypad or say cancel to cancel your booking. ` +
         `Please remember to bring a valid government ID at pickup. ` +
         `Thank you for choosing RentHub!`;
 
     gather.say({ voice: 'Polly.Aditi', language: 'en-IN' }, promptText);
+
 
     // If user doesn't press anything within timeout
     twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, "We didn't receive any keypress input. Thank you for choosing RentHub! Goodbye!");
