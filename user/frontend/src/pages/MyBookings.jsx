@@ -432,19 +432,20 @@ const MyBookings = () => {
                                 {booking.status ? booking.status.toUpperCase() : 'N/A'}
                             </span>
 
-                            {(booking.status === 'confirmed' || booking.status === 'completed') && (
-                                <div style={{ display: 'flex', gap: '10px', marginTop: '1rem' }}>
-                                    <button onClick={() => handleDownloadInvoice(booking.id)} style={{
-                                        backgroundColor: '#2196F3', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem'
-                                    }}>
-                                        <span>📄</span> Download Invoice
-                                    </button>
+                            {(booking.status === 'confirmed' || booking.status === 'pending' || booking.status === 'completed') && (
+                                <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', flexWrap: 'wrap' }}>
+                                    {(booking.status === 'confirmed' || booking.status === 'completed') && (
+                                        <button onClick={() => handleDownloadInvoice(booking.id)} style={{
+                                            backgroundColor: '#2196F3', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem'
+                                        }}>
+                                            <span>📄</span> Download Invoice
+                                        </button>
+                                    )}
 
-                                    {booking.status === 'confirmed' && (() => {
+                                    {(booking.status === 'confirmed' || booking.status === 'pending') && (() => {
                                         // Only show cancel button if start time hasn't passed
                                         if (booking.start_date && booking.start_time) {
                                             const startDateTime = new Date(`${booking.start_date}T${booking.start_time}`);
-                                            // Use currentTime state to ensure real-time updates without page refresh
                                             const now = currentTime;
 
                                             // Hide cancel button if start time has passed
@@ -463,6 +464,7 @@ const MyBookings = () => {
                                     })()}
                                 </div>
                             )}
+
 
                             {booking.status === 'cancelled' && (booking.refund_amount > 0 || booking.displayAdvancePayment > 0 || booking.refund_status) && (
                                 <div className="refund-info" style={{ marginTop: '0.5rem', color: '#2e7d32', fontWeight: 'bold', padding: '0.8rem', backgroundColor: '#e8f5e9', borderRadius: '8px', fontSize: '0.9rem', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
