@@ -750,28 +750,41 @@ const submitRefundDetails = async (req, res) => {
         if (!booking) {
             return res.status(404).json({ error: 'Booking not found or unauthorized' });
         }
-        if (booking.status !== 'rejected') {
-            return res.status(400).json({ error: 'Refund details can only be submitted for rejected bookings' });
+        if (booking.status !== 'rejected' && booking.status !== 'cancelled') {
+            return res.status(400).json({ error: 'Refund details can only be submitted for cancelled or rejected bookings' });
         }
         if (!req.body || !req.body.refundDetails) {
             return res.status(400).json({ error: 'Missing refund details' });
         }
 
-        // Set refund_amount and refundAmount to full advance payment (default 100 if not set)
-        const advancePayment = booking.advance_payment || booking.advancePayment || 100;
+        // Preserve or calculate refund amount
+        let refundAmt = booking.refund_amount;
+        if (!refundAmt || refundAmt <= 0) {
+            const advancePayment = booking.advance_payment || booking.advancePayment || 0;
+            if (booking.status === 'rejected') {
+                refundAmt = advancePayment;
+            } else if (booking.status === 'cancelled') {
+                const bookedTime = new Date(booking.confirmation_timestamp || booking.created_at || Date.now());
+                const now = new Date();
+                const hoursSinceBooking = (now - bookedTime) / (1000 * 60 * 60);
+                const isFullRefund = hoursSinceBooking <= 2;
+                const refundPercentage = isFullRefund ? 100 : 70;
+                refundAmt = Math.round(advancePayment * (refundPercentage / 100));
+            }
+        }
 
         // Update the booking with refund details, refund amount, and set refund_status to 'processing'
         const { data: updatedBooking, error: updateError } = await supabase
             .from('bookings')
             .update({
                 refund_details: req.body.refundDetails,
-                refund_amount: advancePayment,
-                refund_status: 'processing',
-                refund_deduction: 0 // Set deduction to 0 for rejected refunds
+                refund_amount: refundAmt || 0,
+                refund_status: 'processing'
             })
             .eq('id', bookingId)
             .select('*')
             .single();
+
 
         if (updateError) {
             console.error('Update error in refund-details endpoint:', updateError);
