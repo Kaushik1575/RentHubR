@@ -139,4 +139,76 @@ router.get('/trackBooking', async (req, res) => {
     }
 });
 
+// GET / POST /api/voice/retell-webhook and /api/retell-webhook
+router.all('/voice/retell-webhook', async (req, res) => {
+    try {
+        const body = req.body || {};
+        console.log('🎙️ [Retell AI Webhook] Payload received:', JSON.stringify(body));
+
+        const event = body.event || body.type;
+        const callData = body.call || body;
+        const metadata = callData.metadata || body.args || {};
+        const bookingId = metadata.booking_id || metadata.bookingId;
+        const userEmail = metadata.user_email || metadata.userEmail;
+        const userName = metadata.user_name || metadata.userName || 'Customer';
+        const vehicleName = metadata.vehicle_name || metadata.vehicleName || 'Vehicle';
+
+        const action = body.name || (callData.custom_analysis_data && callData.custom_analysis_data.user_intent) || (body.args && body.args.action);
+
+        if (action === 'confirm' || action === 'confirm_booking' || event === 'booking_confirmed') {
+            console.log(`✅ [Retell AI] Booking confirmed for ID: ${bookingId}`);
+            if (bookingId) {
+                await supabase
+                    .from('bookings')
+                    .update({ status: 'confirmed', confirmation_timestamp: new Date().toISOString() })
+                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`);
+            }
+            return res.json({ success: true, message: 'Booking confirmed via Retell AI' });
+
+        } else if (action === 'cancel' || action === 'cancel_booking' || event === 'booking_cancelled') {
+            console.log(`🚫 [Retell AI] Booking cancelled for ID: ${bookingId}`);
+            if (bookingId) {
+                await supabase
+                    .from('bookings')
+                    .update({ status: 'cancelled', cancelled_timestamp: new Date().toISOString() })
+                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`);
+            }
+            return res.json({ success: true, message: 'Booking cancelled via Retell AI' });
+        }
+
+        res.json({ success: true, message: 'Retell AI Webhook Connected Successfully' });
+    } catch (error) {
+        console.error('❌ Error handling Retell AI webhook:', error);
+        res.status(500).json({ error: error.message });
+    }
+});
+
+router.all('/retell-webhook', async (req, res) => {
+    try {
+        const body = req.body || {};
+        const event = body.event || body.type;
+        const callData = body.call || body;
+        const metadata = callData.metadata || body.args || {};
+        const bookingId = metadata.booking_id || metadata.bookingId;
+        const action = body.name || (callData.custom_analysis_data && callData.custom_analysis_data.user_intent) || (body.args && body.args.action);
+
+        if (action === 'confirm' || action === 'confirm_booking' || event === 'booking_confirmed') {
+            if (bookingId) {
+                await supabase.from('bookings').update({ status: 'confirmed', confirmation_timestamp: new Date().toISOString() }).or(`id.eq.${bookingId},booking_id.eq.${bookingId}`);
+            }
+            return res.json({ success: true, message: 'Booking confirmed via Retell AI' });
+        } else if (action === 'cancel' || action === 'cancel_booking' || event === 'booking_cancelled') {
+            if (bookingId) {
+                await supabase.from('bookings').update({ status: 'cancelled', cancelled_timestamp: new Date().toISOString() }).or(`id.eq.${bookingId},booking_id.eq.${bookingId}`);
+            }
+            return res.json({ success: true, message: 'Booking cancelled via Retell AI' });
+        }
+
+        res.json({ success: true, message: 'Retell AI Webhook Connected Successfully' });
+    } catch (error) {
+        res.status(500).json({ error: error.message });
+    }
+});
+
+
 module.exports = router;
