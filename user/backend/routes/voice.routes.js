@@ -31,7 +31,8 @@ router.all('/welcome', (req, res) => {
 
     const userEmail = req.query.userEmail || req.body.userEmail || 'your email';
 
-    const promptText = `Namaste ${userName} ji! Mai RentHub se bol rahi hu aapki ${vehicleName} ki booking verification ke liye. Booking confirm karne ke liye 1 dabaye, ya cancel karne ke liye 2 dabaye.`;
+    const promptText = `Namaste ${userName} ji! Mai RentHub se bol rahi hu aapki booking ID ${bookingId} ki verification ke liye. Booking confirm karne ke liye 1 dabaye, ya cancel karne ke liye 2 dabaye.`;
+
 
     gather.say({ voice: 'Polly.Aditi', language: 'hi-IN' }, promptText);
 
