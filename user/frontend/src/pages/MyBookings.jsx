@@ -26,21 +26,7 @@ const MyBookings = () => {
     const [reconfirmBookingObj, setReconfirmBookingObj] = useState(null);
 
 
-    // Auto-open Refund Details Modal if url param openRefund is present
-    useEffect(() => {
-        if (bookings && bookings.length > 0) {
-            const params = new URLSearchParams(window.location.search);
-            const openRefundId = params.get('openRefund');
-            if (openRefundId) {
-                const target = bookings.find(b => String(b.booking_id) === openRefundId || String(b.id) === openRefundId);
-                if (target) {
-                    setCurrentBookingId(target.id);
-                    setRefundFlowMode('cancellation');
-                    setShowRefundDetailsModal(true);
-                }
-            }
-        }
-    }, [bookings]);
+
 
     const handleReconfirmClick = (booking) => {
         setReconfirmBookingObj(booking);

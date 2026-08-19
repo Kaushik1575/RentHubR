@@ -762,8 +762,9 @@ async function sendNewOfferEmail(userEmail, userName, offerDetails, isUpdate = f
 }
 
 async function sendBookingCancelledEmail(userEmail, userName, bookingId, vehicleName) {
-    const frontendUrl = (process.env.FRONTEND_URL || 'https://user.renthub.qzz.io').replace(/\/$/, '');
-    const refundLink = `${frontendUrl}/my-bookings?openRefund=${encodeURIComponent(bookingId)}`;
+    const frontendUrl = (process.env.FRONTEND_URL || 'https://rent-hub-r.vercel.app').replace(/\/$/, '');
+    const refundLink = `${frontendUrl}/my-bookings`;
+
     const html = `
         <div style="font-family: Arial, sans-serif; color: #222; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
           <div style="background-color: #dc3545; color: white; padding: 20px; text-align: center;">
