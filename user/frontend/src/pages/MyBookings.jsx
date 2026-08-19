@@ -569,22 +569,20 @@ const MyBookings = () => {
                                         </p>
                                     )}
 
-                                    {booking.refund_status !== 'completed' && (
+                                    {booking.refund_status !== 'completed' && !booking.refund_details && (
                                         <div style={{ display: 'flex', gap: '8px', flexWrap: 'wrap', marginTop: '0.3rem' }}>
-                                            {!booking.refund_details && (
-                                                <button
-                                                    onClick={() => {
-                                                        setCurrentBookingId(booking.id);
-                                                        setRefundFlowMode('cancellation');
-                                                        setShowRefundDetailsModal(true);
-                                                    }}
-                                                    style={{
-                                                        backgroundColor: '#1565c0', color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem'
-                                                    }}
-                                                >
-                                                    💳 Submit Refund Details (UPI / Bank)
-                                                </button>
-                                            )}
+                                            <button
+                                                onClick={() => {
+                                                    setCurrentBookingId(booking.id);
+                                                    setRefundFlowMode('cancellation');
+                                                    setShowRefundDetailsModal(true);
+                                                }}
+                                                style={{
+                                                    backgroundColor: '#1565c0', color: 'white', border: 'none', padding: '0.6rem 1rem', borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold', fontSize: '0.85rem'
+                                                }}
+                                            >
+                                                💳 Submit Refund Details (UPI / Bank)
+                                            </button>
 
                                             <button
                                                 onClick={() => handleReconfirmClick(booking)}
@@ -596,6 +594,7 @@ const MyBookings = () => {
                                             </button>
                                         </div>
                                     )}
+
 
                                 </div>
                             )}
