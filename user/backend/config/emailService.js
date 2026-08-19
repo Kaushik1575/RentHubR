@@ -762,8 +762,8 @@ async function sendNewOfferEmail(userEmail, userName, offerDetails, isUpdate = f
 }
 
 async function sendBookingCancelledEmail(userEmail, userName, bookingId, vehicleName) {
-    const frontendUrl = (process.env.FRONTEND_URL || 'https://rent-hub-r.vercel.app').replace(/\/$/, '');
-    const refundLink = `${frontendUrl}/track-booking?id=${encodeURIComponent(bookingId)}`;
+    const frontendUrl = (process.env.FRONTEND_URL || 'https://user.renthub.qzz.io').replace(/\/$/, '');
+    const refundLink = `${frontendUrl}/my-bookings?openRefund=${encodeURIComponent(bookingId)}`;
     const html = `
         <div style="font-family: Arial, sans-serif; color: #222; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
           <div style="background-color: #dc3545; color: white; padding: 20px; text-align: center;">
@@ -771,18 +771,19 @@ async function sendBookingCancelledEmail(userEmail, userName, bookingId, vehicle
           </div>
           <div style="padding: 25px;">
             <p>Hello <b>${userName || 'Valued Customer'}</b>,</p>
-            <p>Your booking request <b>#${bookingId}</b> for <b>${vehicleName || 'Vehicle'}</b> has been cancelled as requested during the call verification.</p>
-            <p>If an advance payment was made, click the button below to submit your refund details (UPI ID / Bank Account) and track your refund status immediately:</p>
+            <p>Your booking request <b>#${bookingId}</b> for <b>${vehicleName || 'Vehicle'}</b> has been cancelled.</p>
+            <p>If an advance payment was made, click the button below to submit your refund details (UPI ID / Bank Account) directly in <b>My Bookings</b>:</p>
             <p style="text-align: center; margin: 25px 0;">
-              <a href="${refundLink}" style="background-color: #0b5cff; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Submit Refund Details & Track Refund</a>
+              <a href="${refundLink}" style="background-color: #0b5cff; color: white; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Submit Refund Details in My Bookings</a>
             </p>
             <p style="font-size: 13px; color: #666;">Booking ID: <b>${bookingId}</b></p>
-            <p style="font-size: 13px; color: #666;">If you did not initiate this cancellation, please contact our support team immediately.</p>
+            <p style="font-size: 13px; color: #666;">If you did not initiate this cancellation, you can also re-confirm your booking directly from My Bookings.</p>
             <br>
             <p>Thank you,<br>The RentHub Team</p>
           </div>
         </div>
     `;
+
 
     return sendEmail({
         to: userEmail,
