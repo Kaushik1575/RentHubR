@@ -1,7 +1,10 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { Resend } = require('resend');
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend safely
+const apiKey = process.env.RESEND_API_KEY;
+const resend = apiKey ? new Resend(apiKey) : null;
 
 // Default sender - pulled from .env for production/custom domains
 const SENDER_EMAIL = process.env.SENDER_EMAIL || 'onboarding@resend.dev';
@@ -10,6 +13,11 @@ const SENDER_NAME = process.env.SENDER_NAME || 'RentHub';
 // Generic function to send email via Resend
 async function sendEmail({ to, subject, html, attachments }) {
     try {
+        if (!resend) {
+            console.error('❌ Resend API key missing (RESEND_API_KEY). Email skipped.');
+            return { success: false, error: 'RESEND_API_KEY missing' };
+        }
+
         const { data, error } = await resend.emails.send({
             from: `${SENDER_NAME} <${SENDER_EMAIL}>`,
             to: Array.isArray(to) ? to : [to],
@@ -20,7 +28,6 @@ async function sendEmail({ to, subject, html, attachments }) {
 
         if (error) {
             console.error('Error sending email via Resend:', error);
-            // Return structure compatible with existing calls
             return { success: false, error: error.message || error };
         }
 
@@ -31,6 +38,7 @@ async function sendEmail({ to, subject, html, attachments }) {
         return { success: false, error: error.message };
     }
 }
+
 
 // Generate OTP
 function generateOTP() {
