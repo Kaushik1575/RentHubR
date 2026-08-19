@@ -16,14 +16,28 @@ const chatbotRoutes = require('./routes/chatbot.routes');
 const userRoutes = require('./routes/user.routes');
 const supportRoutes = require('./routes/support.routes');
 
+const fs = require('fs');
+
 const app = express();
 const PORT = process.env.PORT || 3005;
 
 // Middleware
 app.use(cors());
 app.use(compression());
-app.use(express.static(path.join(__dirname, '../frontend'))); // Serve static files
+
+// Serve compiled dist if built, fallback to raw frontend with JS MIME fix
+const adminDistPath = path.join(__dirname, '../frontend/dist');
+const adminFrontendPath = fs.existsSync(adminDistPath) ? adminDistPath : path.join(__dirname, '../frontend');
+
+app.use(express.static(adminFrontendPath, {
+    setHeaders: (res, filePath) => {
+        if (filePath.endsWith('.jsx') || filePath.endsWith('.js')) {
+            res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
+        }
+    }
+}));
 app.use('/uploads', express.static(path.join(__dirname, 'uploads'))); // Serve uploaded files
+
 app.use(express.json({ limit: '10mb' })); 
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
