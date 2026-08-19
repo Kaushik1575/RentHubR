@@ -46,6 +46,22 @@ router.all('/welcome', (req, res) => {
     res.send(twiml.toString());
 });
 
+// Helper function to safely update booking by either numeric ID or string booking_id
+async function updateBookingByAnyId(bookingId, updates) {
+    if (!bookingId) return { data: null, error: 'No booking ID' };
+    const cleanId = String(bookingId).trim();
+    let query = supabase.from('bookings').update(updates);
+    const numId = Number(cleanId);
+
+    if (!isNaN(numId) && String(numId) === cleanId) {
+        query = query.or(`id.eq.${numId},booking_id.eq.${cleanId}`);
+    } else {
+        query = query.eq('booking_id', cleanId);
+    }
+
+    return await query.select('*, users:user_id(full_name, email)');
+}
+
 // POST /api/voice/process-keypress
 // Processes DTMF keypad press (1 = Confirm, 2 = Cancel)
 router.post('/process-keypress', async (req, res) => {
@@ -56,35 +72,31 @@ router.post('/process-keypress', async (req, res) => {
     const bookingId = req.query.bookingId || req.body.bookingId;
     const userNameParam = req.query.userName || 'Customer';
     const vehicleNameParam = req.query.vehicleName || 'Vehicle';
-    const userEmailParam = req.query.userEmail || req.body.userEmail || 'your email';
+    const userEmailParam = req.query.userEmail || req.body.userEmail || '';
 
     console.log(`🎙️ [Twilio Voice] Keypress received: Digits='${digit}' for Booking ID: ${bookingId}`);
 
     if (digit === '1') {
         twiml.say(
-            { voice: 'Polly.Aditi', language: 'en-IN' },
-            "Thank you for confirming your booking! Please remember to bring a valid government ID at pickup. Have a great ride with RentHub! Goodbye."
+            { voice: 'Polly.Aditi', language: 'hi-IN' },
+            "Booking confirm karne ke liye dhanyavaad! Kripya pickup ke samay ek valid government ID card saath laana na bhulein. RentHub ke saath aapka safar shubh ho! Alvida."
         );
 
         // Update DB status to confirmed
         try {
             if (bookingId) {
-                const { data, error } = await supabase
-                    .from('bookings')
-                    .update({
-                        status: 'confirmed',
-                        confirmation_timestamp: new Date().toISOString()
-                    })
-                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`)
-                    .select('*, users(full_name, email)');
+                const { data, error } = await updateBookingByAnyId(bookingId, {
+                    status: 'confirmed',
+                    confirmation_timestamp: new Date().toISOString()
+                });
 
                 if (error) {
-                    console.error('❌ DB Update Error (Voice Confirm):', error.message);
+                    console.error('❌ DB Update Error (Voice Confirm):', error);
                 } else if (data && data.length > 0) {
                     console.log('✅ Booking updated to CONFIRMED via Voice Call:', bookingId);
                     const booking = data[0];
-                    const userEmail = booking.users?.email || booking.user_email;
-                    const userName = booking.users?.full_name || userNameParam;
+                    const userEmail = (booking.users && booking.users.email) || booking.user_email || userEmailParam;
+                    const userName = (booking.users && booking.users.full_name) || userNameParam;
                     if (userEmail) {
                         await sendBookingConfirmationEmail(userEmail, userName, booking);
                     }
@@ -96,35 +108,32 @@ router.post('/process-keypress', async (req, res) => {
 
     } else if (digit === '2') {
         twiml.say(
-            { voice: 'Polly.Aditi', language: 'en-IN' },
-            `Your booking request has been cancelled. An email with refund details has been sent to ${userEmailParam}. Thank you for visiting RentHub! Goodbye.`
+            { voice: 'Polly.Aditi', language: 'hi-IN' },
+            `Aapki booking request cancel kar di gayi hai. Refund details ki jankari ${userEmailParam || 'apke email'} par bhej di gayi hai. RentHub par aane ke liye dhanyavaad! Alvida.`
         );
-
 
         try {
             if (bookingId) {
                 const localCancelTimestamp = new Date().toISOString();
-                const { data, error } = await supabase
-                    .from('bookings')
-                    .update({
-                        status: 'cancelled',
-                        cancelled_timestamp: localCancelTimestamp
-                    })
-                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`)
-                    .select('*, users(full_name, email)');
+                const { data, error } = await updateBookingByAnyId(bookingId, {
+                    status: 'cancelled',
+                    cancelled_timestamp: localCancelTimestamp
+                });
 
                 if (error) {
-                    console.error('❌ DB Cancel Error (Voice Cancel):', error.message);
+                    console.error('❌ DB Cancel Error (Voice Cancel):', error);
                 } else {
                     console.log('🚫 Booking CANCELLED via Voice Call:', bookingId);
                     const booking = (data && data[0]) || {};
-                    const userEmail = booking.users?.email || booking.user_email;
-                    const userName = booking.users?.full_name || userNameParam;
+                    const userEmail = (booking.users && booking.users.email) || booking.user_email || userEmailParam;
+                    const userName = (booking.users && booking.users.full_name) || userNameParam;
                     const vehicleName = booking.vehicle_name || vehicleNameParam;
 
                     if (userEmail) {
                         await sendBookingCancelledEmail(userEmail, userName, bookingId, vehicleName);
                         console.log(`✉️ Cancellation email with refund link sent to ${userEmail}`);
+                    } else {
+                        console.error('⚠️ No recipient email found for cancellation notification.');
                     }
                 }
             }
@@ -132,7 +141,7 @@ router.post('/process-keypress', async (req, res) => {
             console.error('❌ Exception in Voice DB Cancel:', dbErr);
         }
     } else {
-        twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, "Invalid option selected. Thank you for choosing RentHub! Goodbye!");
+        twiml.say({ voice: 'Polly.Aditi', language: 'hi-IN' }, "Hame koi sahi option nahi mila. RentHub se judne ke liye dhanyavaad! Alvida.");
     }
 
     res.type('text/xml');
@@ -158,14 +167,13 @@ const handleRetellWebhook = async (req, res) => {
         if (action === 'confirm' || action === 'confirm_booking' || event === 'booking_confirmed') {
             console.log(`✅ [Retell AI] Booking confirmed for ID: ${bookingId}`);
             if (bookingId) {
-                const { data } = await supabase
-                    .from('bookings')
-                    .update({ status: 'confirmed', confirmation_timestamp: new Date().toISOString() })
-                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`)
-                    .select('*, users(full_name, email)');
+                const { data } = await updateBookingByAnyId(bookingId, {
+                    status: 'confirmed',
+                    confirmation_timestamp: new Date().toISOString()
+                });
 
                 const booking = (data && data[0]) || {};
-                const email = userEmail || booking.users?.email || booking.user_email;
+                const email = userEmail || (booking.users && booking.users.email) || booking.user_email;
                 if (email) {
                     await sendBookingConfirmationEmail(email, userName, booking);
                 }
@@ -175,14 +183,13 @@ const handleRetellWebhook = async (req, res) => {
         } else if (action === 'cancel' || action === 'cancel_booking' || event === 'booking_cancelled') {
             console.log(`🚫 [Retell AI] Booking cancelled for ID: ${bookingId}`);
             if (bookingId) {
-                const { data } = await supabase
-                    .from('bookings')
-                    .update({ status: 'cancelled', cancelled_timestamp: new Date().toISOString() })
-                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`)
-                    .select('*, users(full_name, email)');
+                const { data } = await updateBookingByAnyId(bookingId, {
+                    status: 'cancelled',
+                    cancelled_timestamp: new Date().toISOString()
+                });
 
                 const booking = (data && data[0]) || {};
-                const email = userEmail || booking.users?.email || booking.user_email;
+                const email = userEmail || (booking.users && booking.users.email) || booking.user_email;
                 if (email) {
                     await sendBookingCancelledEmail(email, userName, bookingId, vehicleName);
                 }
