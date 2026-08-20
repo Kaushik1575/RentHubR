@@ -108,9 +108,20 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
         }
 
         // Prepare the payload
-        const targetAgentId = callMetadata.agent_id || (callMetadata.call_reason === 'sos_emergency' ? RETELL_SOS_AGENT_ID : RETELL_AGENT_ID);
+        const activeApiKey = (process.env.RETELL_API_KEY && process.env.RETELL_API_KEY.startsWith('key_')) 
+            ? process.env.RETELL_API_KEY 
+            : 'key_47254fd3407901e9678eb9f05504';
+
+        const activeFromNumber = (process.env.RETELL_FROM_NUMBER && process.env.RETELL_FROM_NUMBER.startsWith('+1350')) 
+            ? process.env.RETELL_FROM_NUMBER 
+            : '+13502072319';
+
+        const targetAgentId = callMetadata.agent_id || (callMetadata.call_reason === 'sos_emergency' 
+            ? (process.env.RETELL_SOS_AGENT_ID || 'agent_3df3da5cd8eb882f4a2906d499') 
+            : (process.env.RETELL_AGENT_ID || 'agent_1bafe9ca9c302f33c15826c22b'));
+
         const payload = {
-            from_number: RETELL_FROM_NUMBER,
+            from_number: activeFromNumber,
             to_number: formattedToNumber,
             call_type: 'phone_call',
             override_agent_id: targetAgentId
@@ -144,15 +155,15 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
 
         console.log('Making Retell AI outbound call:', {
             to: formattedToNumber,
-            from: RETELL_FROM_NUMBER,
-            agent: RETELL_AGENT_ID
+            from: activeFromNumber,
+            agent: targetAgentId
         });
 
         // Make the API call
         const response = await fetch(RETELL_API_URL, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${RETELL_API_KEY}`,
+                'Authorization': `Bearer ${activeApiKey}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload),

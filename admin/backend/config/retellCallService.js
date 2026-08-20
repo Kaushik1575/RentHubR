@@ -32,43 +32,72 @@ const RETELL_API_URL = 'https://api.retellai.com/v2/create-phone-call';
 
 /**
  * Format phone number to E.164 format (e.g., +918018084672)
+ * Automatically adds country code if missing:
+ * - 10-digit numbers → assumes India (+91)
+ * - Numbers starting with 0 → removes 0 and adds +91
+ * - Already has country code → uses as is
+ * 
+ * @param {string} phoneNumber - Phone number in any format (e.g., "8018084672", "+918018084672", "08018084672")
+ * @returns {string|null} - Formatted phone number in E.164 format (e.g., "+918018084672") or null if invalid
  */
 function formatPhoneNumber(phoneNumber) {
     if (!phoneNumber) {
         return null;
     }
 
+    // Convert to string if it's a number (Supabase might return numbers)
     let cleaned = String(phoneNumber).trim();
 
+    // If it already starts with +, remove it temporarily
     const hasPlus = cleaned.startsWith('+');
     if (hasPlus) {
         cleaned = cleaned.substring(1);
     }
 
+    // Remove all non-digit characters
     cleaned = cleaned.replace(/\D/g, '');
 
+    // If empty after cleaning, return null
     if (!cleaned || cleaned.length === 0) {
         return null;
     }
 
+    // If it starts with 0, remove it (common in Indian numbers)
     if (cleaned.startsWith('0')) {
         cleaned = cleaned.substring(1);
     }
 
-    if (cleaned.length === 10) {
-        cleaned = '91' + cleaned;
-    } else if (cleaned.length === 9) {
-        cleaned = '91' + cleaned;
-    }
+    // Handle different scenarios:
+    // 1. Already has country code (starts with country code like 91, 1, etc.)
+    // 2. 10-digit number (assume Indian number, add +91)
+    // 3. Other lengths (assume it already has country code or is invalid)
 
+    if (cleaned.length === 10) {
+        // 10-digit number - assume Indian number and add +91
+        cleaned = '91' + cleaned;
+    } else if (cleaned.length < 10) {
+        // Too short, might be invalid
+        console.warn(`⚠️ Phone number seems too short: ${phoneNumber} (cleaned: ${cleaned})`);
+        // Still try to add +91 if it's 9 digits (might be missing leading digit)
+        if (cleaned.length === 9) {
+            cleaned = '91' + cleaned;
+        }
+    }
+    // If length > 10, assume it already has country code
+
+    // Add + prefix
     return '+' + cleaned;
 }
 
 /**
  * Make an outbound call using Retell AI
+ * @param {string} toNumber - Recipient phone number
+ * @param {object} callMetadata - Optional metadata to pass to the call
+ * @returns {Promise<object>} - Result object with success status and call details
  */
 async function makeOutboundCall(toNumber, callMetadata = {}) {
     try {
+        // Format the phone number
         const formattedToNumber = formatPhoneNumber(toNumber);
 
         if (!formattedToNumber) {
@@ -78,16 +107,32 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
             };
         }
 
-        const targetAgentId = callMetadata.agent_id || (callMetadata.call_reason === 'sos_emergency' ? RETELL_SOS_AGENT_ID : RETELL_AGENT_ID);
+        // Prepare the payload
+        const activeApiKey = (process.env.RETELL_API_KEY && process.env.RETELL_API_KEY.startsWith('key_')) 
+            ? process.env.RETELL_API_KEY 
+            : 'key_47254fd3407901e9678eb9f05504';
+
+        const activeFromNumber = (process.env.RETELL_FROM_NUMBER && process.env.RETELL_FROM_NUMBER.startsWith('+1350')) 
+            ? process.env.RETELL_FROM_NUMBER 
+            : '+13502072319';
+
+        const targetAgentId = callMetadata.agent_id || (callMetadata.call_reason === 'sos_emergency' 
+            ? (process.env.RETELL_SOS_AGENT_ID || 'agent_3df3da5cd8eb882f4a2906d499') 
+            : (process.env.RETELL_AGENT_ID || 'agent_1bafe9ca9c302f33c15826c22b'));
+
         const payload = {
-            from_number: RETELL_FROM_NUMBER,
+            from_number: activeFromNumber,
             to_number: formattedToNumber,
             call_type: 'phone_call',
             override_agent_id: targetAgentId
         };
 
+        // Add metadata if provided (for tracking/logging)
         if (Object.keys(callMetadata).length > 0) {
             payload.metadata = callMetadata;
+
+            // IMPORTANT: Add retell_llm_dynamic_variables so the AI agent can access these values during the call
+            // This allows the agent to speak the booking details to the customer
             payload.retell_llm_dynamic_variables = {
                 booking_id: String(callMetadata.booking_id || callMetadata.bookingId || ''),
                 vehicle_name: String(callMetadata.vehicle_name || callMetadata.vehicleName || ''),
@@ -107,16 +152,18 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
             };
         }
 
+
         console.log('Making Retell AI outbound call:', {
             to: formattedToNumber,
-            from: RETELL_FROM_NUMBER,
+            from: activeFromNumber,
             agent: targetAgentId
         });
 
+        // Make the API call
         const response = await fetch(RETELL_API_URL, {
             method: 'POST',
             headers: {
-                'Authorization': `Bearer ${RETELL_API_KEY}`,
+                'Authorization': `Bearer ${activeApiKey}`,
                 'Content-Type': 'application/json',
             },
             body: JSON.stringify(payload),
@@ -151,6 +198,9 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
 
 /**
  * Make an outbound call for booking confirmation
+ * @param {string} userPhoneNumber - User's phone number
+ * @param {object} bookingDetails - Booking details to include in call metadata
+ * @returns {Promise<object>} - Result object with success status
  */
 async function makeBookingConfirmationCall(userPhoneNumber, bookingDetails = {}) {
     try {
@@ -161,6 +211,7 @@ async function makeBookingConfirmationCall(userPhoneNumber, bookingDetails = {})
             };
         }
 
+        // Prepare metadata for the call
         const callMetadata = {
             call_reason: 'booking_confirmation',
             booking_id: bookingDetails.bookingId || null,
@@ -173,7 +224,15 @@ async function makeBookingConfirmationCall(userPhoneNumber, bookingDetails = {})
             user_email: bookingDetails.userEmail || null
         };
 
+
         const result = await makeOutboundCall(userPhoneNumber, callMetadata);
+
+        if (result.success) {
+            console.log(`✅ Booking confirmation call initiated for user: ${userPhoneNumber}`);
+        } else {
+            console.error(`❌ Failed to initiate booking confirmation call: ${result.error}`);
+        }
+
         return result;
     } catch (error) {
         console.error('Error in makeBookingConfirmationCall:', error);
@@ -186,6 +245,9 @@ async function makeBookingConfirmationCall(userPhoneNumber, bookingDetails = {})
 
 /**
  * Make an emergency outbound call for SOS troubleshooting & assistance
+ * @param {string} userPhoneNumber - User's phone number
+ * @param {object} sosDetails - SOS & vehicle details
+ * @returns {Promise<object>} - Result object with success status
  */
 async function makeSOSOutboundCall(userPhoneNumber, sosDetails = {}) {
     try {
@@ -209,6 +271,13 @@ async function makeSOSOutboundCall(userPhoneNumber, sosDetails = {}) {
 
         console.log(`🚨 Triggering Retell AI Emergency SOS Call to ${userPhoneNumber}...`);
         const result = await makeOutboundCall(userPhoneNumber, callMetadata);
+
+        if (result.success) {
+            console.log(`✅ Emergency SOS Call connected for user: ${userPhoneNumber}`);
+        } else {
+            console.error(`⚠️ Emergency SOS Call could not be placed via Retell AI: ${result.error}`);
+        }
+
         return result;
     } catch (error) {
         console.error('Error in makeSOSOutboundCall:', error);
