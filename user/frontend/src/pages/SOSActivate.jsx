@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
+import getApiUrl from '../config/api';
 import './SOSActivate.css';
 
 const SOSActivate = () => {
@@ -12,7 +13,7 @@ const SOSActivate = () => {
     const [locationStats, setLocationStats] = useState('');
     const [gpsData, setGpsData] = useState(null);
     const [activeIssue, setActiveIssue] = useState('bike_not_starting');
-    const [voiceActive, setVoiceActive] = useState(true);
+    const [voiceActive, setVoiceActive] = useState(false); // Website voice silent by default so it does not interfere with real phone call
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [feedbackLoading, setFeedbackLoading] = useState(false);
     const [sosDataInfo, setSosDataInfo] = useState(null);
@@ -163,7 +164,7 @@ const SOSActivate = () => {
         }
 
         try {
-            const res = await fetch('/api/sos-activate', {
+            const res = await fetch(getApiUrl('/api/sos-activate'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -177,10 +178,6 @@ const SOSActivate = () => {
             if (res.ok) {
                 setSosDataInfo(data.sosData || null);
                 setStatus('active_sos');
-                // Automatically speak initial guidance
-                setTimeout(() => {
-                    speakVoicePrompt(diagnosticGuides.bike_not_starting.voicePrompt);
-                }, 500);
             } else {
                 throw new Error(data.error || 'Failed to activate SOS');
             }
@@ -203,7 +200,7 @@ const SOSActivate = () => {
         if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 
         try {
-            const res = await fetch('/api/sos-feedback', {
+            const res = await fetch(getApiUrl('/api/sos-feedback'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -215,9 +212,6 @@ const SOSActivate = () => {
             const data = await res.json();
             if (res.ok) {
                 setStatus('resolved');
-                if (voiceActive) {
-                    speakVoicePrompt("Khushi ki baat hai ki aapki problem solve ho gayi! RentHub ke saath aapka safar shubh ho. Happy riding!");
-                }
             } else {
                 throw new Error(data.error || 'Failed to submit status');
             }
@@ -234,7 +228,7 @@ const SOSActivate = () => {
         if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 
         try {
-            const res = await fetch('/api/sos-feedback', {
+            const res = await fetch(getApiUrl('/api/sos-feedback'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
@@ -247,11 +241,8 @@ const SOSActivate = () => {
             const data = await res.json();
             if (res.ok) {
                 setStatus('escalated');
-                if (voiceActive) {
-                    speakVoicePrompt("Humne emergency roadside mechanic ko aapki live location bhej di hai. Hamara support team aapse phone par turant contact karega.");
-                }
             } else {
-                throw new Error(data.error || 'Failed to dispatch mechanic');
+                throw new Error(data.error || 'Failed to submit status');
             }
         } catch (err) {
             alert('Notice: ' + err.message);
