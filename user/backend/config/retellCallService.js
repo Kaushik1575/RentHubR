@@ -98,11 +98,12 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
         }
 
         // Prepare the payload
+        const targetAgentId = callMetadata.agent_id || (callMetadata.call_reason === 'sos_emergency' ? RETELL_SOS_AGENT_ID : RETELL_AGENT_ID);
         const payload = {
             from_number: RETELL_FROM_NUMBER,
             to_number: formattedToNumber,
             call_type: 'phone_call',
-            override_agent_id: RETELL_AGENT_ID
+            override_agent_id: targetAgentId
         };
 
         // Add metadata if provided (for tracking/logging)
@@ -112,7 +113,7 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
             // IMPORTANT: Add retell_llm_dynamic_variables so the AI agent can access these values during the call
             // This allows the agent to speak the booking details to the customer
             payload.retell_llm_dynamic_variables = {
-                booking_id: String(callMetadata.booking_id || ''),
+                booking_id: String(callMetadata.booking_id || callMetadata.bookingId || ''),
                 vehicle_name: String(callMetadata.vehicle_name || callMetadata.vehicleName || ''),
                 vehicle_type: String(callMetadata.vehicle_type || callMetadata.vehicleType || ''),
                 start_date: String(callMetadata.start_date || callMetadata.startDate || ''),
@@ -122,7 +123,11 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
                 user_email: String(callMetadata.user_email || callMetadata.userEmail || ''),
                 total_amount: String(callMetadata.total_amount || callMetadata.totalAmount || ''),
                 advance_payment: String(callMetadata.advance_payment || callMetadata.advancePayment || ''),
-                remaining_amount: String(callMetadata.remaining_amount || callMetadata.remainingAmount || '')
+                remaining_amount: String(callMetadata.remaining_amount || callMetadata.remainingAmount || ''),
+                call_reason: String(callMetadata.call_reason || 'booking_confirmation'),
+                gps_location: String(callMetadata.gps_location || callMetadata.gpsLocation || 'Live GPS Active'),
+                pickup_location: String(callMetadata.pickup_location || callMetadata.pickupLocation || 'GITA Autonomous College BBSR'),
+                emergency_phone: String(callMetadata.emergency_phone || '9040757683')
             };
         }
 
@@ -187,6 +192,7 @@ async function makeBookingConfirmationCall(userPhoneNumber, bookingDetails = {})
 
         // Prepare metadata for the call
         const callMetadata = {
+            call_reason: 'booking_confirmation',
             booking_id: bookingDetails.bookingId || null,
             vehicle_name: bookingDetails.vehicleName || null,
             vehicle_type: bookingDetails.vehicleType || null,
@@ -216,9 +222,55 @@ async function makeBookingConfirmationCall(userPhoneNumber, bookingDetails = {})
     }
 }
 
+/**
+ * Make an emergency outbound call for SOS troubleshooting & assistance
+ * @param {string} userPhoneNumber - User's phone number
+ * @param {object} sosDetails - SOS & vehicle details
+ * @returns {Promise<object>} - Result object with success status
+ */
+async function makeSOSOutboundCall(userPhoneNumber, sosDetails = {}) {
+    try {
+        if (!userPhoneNumber) {
+            return {
+                success: false,
+                error: 'User phone number is required for SOS call'
+            };
+        }
+
+        const callMetadata = {
+            call_reason: 'sos_emergency',
+            booking_id: sosDetails.bookingId || null,
+            vehicle_name: sosDetails.bikeModel || sosDetails.vehicleName || 'Vehicle',
+            user_name: sosDetails.userName || 'Customer',
+            user_email: sosDetails.userEmail || null,
+            gps_location: sosDetails.gpsLocation || 'Location Provided',
+            pickup_location: sosDetails.pickupLocation || 'GITA Autonomous College BBSR',
+            emergency_phone: '9040757683'
+        };
+
+        console.log(`🚨 Triggering Retell AI Emergency SOS Call to ${userPhoneNumber}...`);
+        const result = await makeOutboundCall(userPhoneNumber, callMetadata);
+
+        if (result.success) {
+            console.log(`✅ Emergency SOS Call connected for user: ${userPhoneNumber}`);
+        } else {
+            console.error(`⚠️ Emergency SOS Call could not be placed via Retell AI: ${result.error}`);
+        }
+
+        return result;
+    } catch (error) {
+        console.error('Error in makeSOSOutboundCall:', error);
+        return {
+            success: false,
+            error: error.message
+        };
+    }
+}
+
 module.exports = {
     makeOutboundCall,
     makeBookingConfirmationCall,
+    makeSOSOutboundCall,
     formatPhoneNumber
 };
 

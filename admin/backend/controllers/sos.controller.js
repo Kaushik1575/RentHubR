@@ -1,5 +1,5 @@
 const supabase = require('../config/supabase');
-const { sendSOSAlertEmail } = require('../config/emailService');
+const { sendSOSAlertEmail, sendEmail } = require('../config/emailService');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com'];
 
 const activateSOS = async (req, res) => {
@@ -12,9 +12,6 @@ const activateSOS = async (req, res) => {
         }
 
         // Fetch booking details with user info
-
-
-        // Handle formatted booking ID (RH...) or numeric ID
         let query = supabase.from('bookings').select(`
                 *,
                 users:user_id (
@@ -95,11 +92,12 @@ const activateSOS = async (req, res) => {
             gpsString = gpsLocation;
         }
 
+        const userPhone = booking.users?.phone_number || booking.phone_number || null;
         const sosData = {
             bookingId: booking.booking_id || booking.id,
             userName: booking.users?.full_name || 'Unknown User',
             userEmail: booking.users?.email || 'Unknown Email',
-            phoneNumber: booking.users?.phone_number || 'Unknown Phone',
+            phoneNumber: userPhone || 'Unknown Phone',
             bikeModel: vehicleName,
             pickupLocation: booking.pickup_location || 'GITA Autonomous College BBSR',
             timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
@@ -130,7 +128,17 @@ const activateSOS = async (req, res) => {
         const allAdminEmailsArray = Array.from(allAdminEmails);
         await sendSOSAlertEmail(allAdminEmailsArray, sosData);
 
-        res.json({ success: true, message: 'SOS alert sent successfully' });
+        res.json({
+            success: true,
+            message: 'SOS alert sent successfully.',
+            sosData: {
+                bookingId: sosData.bookingId,
+                userName: sosData.userName,
+                phoneNumber: sosData.phoneNumber,
+                bikeModel: sosData.bikeModel,
+                googleMapsLink: sosData.googleMapsLink
+            }
+        });
 
     } catch (error) {
         console.error('Error processing SOS request:', error);
@@ -138,6 +146,77 @@ const activateSOS = async (req, res) => {
     }
 };
 
+/**
+ * Handle feedback from User / Retell AI when an SOS option is selected
+ */
+const handleSOSFeedback = async (req, res) => {
+    try {
+        const { bookingId, status, issueType, details } = req.body;
+
+        if (!bookingId) {
+            return res.status(400).json({ error: 'Booking ID is required' });
+        }
+
+        console.log(`🚨 Admin SOS Feedback - Booking: ${bookingId}, Status: ${status}`);
+
+        if (status === 'escalate_mechanic' || status === 'unresolved') {
+            let query = supabase.from('bookings').select('*, users:user_id(full_name, email, phone_number)');
+            if (bookingId.toString().startsWith('RH')) {
+                query = query.eq('booking_id', bookingId);
+            } else {
+                query = query.eq('id', bookingId);
+            }
+            const { data: booking } = await query.single();
+
+            const userName = booking?.users?.full_name || 'Customer';
+            const userPhone = booking?.users?.phone_number || 'N/A';
+            const vehicleName = booking?.vehicle_name || 'Vehicle';
+
+            const alertHtml = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; background: #fff5f5; border: 2px solid #e53e3e; border-radius: 8px;">
+                    <h2 style="color: #c53030; margin-top: 0;">🚨 URGENT: Roadside Mechanic Dispatch Requested!</h2>
+                    <p>A customer has indicated that their issue is <strong>UNSOLVED</strong> and requested emergency roadside mechanic assistance.</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <tr><td style="padding: 8px; font-weight: bold;">Booking ID:</td><td style="padding: 8px;">${bookingId}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Customer Name:</td><td style="padding: 8px;">${userName}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Phone Number:</td><td style="padding: 8px;"><a href="tel:${userPhone}">${userPhone}</a></td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Vehicle:</td><td style="padding: 8px;">${vehicleName}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Reported Issue:</td><td style="padding: 8px; color: #c53030;"><strong>${issueType || 'General Breakdown'}</strong></td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Details / Notes:</td><td style="padding: 8px;">${details || 'Customer requested mechanic'}</td></tr>
+                    </table>
+                </div>
+            `;
+
+            try {
+                await sendEmail({
+                    to: ADMIN_EMAILS,
+                    subject: `🚨 [URGENT DISPATCH] Roadside Mechanic Needed - Booking ${bookingId}`,
+                    html: alertHtml
+                });
+            } catch (emailErr) {
+                console.error('Error sending mechanic alert email:', emailErr.message);
+            }
+
+            return res.json({
+                success: true,
+                message: 'Roadside mechanic dispatch request escalated to emergency response team.',
+                status: 'mechanic_dispatched'
+            });
+        }
+
+        return res.json({
+            success: true,
+            message: 'SOS issue marked as resolved.',
+            status: 'resolved'
+        });
+
+    } catch (error) {
+        console.error('Error handling SOS feedback:', error);
+        res.status(500).json({ error: 'Failed to process SOS feedback: ' + error.message });
+    }
+};
+
 module.exports = {
-    activateSOS
+    activateSOS,
+    handleSOSFeedback
 };

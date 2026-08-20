@@ -1,5 +1,6 @@
 const supabase = require('../config/supabase');
-const { sendSOSAlertEmail } = require('../config/emailService');
+const { sendSOSAlertEmail, sendEmail } = require('../config/emailService');
+const { makeSOSOutboundCall } = require('../config/retellCallService');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com'];
 
 const activateSOS = async (req, res) => {
@@ -12,9 +13,6 @@ const activateSOS = async (req, res) => {
         }
 
         // Fetch booking details with user info
-
-
-        // Handle formatted booking ID (RH...) or numeric ID
         let query = supabase.from('bookings').select(`
                 *,
                 users:user_id (
@@ -95,11 +93,12 @@ const activateSOS = async (req, res) => {
             gpsString = gpsLocation;
         }
 
+        const userPhone = booking.users?.phone_number || booking.phone_number || null;
         const sosData = {
             bookingId: booking.booking_id || booking.id,
             userName: booking.users?.full_name || 'Unknown User',
             userEmail: booking.users?.email || 'Unknown Email',
-            phoneNumber: booking.users?.phone_number || 'Unknown Phone',
+            phoneNumber: userPhone || 'Unknown Phone',
             bikeModel: vehicleName,
             pickupLocation: booking.pickup_location || 'GITA Autonomous College BBSR',
             timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
@@ -126,11 +125,37 @@ const activateSOS = async (req, res) => {
             console.warn('No admins found in database. Using fallback.');
         }
 
-        // Send one email to all admins at once to avoid Resend 2-emails-per-second rate limit
+        // 1. Send one email to all admins at once
         const allAdminEmailsArray = Array.from(allAdminEmails);
         await sendSOSAlertEmail(allAdminEmailsArray, sosData);
 
-        res.json({ success: true, message: 'SOS alert sent successfully' });
+        // 2. Trigger Retell AI Automated Emergency Outbound Call to the User's Phone
+        let callResult = { success: false };
+        if (userPhone && userPhone !== 'Unknown Phone') {
+            try {
+                console.log(`🎙️ Initiating Retell AI Emergency Call to user ${userPhone} for booking ${sosData.bookingId}...`);
+                callResult = await makeSOSOutboundCall(userPhone, sosData);
+                console.log('📞 Retell AI SOS Call Response:', callResult);
+            } catch (callErr) {
+                console.error('⚠️ Retell AI SOS Call Failed:', callErr.message);
+            }
+        } else {
+            console.warn('⚠️ No valid user phone number found for SOS voice call.');
+        }
+
+        res.json({
+            success: true,
+            message: 'SOS alert sent successfully. Emergency AI calling initiated.',
+            callInitiated: callResult.success,
+            callDetails: callResult,
+            sosData: {
+                bookingId: sosData.bookingId,
+                userName: sosData.userName,
+                phoneNumber: sosData.phoneNumber,
+                bikeModel: sosData.bikeModel,
+                googleMapsLink: sosData.googleMapsLink
+            }
+        });
 
     } catch (error) {
         console.error('Error processing SOS request:', error);
@@ -138,6 +163,86 @@ const activateSOS = async (req, res) => {
     }
 };
 
+/**
+ * Handle feedback from User / Retell AI when an SOS option is selected
+ * (Option 1: Solved, Option 2: Escalate to Roadside Mechanic)
+ */
+const handleSOSFeedback = async (req, res) => {
+    try {
+        const { bookingId, status, issueType, details } = req.body;
+
+        if (!bookingId) {
+            return res.status(400).json({ error: 'Booking ID is required' });
+        }
+
+        console.log(`🚨 SOS Feedback Received - Booking: ${bookingId}, Status: ${status}, Issue: ${issueType}`);
+
+        if (status === 'escalate_mechanic' || status === 'unresolved') {
+            // Fetch booking details for escalation
+            let query = supabase.from('bookings').select('*, users:user_id(full_name, email, phone_number)');
+            if (bookingId.toString().startsWith('RH')) {
+                query = query.eq('booking_id', bookingId);
+            } else {
+                query = query.eq('id', bookingId);
+            }
+            const { data: booking } = await query.single();
+
+            const userName = booking?.users?.full_name || 'Customer';
+            const userPhone = booking?.users?.phone_number || 'N/A';
+            const vehicleName = booking?.vehicle_name || 'Vehicle';
+
+            // Send high-priority mechanic dispatch alert email
+            const alertHtml = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; background: #fff5f5; border: 2px solid #e53e3e; border-radius: 8px;">
+                    <h2 style="color: #c53030; margin-top: 0;">🚨 URGENT: Roadside Mechanic Dispatch Requested!</h2>
+                    <p>A customer has indicated that their issue is <strong>UNSOLVED</strong> and requested emergency roadside mechanic assistance.</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <tr><td style="padding: 8px; font-weight: bold;">Booking ID:</td><td style="padding: 8px;">${bookingId}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Customer Name:</td><td style="padding: 8px;">${userName}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Phone Number:</td><td style="padding: 8px;"><a href="tel:${userPhone}">${userPhone}</a></td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Vehicle:</td><td style="padding: 8px;">${vehicleName}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Reported Issue:</td><td style="padding: 8px; color: #c53030;"><strong>${issueType || 'General Breakdown'}</strong></td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Details / Notes:</td><td style="padding: 8px;">${details || 'Customer requested mechanic via AI SOS Voice flow'}</td></tr>
+                    </table>
+                    <div style="margin-top: 20px; text-align: center;">
+                        <a href="tel:${userPhone}" style="display: inline-block; padding: 12px 24px; background: #e53e3e; color: white; text-decoration: none; font-weight: bold; border-radius: 5px;">Call Customer Immediately</a>
+                    </div>
+                </div>
+            `;
+
+            try {
+                await sendEmail({
+                    to: ADMIN_EMAILS,
+                    subject: `🚨 [URGENT DISPATCH] Roadside Mechanic Needed - Booking ${bookingId}`,
+                    html: alertHtml
+                });
+                console.log(`✉️ Emergency Mechanic Dispatch alert sent to admins for booking ${bookingId}`);
+            } catch (emailErr) {
+                console.error('Error sending mechanic alert email:', emailErr.message);
+            }
+
+            return res.json({
+                success: true,
+                message: 'Roadside mechanic dispatch request escalated to emergency response team.',
+                status: 'mechanic_dispatched'
+            });
+        }
+
+        // If status is 'resolved'
+        console.log(`✅ SOS Marked as Resolved for booking ${bookingId}`);
+        return res.json({
+            success: true,
+            message: 'SOS issue marked as resolved. Safe travels!',
+            status: 'resolved'
+        });
+
+    } catch (error) {
+        console.error('Error handling SOS feedback:', error);
+        res.status(500).json({ error: 'Failed to process SOS feedback: ' + error.message });
+    }
+};
+
 module.exports = {
-    activateSOS
+    activateSOS,
+    handleSOSFeedback
 };
