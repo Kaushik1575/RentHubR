@@ -76,6 +76,8 @@ services:
         sync: false
       - key: RETELL_FROM_NUMBER
         sync: false
+      - key: RETELL_SOS_AGENT_ID
+        sync: false
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN
@@ -119,6 +121,8 @@ services:
       - key: RETELL_API_KEY
         sync: false
       - key: RETELL_FROM_NUMBER
+        sync: false
+      - key: RETELL_SOS_AGENT_ID
         sync: false
       - key: TWILIO_ACCOUNT_SID
         sync: false
