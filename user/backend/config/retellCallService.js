@@ -1,6 +1,9 @@
 // Retell AI Outbound Call Service
 // This service handles automatic outbound calls when bookings are confirmed
 
+const path = require('path');
+require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
+
 let fetch;
 try {
     // Try to use node-fetch if available (v2 uses default export)
@@ -17,7 +20,8 @@ try {
 // Retell AI Configuration
 const RETELL_API_KEY = process.env.RETELL_API_KEY || 'key_47254fd3407901e9678eb9f05504';
 const RETELL_AGENT_ID = process.env.RETELL_AGENT_ID || 'agent_1bafe9ca9c302f33c15826c22b';
-const RETELL_FROM_NUMBER = process.env.RETELL_FROM_NUMBER || '+12173933886';
+const RETELL_SOS_AGENT_ID = process.env.RETELL_SOS_AGENT_ID || 'agent_3df3da5cd8eb882f4a2906d499';
+const RETELL_FROM_NUMBER = process.env.RETELL_FROM_NUMBER || '+13502072319';
 const RETELL_API_URL = 'https://api.retellai.com/v2/create-phone-call';
 
 /**
