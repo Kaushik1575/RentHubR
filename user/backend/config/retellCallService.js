@@ -21,7 +21,13 @@ try {
 const RETELL_API_KEY = process.env.RETELL_API_KEY || 'key_47254fd3407901e9678eb9f05504';
 const RETELL_AGENT_ID = process.env.RETELL_AGENT_ID || 'agent_1bafe9ca9c302f33c15826c22b';
 const RETELL_SOS_AGENT_ID = process.env.RETELL_SOS_AGENT_ID || 'agent_3df3da5cd8eb882f4a2906d499';
-const RETELL_FROM_NUMBER = process.env.RETELL_FROM_NUMBER || '+13502072319';
+
+// Ensure valid registered caller ID (override stale +12173933886 if present in old environment variables)
+let validFromNumber = process.env.RETELL_FROM_NUMBER || '+13502072319';
+if (validFromNumber === '+12173933886' || !validFromNumber.startsWith('+')) {
+    validFromNumber = '+13502072319';
+}
+const RETELL_FROM_NUMBER = validFromNumber;
 const RETELL_API_URL = 'https://api.retellai.com/v2/create-phone-call';
 
 /**
