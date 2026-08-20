@@ -59,7 +59,7 @@ const activateSOS = async (req, res) => {
 
             const { data: vehicle, error: vehicleError } = await supabase
                 .from(tableName)
-                .select('name, model')
+                .select('*')
                 .eq('id', booking.vehicle_id)
                 .single();
 
@@ -68,15 +68,15 @@ const activateSOS = async (req, res) => {
                 if (tableName === 'scooty') {
                     const { data: altVehicle } = await supabase
                         .from('scooties')
-                        .select('name, model')
+                        .select('*')
                         .eq('id', booking.vehicle_id)
                         .single();
                     if (altVehicle) {
-                        vehicleName = altVehicle.name || altVehicle.model || 'Unknown Vehicle';
+                        vehicleName = altVehicle.name || altVehicle.model || altVehicle.brand || 'Vehicle';
                     }
                 }
             } else if (vehicle) {
-                vehicleName = vehicle.name || vehicle.model || 'Unknown Vehicle';
+                vehicleName = vehicle.name || vehicle.model || vehicle.brand || 'Vehicle';
             }
         }
 
