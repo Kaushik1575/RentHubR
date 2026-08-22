@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-
+import { toast } from 'react-hot-toast';
+import HeroAvailabilityWidget from '../components/HeroAvailabilityWidget';
 
 const Home = () => {
     const [bikes, setBikes] = useState([]);
@@ -10,6 +11,12 @@ const Home = () => {
     const [activeCategory, setActiveCategory] = useState('All');
     const [offers, setOffers] = useState([]);
     const [currentTime, setCurrentTime] = useState(new Date());
+    
+    // Availability search states
+    const [activeAvailabilityQuery, setActiveAvailabilityQuery] = useState(null);
+    const [availabilityResults, setAvailabilityResults] = useState({});
+    const [isSearchingAvailability, setIsSearchingAvailability] = useState(false);
+
     const navigate = useNavigate();
 
     // Live Timer for auto-refreshing offer states
@@ -57,22 +64,60 @@ const Home = () => {
         fetchOffers();
     }, []);
 
-    // Handle reward banner clicks with login check
-    const handleRewardClick = (e) => {
-        e.preventDefault();
+    // Handle Availability Fleet Search
+    const handleSearchAvailability = async (query) => {
+        setIsSearchingAvailability(true);
+        try {
+            const res = await fetch('/api/vehicles/check-fleet-availability', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(query)
+            });
+            const data = await res.json();
+            if (res.ok && data.success) {
+                const map = {};
+                (data.results || []).forEach(r => {
+                    map[r.id] = r;
+                });
+                setAvailabilityResults(map);
+                setActiveAvailabilityQuery(query);
 
-        // Check if user is logged in
-        const token = localStorage.getItem('token');
+                // Auto filter category tab if user searched specific category
+                if (query.vehicleType === 'bike') {
+                    scrollToSection('bikes-section');
+                } else if (query.vehicleType === 'scooty') {
+                    scrollToSection('scooters-section');
+                } else if (query.vehicleType === 'car') {
+                    scrollToSection('cars-section');
+                } else {
+                    const el = document.getElementById('vehicle-showcase-section');
+                    if (el) {
+                        const offset = 80;
+                        const bodyRect = document.body.getBoundingClientRect().top;
+                        const elRect = el.getBoundingClientRect().top;
+                        window.scrollTo({
+                            top: elRect - bodyRect - offset,
+                            behavior: 'smooth'
+                        });
+                    }
+                }
 
-        if (!token) {
-            // Store intended destination
-            sessionStorage.setItem('redirectAfterLogin', '/rewards');
-            // Redirect to login
-            navigate('/login');
-        } else {
-            // User is logged in, go to rewards page
-            navigate('/rewards');
+                toast.success(`Found ${data.summary.availableCount} available rides for your slot!`);
+            } else {
+                toast.error(data.error || 'Failed to check availability.');
+            }
+        } catch (err) {
+            console.error('Error checking fleet availability:', err);
+            toast.error('Network error checking availability.');
+        } finally {
+            setIsSearchingAvailability(false);
         }
+    };
+
+    const handleResetAvailability = () => {
+        setActiveAvailabilityQuery(null);
+        setAvailabilityResults({});
+        toast.success('Availability filter reset. Showing full fleet.');
     };
 
     // Scroll Animation Observer
@@ -95,33 +140,52 @@ const Home = () => {
         // Mock rating if not present (random between 4.5 and 5.0)
         const rating = (4.5 + Math.random() * 0.5).toFixed(1);
 
-        // Find the best offer for this specific category
-        const matchingOffer = (offers || []).find(o => {
-            if (!o.is_active) return false;
-            
-            // Check if it's actually live (not future and not expired)
-            const isLive = (!o.valid_from || new Date(o.valid_from) <= currentTime) && 
-                           (!o.valid_until || new Date(o.valid_until) >= currentTime);
-            if (!isLive) return false;
+        // Check if availability query is active for this vehicle
+        const avail = activeAvailabilityQuery ? availabilityResults[vehicle.id] : null;
+        const isAvailableForSlot = avail ? avail.isAvailable : true;
 
-            const target = o.target_category.toUpperCase();
-            const currentType = type.toUpperCase();
-
-            // Strict matching logic
-            if (target === 'ALL') return true;
-            if (target === 'BIKES' && currentType === 'BIKE') return true;
-            if (target === currentType) return true;
-
-            return false;
-        });
+        // Construct booking URL
+        let rentUrl = `/booking-form?vehicleId=${vehicle.id}&type=${type}`;
+        if (activeAvailabilityQuery) {
+            rentUrl += `&startDate=${activeAvailabilityQuery.startDate}&startTime=${activeAvailabilityQuery.startTime}&duration=${activeAvailabilityQuery.duration}`;
+        }
 
         return (
-            <div className="vehicle-card" data-id={vehicle.id} data-type={type}>
+            <div className="vehicle-card" data-id={vehicle.id} data-type={type} style={{
+                position: 'relative',
+                opacity: (avail && !isAvailableForSlot) ? 0.75 : 1,
+                border: (avail && isAvailableForSlot) ? '2px solid #22c55e' : (avail && !isAvailableForSlot) ? '2px solid #fca5a5' : '1px solid rgba(0,0,0,0.08)'
+            }}>
                 <div className="card-image-wrapper">
                     <Link to={`/vehicle/${type}/${vehicle.id}`}>
                         <img src={vehicle.image_url} alt={vehicle.name} />
                     </Link>
                     <span className="rating-badge"><i className="fas fa-star"></i> {rating}</span>
+
+                    {/* Live Availability Badge if filter active */}
+                    {activeAvailabilityQuery && (
+                        <div style={{
+                            position: 'absolute',
+                            top: '12px',
+                            left: '12px',
+                            zIndex: 2,
+                            padding: '6px 12px',
+                            borderRadius: '20px',
+                            fontSize: '11px',
+                            fontWeight: '800',
+                            textTransform: 'uppercase',
+                            letterSpacing: '0.5px',
+                            background: isAvailableForSlot ? 'rgba(34, 197, 94, 0.95)' : 'rgba(239, 68, 68, 0.95)',
+                            color: 'white',
+                            boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            gap: '5px'
+                        }}>
+                            <i className={isAvailableForSlot ? "fas fa-check-circle" : "fas fa-ban"}></i>
+                            {isAvailableForSlot ? 'Available' : 'Booked'}
+                        </div>
+                    )}
                 </div>
                 <div className="vehicle-details">
                     <div className="vehicle-header">
@@ -136,12 +200,45 @@ const Home = () => {
                         <span><i className="fas fa-tachometer-alt"></i> Manual</span>
                     </div>
 
+                    {/* Conflict reason if booked */}
+                    {avail && !isAvailableForSlot && (
+                        <div style={{
+                            background: '#fef2f2',
+                            border: '1px solid #fecaca',
+                            borderRadius: '6px',
+                            padding: '6px 10px',
+                            fontSize: '11.5px',
+                            color: '#991b1b',
+                            marginTop: '8px',
+                            fontWeight: '600'
+                        }}>
+                            <i className="fas fa-info-circle" style={{ marginRight: '4px' }}></i>
+                            {avail.reason}
+                        </div>
+                    )}
+
                     <div className="card-divider"></div>
 
                     <div className="vehicle-footer">
                         <div className="price-info">
-                            <span className="price-label">Price per Hour</span>
-                            <span className="price-value">₹{vehicle.price}</span>
+                            {avail && isAvailableForSlot ? (
+                                <>
+                                    <span className="price-label" style={{ color: '#16a34a', fontWeight: '700' }}>
+                                        Est. for {activeAvailabilityQuery.duration} hrs
+                                    </span>
+                                    <span className="price-value" style={{ color: '#15803d' }}>
+                                        ₹{avail.estimatedTotal}
+                                        <small style={{ fontSize: '12px', color: '#64748b', fontWeight: 'normal', marginLeft: '4px' }}>
+                                            (₹{vehicle.price}/h)
+                                        </small>
+                                    </span>
+                                </>
+                            ) : (
+                                <>
+                                    <span className="price-label">Price per Hour</span>
+                                    <span className="price-value">₹{vehicle.price}</span>
+                                </>
+                            )}
                         </div>
 
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
@@ -159,22 +256,46 @@ const Home = () => {
                                 fontSize: '1rem',
                                 transition: 'all 0.2s ease'
                             }}>
-                                View
+                                View Details
                             </Link>
-                            <Link to={`/booking-form?vehicleId=${vehicle.id}&type=${type}`} className="rent-btn" style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '10px',
-                                borderRadius: '8px',
-                                textAlign: 'center',
-                                fontSize: '1rem',
-                                height: 'auto',
-                                width: '100%',
-                                boxSizing: 'border-box'
-                            }}>
-                                Rent Now
-                            </Link>
+
+                            {isAvailableForSlot ? (
+                                <Link to={rentUrl} className="rent-btn" style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '10px',
+                                    borderRadius: '8px',
+                                    textAlign: 'center',
+                                    fontSize: '1rem',
+                                    height: 'auto',
+                                    width: '100%',
+                                    boxSizing: 'border-box',
+                                    background: activeAvailabilityQuery ? '#16a34a' : undefined
+                                }}>
+                                    {activeAvailabilityQuery ? 'Book Slot' : 'Rent Now'}
+                                </Link>
+                            ) : (
+                                <Link to={`/vehicle/${type}/${vehicle.id}`} style={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    padding: '10px',
+                                    borderRadius: '8px',
+                                    textAlign: 'center',
+                                    fontSize: '0.9rem',
+                                    height: 'auto',
+                                    width: '100%',
+                                    boxSizing: 'border-box',
+                                    background: '#f1f5f9',
+                                    color: '#64748b',
+                                    border: '1px solid #cbd5e1',
+                                    textDecoration: 'none',
+                                    fontWeight: '700'
+                                }}>
+                                    Check Dates
+                                </Link>
+                            )}
                         </div>
                     </div>
                 </div>
@@ -216,7 +337,7 @@ const Home = () => {
             </section>
 
             {/* Vehicle Showcase Section */}
-            <section className="vehicle-showcase" style={{ paddingTop: '20px' }}>
+            <section className="vehicle-showcase" id="vehicle-showcase-section" style={{ paddingTop: '20px' }}>
                 <div className="container" style={{ maxWidth: '100%', padding: '0' }}>
 
                     {/* DYNAMIC FESTIVE OFFERS SECTION - MOVED ABOVE VEHICLE HEADER */}
@@ -564,12 +685,20 @@ const Home = () => {
                         </div>
                     )}
 
-                    <div className="section-header text-center" style={{ padding: '0 20px' }}>
+                    <div className="section-header text-center" style={{ padding: '0 20px', marginBottom: '35px' }}>
                         <h2 style={{ fontSize: '48px', fontWeight: '900', color: '#1e1b4b', marginBottom: '15px' }}>Featured Vehicles & Bikes</h2>
-                        <p className="section-subtitle" style={{ fontSize: '18px', color: '#64748b', maxWidth: '800px', margin: '0 auto 40px auto' }}>Choose from our premium fleet of well-maintained vehicles for a safe and comfortable ride.</p>
+                        <p className="section-subtitle" style={{ fontSize: '18px', color: '#64748b', maxWidth: '800px', margin: '0 auto 0 auto' }}>Choose from our premium fleet of well-maintained vehicles for a safe and comfortable ride.</p>
                     </div>
 
-
+                    {/* Live Availability Checker Widget */}
+                    <div style={{ maxWidth: '1100px', margin: '0 auto 40px auto', padding: '0 20px' }}>
+                        <HeroAvailabilityWidget
+                            onSearch={handleSearchAvailability}
+                            isSearching={isSearchingAvailability}
+                            activeQuery={activeAvailabilityQuery}
+                            onReset={handleResetAvailability}
+                        />
+                    </div>
 
                     {/* Category Filter */}
                     <div className="filter-container" style={{

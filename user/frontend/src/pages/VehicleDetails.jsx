@@ -5,6 +5,7 @@ import Footer from '../components/Footer';
 import { ReviewSummary, ReviewCard, ReviewForm, ImageSliderModal } from '../components/ReviewComponents';
 import { toast } from 'react-hot-toast';
 import StatusPopup from '../components/StatusPopup';
+import VehicleAvailabilityChecker from '../components/VehicleAvailabilityChecker';
 
 const VehicleDetails = () => {
     const { type, id } = useParams(); // type: 'bikes', 'cars', 'scooty'
@@ -173,6 +174,13 @@ const VehicleDetails = () => {
                         </Link>
                     </div>
                 </div>
+
+                {/* Live Availability & Slot Schedule Checker */}
+                <VehicleAvailabilityChecker
+                    vehicleId={vehicle.id}
+                    vehicleType={apiType}
+                    pricePerHour={vehicle.price}
+                />
 
                 {/* Reviews Section */}
                 <div style={{ borderTop: '1px solid #eee', paddingTop: '3rem' }}>

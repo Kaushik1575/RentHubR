@@ -68,17 +68,17 @@ const BookingForm = () => {
 
     // Initial Load
     useEffect(() => {
-        // Chatbot Auto-Fill: Parse params from URL set by chatbot
+        // Auto-Fill from Availability Search or Chatbot
         const urlStartDate = searchParams.get('startDate');
         const urlStartTime = searchParams.get('startTime');
         const urlDuration = searchParams.get('duration');
 
-        if (urlStartDate && urlStartTime && urlDuration) {
+        if (urlStartDate || urlStartTime || urlDuration) {
             setFormData(prev => ({
                 ...prev,
-                startDate: urlStartDate,
-                startTime: urlStartTime,
-                duration: parseInt(urlDuration) || 2
+                ...(urlStartDate ? { startDate: urlStartDate } : {}),
+                ...(urlStartTime ? { startTime: urlStartTime } : {}),
+                ...(urlDuration ? { duration: parseInt(urlDuration) || prev.duration } : {})
             }));
         }
 
@@ -375,7 +375,7 @@ const BookingForm = () => {
 
             // 2. Open Razorpay
             const options = {
-                key: import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_RvUJ27UN65SU8w", // Use env var in real app
+                key: orderData.key_id || import.meta.env.VITE_RAZORPAY_KEY_ID || "rzp_test_S4F1Tr5A1dzGUj",
                 amount: orderData.amount,
                 currency: orderData.currency,
                 name: "RentHub",

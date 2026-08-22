@@ -957,6 +957,7 @@ const reconfirmBooking = async (req, res) => {
 };
 
 module.exports = {
+    checkTimeConflict,
     checkAvailability,
     createBooking,
     getUserBookings,

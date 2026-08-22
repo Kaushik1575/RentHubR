@@ -3,8 +3,8 @@ const router = express.Router();
 const bookingController = require('../controllers/booking.controller');
 const { verifyToken } = require('../middleware/authMiddleware');
 
-// Check availability
-router.post('/check-availability', verifyToken, bookingController.checkAvailability);
+// Check availability (publicly accessible)
+router.post('/check-availability', bookingController.checkAvailability);
 
 // Bookings
 router.post('/', verifyToken, bookingController.createBooking);
