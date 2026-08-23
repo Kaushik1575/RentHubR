@@ -783,7 +783,7 @@ const TrackApplication = () => {
                                                         </div>
                                                     )}
 
-                                                    {/* Stage 5: Live Pricing Terms (No Monthly ROI Slider) & Agree/Disagree Actions */}
+                                                    {/* Stage 5: Live Pricing Terms (Shown only after Admin proposes/sends the price) */}
                                                     {s.number === 5 && (
                                                         <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-3">
                                                             <div className="flex items-center justify-between border-b border-amber-100 pb-2">
@@ -791,82 +791,99 @@ const TrackApplication = () => {
                                                                     <TrendingUp className="w-4 h-4 text-amber-600" />
                                                                     70% Sponsor Revenue Share
                                                                 </span>
-                                                                <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-black text-[10px]">
-                                                                    Weekly Payouts
+                                                                <span className={`px-2 py-0.5 rounded font-black text-[10px] ${
+                                                                    currentStageNum >= 5 ? 'bg-amber-200 text-amber-900' : 'bg-slate-200 text-slate-700'
+                                                                }`}>
+                                                                    {currentStageNum >= 5 ? 'Official Proposal' : 'Pending Review'}
                                                                 </span>
                                                             </div>
 
-                                                            <div className="grid grid-cols-2 gap-2 text-xs">
-                                                                <div className="bg-white p-2.5 rounded-xl border border-amber-100">
-                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Customer Rent</span>
-                                                                    <span className="text-base font-black text-slate-900">₹{hourlyRate}<small className="text-xs text-slate-500">/hr</small></span>
-                                                                </div>
-                                                                <div className="bg-white p-2.5 rounded-xl border border-amber-100">
-                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Your Share (70%)</span>
-                                                                    <span className="text-base font-black text-emerald-700">₹{sponsorHourlyShare.toFixed(1)}<small className="text-xs text-slate-500">/hr</small></span>
-                                                                </div>
-                                                            </div>
-
-                                                            {/* Sponsor Agreement Decision Block */}
-                                                            {(trackingData.terms_accepted || trackingData.agreement_accepted_at) ? (
-                                                                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center justify-between gap-2">
-                                                                    <div>
-                                                                        <span className="text-[10px] uppercase font-bold text-emerald-600 block">Sponsor Decision</span>
-                                                                        <strong className="text-xs font-black">✓ Pricing Terms Accepted</strong>
-                                                                        <span className="text-[11px] text-emerald-700 block">Ready for Next Step: Digital Contract & GPS Fitment</span>
-                                                                    </div>
-                                                                    <span className="px-2.5 py-1 rounded-full bg-emerald-200 text-emerald-900 font-extrabold text-[10px] shrink-0">
-                                                                        Accepted
+                                                            {currentStageNum < 5 ? (
+                                                                /* Before Admin sends price */
+                                                                <div className="p-3.5 bg-white/90 rounded-xl border border-amber-100 text-center space-y-1">
+                                                                    <span className="text-xs font-bold text-slate-800 block">
+                                                                        ⏳ Awaiting Pricing Proposal from Admin
                                                                     </span>
-                                                                </div>
-                                                            ) : trackingData.terms_declined ? (
-                                                                <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 space-y-2">
-                                                                    <div className="flex items-center justify-between gap-2">
-                                                                        <div>
-                                                                            <span className="text-[10px] uppercase font-bold text-rose-600 block">Sponsor Decision</span>
-                                                                            <strong className="text-xs font-black">✕ Terms Declined</strong>
-                                                                            <span className="text-[11px] text-rose-700 block">Pricing revision requested. Support team will contact you.</span>
-                                                                        </div>
-                                                                        <span className="px-2.5 py-1 rounded-full bg-rose-200 text-rose-900 font-extrabold text-[10px] shrink-0">
-                                                                            Declined
-                                                                        </span>
-                                                                    </div>
-                                                                    <button
-                                                                        type="button"
-                                                                        onClick={() => handleRespondTerms(true)}
-                                                                        disabled={respondingTerms}
-                                                                        className="w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold text-xs transition-all cursor-pointer"
-                                                                    >
-                                                                        {respondingTerms ? 'Updating...' : `Re-evaluate & Accept Terms (₹${hourlyRate}/hr)`}
-                                                                    </button>
+                                                                    <p className="text-[11px] text-slate-500 leading-relaxed">
+                                                                        Admin will calculate and send the official customer rental rate and revenue split after completing the vehicle inspection.
+                                                                    </p>
                                                                 </div>
                                                             ) : (
-                                                                <div className="pt-2 border-t border-amber-200/80 space-y-2.5">
-                                                                    <div className="flex items-center justify-between">
-                                                                        <span className="text-xs font-extrabold text-slate-800">
-                                                                            Sponsor Terms Approval:
-                                                                        </span>
-                                                                        <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">Action Required</span>
+                                                                /* After Admin sends price */
+                                                                <>
+                                                                    <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                        <div className="bg-white p-2.5 rounded-xl border border-amber-100">
+                                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Proposed Rent</span>
+                                                                            <span className="text-base font-black text-slate-900">₹{hourlyRate}<small className="text-xs text-slate-500">/hr</small></span>
+                                                                        </div>
+                                                                        <div className="bg-white p-2.5 rounded-xl border border-amber-100">
+                                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Your Share (70%)</span>
+                                                                            <span className="text-base font-black text-emerald-700">₹{sponsorHourlyShare.toFixed(1)}<small className="text-xs text-slate-500">/hr</small></span>
+                                                                        </div>
                                                                     </div>
-                                                                    <div className="grid grid-cols-2 gap-2">
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleRespondTerms(true)}
-                                                                            disabled={respondingTerms}
-                                                                            className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
-                                                                        >
-                                                                            {respondingTerms ? 'Processing...' : '✓ Agree & Accept'}
-                                                                        </button>
-                                                                        <button
-                                                                            type="button"
-                                                                            onClick={() => handleRespondTerms(false)}
-                                                                            disabled={respondingTerms}
-                                                                            className="py-2.5 px-3 rounded-xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                                                                        >
-                                                                            {respondingTerms ? 'Processing...' : '✕ Disagree'}
-                                                                        </button>
-                                                                    </div>
-                                                                </div>
+
+                                                                    {/* Sponsor Agreement Decision Block */}
+                                                                    {(trackingData.terms_accepted || trackingData.agreement_accepted_at) ? (
+                                                                        <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center justify-between gap-2">
+                                                                            <div>
+                                                                                <span className="text-[10px] uppercase font-bold text-emerald-600 block">Sponsor Decision</span>
+                                                                                <strong className="text-xs font-black">✓ Pricing Terms Accepted</strong>
+                                                                                <span className="text-[11px] text-emerald-700 block">Ready for Next Step: Digital Contract & GPS Fitment</span>
+                                                                            </div>
+                                                                            <span className="px-2.5 py-1 rounded-full bg-emerald-200 text-emerald-900 font-extrabold text-[10px] shrink-0">
+                                                                                Accepted
+                                                                            </span>
+                                                                        </div>
+                                                                    ) : trackingData.terms_declined ? (
+                                                                        <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 space-y-2">
+                                                                            <div className="flex items-center justify-between gap-2">
+                                                                                <div>
+                                                                                    <span className="text-[10px] uppercase font-bold text-rose-600 block">Sponsor Decision</span>
+                                                                                    <strong className="text-xs font-black">✕ Terms Declined</strong>
+                                                                                    <span className="text-[11px] text-rose-700 block">Pricing revision requested. Support team will contact you.</span>
+                                                                                </div>
+                                                                                <span className="px-2.5 py-1 rounded-full bg-rose-200 text-rose-900 font-extrabold text-[10px] shrink-0">
+                                                                                    Declined
+                                                                                </span>
+                                                                            </div>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleRespondTerms(true)}
+                                                                                disabled={respondingTerms}
+                                                                                className="w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold text-xs transition-all cursor-pointer"
+                                                                            >
+                                                                                {respondingTerms ? 'Updating...' : `Re-evaluate & Accept Terms (₹${hourlyRate}/hr)`}
+                                                                            </button>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <div className="pt-2 border-t border-amber-200/80 space-y-2.5">
+                                                                            <div className="flex items-center justify-between">
+                                                                                <span className="text-xs font-extrabold text-slate-800">
+                                                                                    Sponsor Terms Approval:
+                                                                                </span>
+                                                                                <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">Action Required</span>
+                                                                            </div>
+                                                                            <div className="grid grid-cols-2 gap-2">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleRespondTerms(true)}
+                                                                                    disabled={respondingTerms}
+                                                                                    className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                                                                                >
+                                                                                    {respondingTerms ? 'Processing...' : '✓ Agree & Accept'}
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleRespondTerms(false)}
+                                                                                    disabled={respondingTerms}
+                                                                                    className="py-2.5 px-3 rounded-xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                                                >
+                                                                                    {respondingTerms ? 'Processing...' : '✕ Disagree'}
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+                                                                </>
                                                             )}
                                                         </div>
                                                     )}
