@@ -877,9 +877,26 @@ async function sendNearestLocationsEmail(userEmail, userName, bookingDetails = {
                             <tr>
                                 <td style="padding: 30px 25px; background: #f8fafc;">
                                     <p style="font-size: 15px; margin: 0 0 20px 0; color: #334155; line-height: 1.5;">
-                                        Hello <strong>${userName || 'Valued Customer'}</strong>,<br>
-                                        As requested during your AI voice assistance call, here are the nearest verified bike repair garages and petrol pumps closest to you. Click any link below to open <strong>turn-by-turn Google Maps navigation</strong>.
-                                    </p>
+                                    <!-- Top Live Radar Quick Launchers -->
+                                    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 12px; padding: 18px; margin-bottom: 25px; text-align: center; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
+                                        <div style="color: #38bdf8; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
+                                            🎯 100% Real-Time Radar Map (Instant 1-Tap View)
+                                        </div>
+                                        <h3 style="color: #ffffff; margin: 0 0 14px 0; font-size: 17px; font-weight: 800;">
+                                            Open All Nearby Help Directly in Google Maps
+                                        </h3>
+                                        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
+                                            <a href="${mapSearchLinks.allPetrolPumps || `https://www.google.com/maps/search/petrol+pump+fuel+station/@${userCoordinates.latitude || 20.2185},${userCoordinates.longitude || 85.7358},16z`}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px; margin: 4px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.4);">
+                                                ⛽ All Live Petrol Pumps Near Me &rarr;
+                                            </a>
+                                            <a href="${mapSearchLinks.allGarages || `https://www.google.com/maps/search/bike+garage+two+wheeler+mechanic+puncture+repair/@${userCoordinates.latitude || 20.2185},${userCoordinates.longitude || 85.7358},16z`}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px; margin: 4px; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);">
+                                                🏍️ All Bike Garages & Mechanics Near Me &rarr;
+                                            </a>
+                                            <a href="https://www.google.com/maps/search/puncture+tyre+repair/@${userCoordinates.latitude || 20.2185},${userCoordinates.longitude || 85.7358},16z" target="_blank" style="display: inline-block; background: #334155; color: #f1f5f9; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px; margin: 4px; border: 1px solid #475569;">
+                                                🛞 Puncture & Air Stations &rarr;
+                                            </a>
+                                        </div>
+                                    </div>
 
                                     <!-- Section 1: Bike Garages -->
                                     <div style="margin-bottom: 25px;">
@@ -888,7 +905,7 @@ async function sendNearestLocationsEmail(userEmail, userName, bookingDetails = {
                                                 🏍️ Nearest Bike Garages & Mechanics
                                             </h2>
                                         </div>
-                                        ${renderGaragesHtml || '<p style="color: #64748b; font-size: 14px;">No garage found in immediate 1km. Please use the Google Maps search button below.</p>'}
+                                        ${renderGaragesHtml || '<p style="color: #64748b; font-size: 14px;">No garage found in immediate 1km. Please use the Google Maps search button above.</p>'}
                                     </div>
 
                                     <!-- Section 2: Petrol Pumps -->
@@ -898,22 +915,7 @@ async function sendNearestLocationsEmail(userEmail, userName, bookingDetails = {
                                                 ⛽ Nearest Petrol Pumps & Fuel Stations
                                             </h2>
                                         </div>
-                                        ${renderPetrolPumpsHtml || '<p style="color: #64748b; font-size: 14px;">No petrol pump found in immediate 1km. Please use the Google Maps search button below.</p>'}
-                                    </div>
-
-                                    <!-- Quick Maps Search Links -->
-                                    <div style="background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 25px;">
-                                        <h4 style="margin: 0 0 10px 0; color: #0f172a; font-size: 15px;">🔍 Explore All Nearby Help on Google Maps</h4>
-                                        <div style="display: inline-block; margin: 4px;">
-                                            <a href="${mapSearchLinks.allGarages || `https://www.google.com/maps/search/bike+garage/@${userCoordinates.latitude || 20.2185},${userCoordinates.longitude || 85.7358},15z`}" target="_blank" style="display: inline-block; background: #f1f5f9; color: #2563eb; border: 1px solid #bfdbfe; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px;">
-                                                🏍️ All Bike Garages Near Me &rarr;
-                                            </a>
-                                        </div>
-                                        <div style="display: inline-block; margin: 4px;">
-                                            <a href="${mapSearchLinks.allPetrolPumps || `https://www.google.com/maps/search/petrol+pump/@${userCoordinates.latitude || 20.2185},${userCoordinates.longitude || 85.7358},15z`}" target="_blank" style="display: inline-block; background: #f1f5f9; color: #ea580c; border: 1px solid #fed7aa; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px;">
-                                                ⛽ All Petrol Pumps Near Me &rarr;
-                                            </a>
-                                        </div>
+                                        ${renderPetrolPumpsHtml || '<p style="color: #64748b; font-size: 14px;">No petrol pump found in immediate 1km. Please use the Google Maps search button above.</p>'}
                                     </div>
 
                                     <!-- Human Helpline Box -->
