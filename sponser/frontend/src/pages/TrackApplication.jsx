@@ -95,7 +95,7 @@ const STAGE_CONFIG = [
     {
         number: 5,
         title: 'Price & Revenue Share Terms',
-        tagline: 'Earnings Proposal & ROI Projection',
+        tagline: 'Hourly Rate & 70% Revenue Share Terms',
         desc: 'Competitive hourly rental price set with maximum 70% sponsor payout share and 30% platform management fee.',
         icon: DollarSign,
         color: 'from-amber-500 to-orange-600',
@@ -824,15 +824,28 @@ const TrackApplication = () => {
                                                             ) : (
                                                                 /* After Admin sends price */
                                                                 <>
-                                                                    <div className="grid grid-cols-2 gap-2 text-xs">
-                                                                        <div className="bg-white p-2.5 rounded-xl border border-amber-100">
+                                                                    {/* Pricing Comparison Grid */}
+                                                                    <div className={`grid gap-2 text-xs ${trackingData.counter_offer_price ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
+                                                                        <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-sm">
                                                                             <span className="text-[10px] text-slate-400 block uppercase font-bold">Proposed Rent</span>
                                                                             <span className="text-base font-black text-slate-900">₹{hourlyRate}<small className="text-xs text-slate-500">/hr</small></span>
                                                                         </div>
-                                                                        <div className="bg-white p-2.5 rounded-xl border border-amber-100">
+                                                                        <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-sm">
                                                                             <span className="text-[10px] text-slate-400 block uppercase font-bold">Your Share (70%)</span>
                                                                             <span className="text-base font-black text-emerald-700">₹{sponsorHourlyShare.toFixed(1)}<small className="text-xs text-slate-500">/hr</small></span>
                                                                         </div>
+                                                                        {trackingData.counter_offer_price && (
+                                                                            <>
+                                                                                <div className="bg-purple-50 p-2.5 rounded-xl border border-purple-200 shadow-sm">
+                                                                                    <span className="text-[10px] text-purple-700 block uppercase font-bold">Your Counter Rate</span>
+                                                                                    <span className="text-base font-black text-purple-900">₹{trackingData.counter_offer_price}<small className="text-xs text-purple-600">/hr</small></span>
+                                                                                </div>
+                                                                                <div className="bg-purple-50 p-2.5 rounded-xl border border-purple-200 shadow-sm">
+                                                                                    <span className="text-[10px] text-purple-700 block uppercase font-bold">Counter Share (70%)</span>
+                                                                                    <span className="text-base font-black text-purple-800">₹{(trackingData.counter_offer_price * 0.70).toFixed(1)}<small className="text-xs text-purple-600">/hr</small></span>
+                                                                                </div>
+                                                                            </>
+                                                                        )}
                                                                     </div>
 
                                                                     {/* Sponsor Agreement Decision Block */}
@@ -847,51 +860,11 @@ const TrackApplication = () => {
                                                                                 Accepted
                                                                             </span>
                                                                         </div>
-                                                                    ) : trackingData.counter_offer_price && !showCounterForm ? (
-                                                                        /* Counter Offer Already Sent to Admin */
-                                                                        <div className="p-3.5 rounded-xl bg-indigo-50 border border-indigo-300 text-indigo-950 space-y-2.5">
-                                                                            <div className="flex items-center justify-between gap-2">
-                                                                                <div>
-                                                                                    <span className="text-[10px] uppercase font-bold text-indigo-600 block">Your Counter-Offer Sent to Admin</span>
-                                                                                    <strong className="text-sm font-black text-indigo-900">Requested Rate: ₹{trackingData.counter_offer_price}/hr</strong>
-                                                                                    <span className="text-[11px] text-indigo-700 block">Your 70% Payout: ₹{(trackingData.counter_offer_price * 0.70).toFixed(1)}/hr</span>
-                                                                                </div>
-                                                                                <span className="px-2.5 py-1 rounded-full bg-indigo-200 text-indigo-900 font-extrabold text-[10px] shrink-0">
-                                                                                    Pending Review
-                                                                                </span>
-                                                                            </div>
-                                                                            {trackingData.sponsor_price_remarks && (
-                                                                                <p className="text-[11px] text-indigo-900 bg-white/90 p-2 rounded-lg border border-indigo-200 italic">
-                                                                                    "{trackingData.sponsor_price_remarks}"
-                                                                                </p>
-                                                                            )}
-                                                                            <div className="flex flex-col sm:flex-row gap-2 pt-1">
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => handleRespondTerms(true)}
-                                                                                    disabled={respondingTerms}
-                                                                                    className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
-                                                                                >
-                                                                                    {respondingTerms ? 'Updating...' : `Accept Admin's ₹${hourlyRate}/hr Instead`}
-                                                                                </button>
-                                                                                <button
-                                                                                    type="button"
-                                                                                    onClick={() => {
-                                                                                        setCounterPrice(String(trackingData.counter_offer_price || ''));
-                                                                                        setCounterReason(trackingData.sponsor_price_remarks || '');
-                                                                                        setShowCounterForm(true);
-                                                                                    }}
-                                                                                    className="py-2 px-3 rounded-xl bg-white hover:bg-indigo-100/50 text-indigo-700 border border-indigo-300 font-bold text-xs transition-all cursor-pointer"
-                                                                                >
-                                                                                    Edit Counter Price
-                                                                                </button>
-                                                                            </div>
-                                                                        </div>
                                                                     ) : showCounterForm ? (
-                                                                        /* Counter Offer Form (When Disagree is Clicked) */
+                                                                        /* Inline Counter Offer Input Form inside Card */
                                                                         <div className="p-3.5 rounded-xl bg-white border-2 border-indigo-300 shadow-sm space-y-3">
                                                                             <div className="flex items-center justify-between border-b border-slate-100 pb-2">
-                                                                                <span className="text-xs font-black text-slate-800 uppercase tracking-wide">
+                                                                                <span className="text-xs font-black text-indigo-950 uppercase tracking-wide flex items-center gap-1.5">
                                                                                     💬 Propose Custom Rental Rate
                                                                                 </span>
                                                                                 <button
@@ -929,7 +902,7 @@ const TrackApplication = () => {
                                                                                 </label>
                                                                                 <input
                                                                                     type="text"
-                                                                                    placeholder="e.g. Looking for ₹75/hr for this brand new model with fresh tyres."
+                                                                                    placeholder="e.g. 2024 model with low mileage & premium accessories."
                                                                                     value={counterReason}
                                                                                     onChange={(e) => setCounterReason(e.target.value)}
                                                                                     className="w-full p-2.5 rounded-xl border border-slate-300 text-slate-800 text-xs focus:border-indigo-500 outline-none box-border"
@@ -960,7 +933,48 @@ const TrackApplication = () => {
                                                                                 </button>
                                                                             </div>
                                                                         </div>
+                                                                    ) : trackingData.counter_offer_price ? (
+                                                                        /* Counter Offer Active Status inside Card */
+                                                                        <div className="p-3.5 rounded-xl bg-purple-50/90 border border-purple-200 text-purple-950 space-y-2.5">
+                                                                            <div className="flex items-center justify-between gap-2">
+                                                                                <div>
+                                                                                    <span className="text-[10px] uppercase font-bold text-purple-600 block">Counter-Offer Submitted</span>
+                                                                                    <strong className="text-xs font-black text-purple-900">Requested Rate: ₹{trackingData.counter_offer_price}/hr</strong>
+                                                                                    <span className="text-[11px] text-purple-700 block">70% Share: ₹{(trackingData.counter_offer_price * 0.70).toFixed(1)}/hr</span>
+                                                                                </div>
+                                                                                <span className="px-2.5 py-1 rounded-full bg-purple-200 text-purple-900 font-extrabold text-[10px] shrink-0">
+                                                                                    Pending Review
+                                                                                </span>
+                                                                            </div>
+                                                                            {trackingData.sponsor_price_remarks && (
+                                                                                <p className="text-[11px] text-purple-900 bg-white/90 p-2 rounded-lg border border-purple-100 italic">
+                                                                                    "{trackingData.sponsor_price_remarks}"
+                                                                                </p>
+                                                                            )}
+                                                                            <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => handleRespondTerms(true)}
+                                                                                    disabled={respondingTerms}
+                                                                                    className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs shadow-sm transition-all cursor-pointer disabled:opacity-50"
+                                                                                >
+                                                                                    {respondingTerms ? 'Updating...' : `Accept Admin's ₹${hourlyRate}/hr Instead`}
+                                                                                </button>
+                                                                                <button
+                                                                                    type="button"
+                                                                                    onClick={() => {
+                                                                                        setCounterPrice(String(trackingData.counter_offer_price || ''));
+                                                                                        setCounterReason(trackingData.sponsor_price_remarks || '');
+                                                                                        setShowCounterForm(true);
+                                                                                    }}
+                                                                                    className="py-2 px-3 rounded-xl bg-white hover:bg-purple-100/50 text-purple-700 border border-purple-300 font-bold text-xs transition-all cursor-pointer"
+                                                                                >
+                                                                                    Edit Counter Price
+                                                                                </button>
+                                                                            </div>
+                                                                        </div>
                                                                     ) : (
+                                                                        /* Initial Sponsor Decision Actions (Agree & Accept / Disagree & Custom Price) */
                                                                         <div className="pt-2 border-t border-amber-200/80 space-y-2.5">
                                                                             <div className="flex items-center justify-between">
                                                                                 <span className="text-xs font-extrabold text-slate-800">
