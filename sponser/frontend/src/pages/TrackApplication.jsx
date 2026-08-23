@@ -21,8 +21,6 @@ import {
     Wrench,
     Bike as BikeIcon,
     ArrowRight,
-    Gauge,
-    Cpu,
     Award,
     Printer,
     HelpCircle,
@@ -31,8 +29,8 @@ import {
     Zap,
     TrendingUp,
     ShieldCheck,
-    Car,
-    BatteryCharging
+    Calendar,
+    ShieldAlert
 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
@@ -42,24 +40,28 @@ const STAGE_CONFIG = [
         number: 1,
         title: 'Application & Docs Submitted',
         tagline: 'Initial Registration & Document Vault',
-        desc: 'Vehicle specifications, identity verification, and legal documentation (RC, Insurance, PUC) uploaded by sponsor.',
+        desc: 'Vehicle specifications, identity verification, and legal documents (RC, Insurance, PUC) uploaded by sponsor.',
         icon: FileText,
         color: 'from-cyan-500 to-blue-600',
-        lightBg: 'bg-cyan-50/70 border-cyan-200 text-cyan-900',
-        badgeBg: 'bg-cyan-100 text-cyan-800 border-cyan-300',
+        cardBg: 'bg-white',
+        borderColor: 'border-cyan-200',
+        badgeBg: 'bg-cyan-50 text-cyan-700 border-cyan-300',
         accentColor: '#06b6d4',
-        eta: 'Completed in < 1 hour'
+        accentText: 'text-cyan-600',
+        eta: 'Completed in < 1 hr'
     },
     {
         number: 2,
         title: 'Document & Vehicle Review',
         tagline: 'RTO & Compliance Verification',
-        desc: 'RentHub legal desk verified original RC records, insurance active tenure, pollution fitness, and photo authenticity.',
+        desc: 'RentHub legal desk verified original RC records, active insurance tenure, pollution fitness, and photo authenticity.',
         icon: ShieldCheck,
         color: 'from-indigo-500 to-purple-600',
-        lightBg: 'bg-indigo-50/70 border-indigo-200 text-indigo-900',
-        badgeBg: 'bg-indigo-100 text-indigo-800 border-indigo-300',
+        cardBg: 'bg-white',
+        borderColor: 'border-indigo-200',
+        badgeBg: 'bg-indigo-50 text-indigo-700 border-indigo-300',
         accentColor: '#6366f1',
+        accentText: 'text-indigo-600',
         eta: '12 - 24 hours'
     },
     {
@@ -69,10 +71,12 @@ const STAGE_CONFIG = [
         desc: 'RentHub certified automotive engineer dispatched to inspect vehicle chassis, body condition, and roadworthiness.',
         icon: MapPin,
         color: 'from-sky-500 to-blue-600',
-        lightBg: 'bg-sky-50/70 border-sky-200 text-sky-900',
-        badgeBg: 'bg-sky-100 text-sky-800 border-sky-300',
+        cardBg: 'bg-white',
+        borderColor: 'border-sky-200',
+        badgeBg: 'bg-sky-50 text-sky-700 border-sky-300',
         accentColor: '#0284c7',
-        eta: 'Scheduled within 48 hours'
+        accentText: 'text-sky-600',
+        eta: 'Within 48 hours'
     },
     {
         number: 4,
@@ -81,10 +85,12 @@ const STAGE_CONFIG = [
         desc: 'Complete 24-point diagnostic scorecard generated covering tyre tread depth, brake pads, engine compression, and lighting.',
         icon: Wrench,
         color: 'from-emerald-500 to-teal-600',
-        lightBg: 'bg-emerald-50/70 border-emerald-200 text-emerald-900',
-        badgeBg: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+        cardBg: 'bg-white',
+        borderColor: 'border-emerald-200',
+        badgeBg: 'bg-emerald-50 text-emerald-700 border-emerald-300',
         accentColor: '#10b981',
-        eta: 'Same-day audit release'
+        accentText: 'text-emerald-600',
+        eta: 'Same-day audit'
     },
     {
         number: 5,
@@ -93,10 +99,12 @@ const STAGE_CONFIG = [
         desc: 'Competitive hourly rental price set with maximum 70% sponsor payout share and 30% platform management fee.',
         icon: DollarSign,
         color: 'from-amber-500 to-orange-600',
-        lightBg: 'bg-amber-50/70 border-amber-200 text-amber-900',
-        badgeBg: 'bg-amber-100 text-amber-800 border-amber-300',
+        cardBg: 'bg-white',
+        borderColor: 'border-amber-200',
+        badgeBg: 'bg-amber-50 text-amber-800 border-amber-300',
         accentColor: '#f59e0b',
-        eta: 'Instant automated proposal'
+        accentText: 'text-amber-600',
+        eta: 'Instant proposal'
     },
     {
         number: 6,
@@ -105,10 +113,12 @@ const STAGE_CONFIG = [
         desc: 'Sponsor digitally reviews pricing terms, insurance liabilities, weekly payout cycle, and e-signs agreement.',
         icon: FileSignature,
         color: 'from-rose-500 to-pink-600',
-        lightBg: 'bg-rose-50/70 border-rose-200 text-rose-900',
-        badgeBg: 'bg-rose-100 text-rose-800 border-rose-300',
+        cardBg: 'bg-white',
+        borderColor: 'border-rose-200',
+        badgeBg: 'bg-rose-50 text-rose-700 border-rose-300',
         accentColor: '#f43f5e',
-        eta: 'Awaiting sponsor sign'
+        accentText: 'text-rose-600',
+        eta: 'Awaiting e-sign'
     },
     {
         number: 7,
@@ -117,10 +127,12 @@ const STAGE_CONFIG = [
         desc: 'Agreement officially executed. Vehicle allocated an asset slot in the RentHub municipal fleet registry.',
         icon: Award,
         color: 'from-purple-600 to-indigo-700',
-        lightBg: 'bg-purple-50/70 border-purple-200 text-purple-900',
-        badgeBg: 'bg-purple-100 text-purple-800 border-purple-300',
+        cardBg: 'bg-white',
+        borderColor: 'border-purple-200',
+        badgeBg: 'bg-purple-50 text-purple-700 border-purple-300',
         accentColor: '#8b5cf6',
-        eta: 'Instant verification'
+        accentText: 'text-purple-600',
+        eta: 'Instant activation'
     },
     {
         number: 8,
@@ -129,9 +141,11 @@ const STAGE_CONFIG = [
         desc: 'Military-grade 4G AIS-140 GPS tracker and remote engine immobilizer fitted with real-time live telemetry paired.',
         icon: Radio,
         color: 'from-blue-600 to-cyan-500',
-        lightBg: 'bg-blue-50/70 border-blue-200 text-blue-900',
-        badgeBg: 'bg-blue-100 text-blue-800 border-blue-300',
+        cardBg: 'bg-white',
+        borderColor: 'border-blue-200',
+        badgeBg: 'bg-blue-50 text-blue-700 border-blue-300',
         accentColor: '#2563eb',
+        accentText: 'text-blue-600',
         eta: '2 - 4 hours'
     },
     {
@@ -141,9 +155,11 @@ const STAGE_CONFIG = [
         desc: 'Vehicle published to thousands of verified RentHub riders! Instant real-time booking availability and automated payouts active.',
         icon: Sparkles,
         color: 'from-emerald-500 via-teal-500 to-green-600',
-        lightBg: 'bg-gradient-to-r from-emerald-50 to-teal-50 border-emerald-300 text-emerald-950',
-        badgeBg: 'bg-emerald-500 text-white font-black shadow-md shadow-emerald-500/30',
+        cardBg: 'bg-gradient-to-br from-emerald-50/80 via-white to-teal-50/80',
+        borderColor: 'border-emerald-300',
+        badgeBg: 'bg-emerald-500 text-white font-black shadow-md shadow-emerald-200',
         accentColor: '#059669',
+        accentText: 'text-emerald-600',
         eta: '🟢 Live Fleet Active'
     }
 ];
@@ -160,9 +176,9 @@ const TrackApplication = () => {
     const [agreementAgreed, setAgreementAgreed] = useState(false);
     const [acceptingAgreement, setAcceptingAgreement] = useState(false);
     const [stageFilter, setStageFilter] = useState('all'); // 'all', 'completed', 'active', 'upcoming'
-    const [calcHours, setCalcHours] = useState(6); // Revenue calculator hours/day
+    const [calcHours, setCalcHours] = useState(6);
 
-    // Fetch sponsor's own vehicles for quick-select chips
+    // Load sponsor's own vehicles for quick chips
     useEffect(() => {
         const fetchUserBikes = async () => {
             try {
@@ -251,668 +267,644 @@ const TrackApplication = () => {
     const projectedMonthly = (sponsorHourlyShare * calcHours * 30).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
     return (
-        <div className="min-h-screen bg-slate-950 text-slate-100 p-4 md:p-8 space-y-8 max-w-7xl mx-auto pb-28 font-sans selection:bg-indigo-500 selection:text-white">
+        <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-blue-50/40 text-slate-800 p-4 md:p-8 space-y-8 max-w-7xl mx-auto pb-28 font-sans">
             
-            {/* Ambient Background Glows */}
-            <div className="fixed inset-0 pointer-events-none overflow-hidden z-0">
-                <div className="absolute top-1/4 left-1/2 -translate-x-1/2 w-[700px] h-[350px] bg-gradient-to-tr from-indigo-600/15 via-cyan-500/10 to-transparent blur-[140px] rounded-full"></div>
-                <div className="absolute bottom-10 right-10 w-[400px] h-[400px] bg-emerald-500/10 blur-[130px] rounded-full"></div>
+            {/* Header / Hero Section in Light Theme */}
+            <div className="bg-white rounded-3xl border border-slate-200/80 p-6 md:p-10 shadow-xl shadow-indigo-100/50 relative overflow-hidden">
+                {/* Top Glowing Color Accent Stripe */}
+                <div className="absolute top-0 left-0 right-0 h-1.5 bg-gradient-to-r from-cyan-500 via-indigo-500 via-purple-500 to-emerald-500"></div>
+
+                <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
+                    <div className="max-w-2xl space-y-3">
+                        <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-indigo-50 border border-indigo-200 text-indigo-700 text-xs font-bold tracking-wide">
+                            <span className="relative flex h-2 w-2">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-600"></span>
+                            </span>
+                            9-Stage Asset Lifecycle Radar
+                        </div>
+
+                        <h1 className="text-3xl md:text-4xl lg:text-5xl font-black tracking-tight text-slate-900 leading-tight">
+                            Track Your Vehicle <span className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 bg-clip-text text-transparent">Application</span>
+                        </h1>
+
+                        <p className="text-slate-600 text-sm md:text-base leading-relaxed">
+                            Monitor real-time progress across all 9 onboarding milestones, inspect physical survey scorecards, review revenue terms, and track anti-theft GPS telemetry.
+                        </p>
+
+                        {/* Search Bar */}
+                        <form onSubmit={(e) => { e.preventDefault(); performLookup(searchId); }} className="pt-2 flex flex-col sm:flex-row gap-3">
+                            <div className="relative flex-1">
+                                <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-500" />
+                                <input
+                                    type="text"
+                                    value={searchId}
+                                    onChange={(e) => setSearchId(e.target.value)}
+                                    placeholder="Enter Tracking ID (e.g. RH-REQ-7049, OD-02-AB-1234)..."
+                                    className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-50 border border-slate-200 text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all text-sm font-semibold tracking-wide shadow-inner"
+                                />
+                            </div>
+                            <button
+                                type="submit"
+                                disabled={loading}
+                                className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 hover:from-indigo-700 hover:to-pink-700 text-white font-extrabold text-sm shadow-lg shadow-indigo-200 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 hover:scale-[1.02]"
+                            >
+                                {loading ? (
+                                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                                ) : (
+                                    <>
+                                        <Zap className="w-4 h-4 text-yellow-300" />
+                                        <span>Scan Telemetry</span>
+                                    </>
+                                )}
+                            </button>
+                        </form>
+                    </div>
+
+                    {/* Progress Gauge Snapshot Card */}
+                    {trackingData && (
+                        <div className="bg-gradient-to-br from-indigo-50/60 to-purple-50/60 border border-indigo-100 rounded-3xl p-6 shadow-md min-w-[280px] relative overflow-hidden">
+                            <div className="flex items-center justify-between mb-4">
+                                <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-500">Live Status</span>
+                                <span className="px-3 py-1 rounded-full text-xs font-black bg-indigo-600 text-white shadow-sm">
+                                    STAGE {currentStageNum}/9
+                                </span>
+                            </div>
+
+                            <div className="flex items-end gap-3 mb-3">
+                                <span className="text-4xl font-black text-slate-900">
+                                    {progressPercent}%
+                                </span>
+                                <span className="text-xs text-slate-500 font-bold pb-1.5">Completed</span>
+                            </div>
+
+                            {/* Multi-Color Progress Bar */}
+                            <div className="w-full h-3 bg-slate-200 rounded-full overflow-hidden p-0.5 mb-3 shadow-inner">
+                                <div
+                                    className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-indigo-500 via-amber-400 to-emerald-500 transition-all duration-1000 shadow-sm"
+                                    style={{ width: `${progressPercent}%` }}
+                                ></div>
+                            </div>
+
+                            <div className="text-xs font-bold text-slate-700 truncate flex items-center gap-1.5">
+                                <CheckCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+                                <span>{STAGE_CONFIG[currentStageNum - 1]?.title}</span>
+                            </div>
+                        </div>
+                    )}
+                </div>
             </div>
 
-            <div className="relative z-10 space-y-8">
-                
-                {/* Futuristic Hero Header Card */}
-                <div className="rounded-3xl bg-gradient-to-b from-slate-900/90 via-slate-900/70 to-slate-950/90 border border-slate-800/80 p-6 md:p-10 shadow-2xl backdrop-blur-2xl relative overflow-hidden">
-                    {/* Glowing Top Border Accent */}
-                    <div className="absolute top-0 left-0 right-0 h-1 bg-gradient-to-r from-cyan-500 via-indigo-500 via-purple-500 to-emerald-500"></div>
+            {/* Quick Select Chips for Sponsor's Registered Bikes */}
+            {userVehicles.length > 0 && (
+                <div className="bg-white border border-slate-200/80 rounded-2xl p-4 md:p-5 shadow-sm">
+                    <div className="flex items-center justify-between mb-3">
+                        <span className="text-xs font-extrabold uppercase tracking-wider text-slate-500 flex items-center gap-2">
+                            <BikeIcon className="w-4 h-4 text-indigo-600" />
+                            Your Registered Fleet Vehicles ({userVehicles.length})
+                        </span>
+                        <Link to="/my-bikes" className="text-xs font-bold text-indigo-600 hover:text-indigo-800 flex items-center gap-1">
+                            Manage in My Bikes <ChevronRight className="w-3 h-3" />
+                        </Link>
+                    </div>
+                    
+                    <div className="flex flex-wrap gap-2.5">
+                        {userVehicles.map((v) => {
+                            const tid = v.tracking_id || `RH-REQ-${v.id}`;
+                            const isSelected = trackingData && (trackingData.tracking_id === tid || trackingData.id === v.id);
 
-                    <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-8">
-                        <div className="max-w-2xl space-y-3">
-                            <div className="inline-flex items-center gap-2.5 px-3.5 py-1.5 rounded-full bg-gradient-to-r from-indigo-500/20 to-cyan-500/20 border border-indigo-500/40 text-cyan-300 text-xs font-bold tracking-wide backdrop-blur-md shadow-inner">
-                                <span className="relative flex h-2 w-2">
-                                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-cyan-400 opacity-75"></span>
-                                    <span className="relative inline-flex rounded-full h-2 w-2 bg-cyan-500"></span>
-                                </span>
-                                9-Stage Asset Lifecycle Telemetry
-                            </div>
-
-                            <h1 className="text-3xl md:text-5xl font-black tracking-tight text-white leading-tight">
-                                Live Vehicle <span className="bg-gradient-to-r from-cyan-400 via-indigo-300 to-emerald-400 bg-clip-text text-transparent">Onboarding Radar</span>
-                            </h1>
-
-                            <p className="text-slate-400 text-sm md:text-base leading-relaxed">
-                                Real-time diagnostic telemetry, mechanical survey reports, revenue sharing agreement contracts, and anti-theft GPS hardware pairing.
-                            </p>
-
-                            {/* Tracking Search Input */}
-                            <form onSubmit={(e) => { e.preventDefault(); performLookup(searchId); }} className="pt-2 flex flex-col sm:flex-row gap-3">
-                                <div className="relative flex-1">
-                                    <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-indigo-400" />
-                                    <input
-                                        type="text"
-                                        value={searchId}
-                                        onChange={(e) => setSearchId(e.target.value)}
-                                        placeholder="Enter Tracking ID (e.g. RH-REQ-7049, OD-02-AB-1234)..."
-                                        className="w-full pl-12 pr-4 py-3.5 rounded-2xl bg-slate-800/80 border border-slate-700/80 text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-cyan-400 focus:border-cyan-400 transition-all text-sm font-semibold tracking-wide shadow-inner"
-                                    />
-                                </div>
+                            return (
                                 <button
-                                    type="submit"
-                                    disabled={loading}
-                                    className="px-7 py-3.5 rounded-2xl bg-gradient-to-r from-cyan-500 via-indigo-600 to-purple-600 hover:from-cyan-400 hover:via-indigo-500 hover:to-purple-500 text-white font-extrabold text-sm shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 hover:scale-[1.02]"
+                                    key={v.id}
+                                    type="button"
+                                    onClick={() => {
+                                        setSearchId(tid);
+                                        performLookup(tid);
+                                    }}
+                                    className={`px-4 py-2 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer border ${
+                                        isSelected
+                                            ? 'bg-indigo-600 text-white border-indigo-600 shadow-md shadow-indigo-100'
+                                            : 'bg-slate-50 hover:bg-indigo-50/50 text-slate-700 border-slate-200'
+                                    }`}
                                 >
-                                    {loading ? (
-                                        <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
-                                    ) : (
-                                        <>
-                                            <Zap className="w-4 h-4 text-yellow-300" />
-                                            <span>Scan Telemetry</span>
-                                        </>
-                                    )}
+                                    <span className={`w-2 h-2 rounded-full ${isSelected ? 'bg-white' : 'bg-indigo-500'}`}></span>
+                                    <span>{v.name}</span>
+                                    <span className={`px-1.5 py-0.5 rounded text-[10px] font-mono ${isSelected ? 'bg-indigo-700 text-white' : 'bg-slate-200 text-slate-700'}`}>{tid}</span>
                                 </button>
-                            </form>
-                        </div>
-
-                        {/* Quick Live Status Gauge Card */}
-                        {trackingData && (
-                            <div className="bg-gradient-to-br from-slate-800/90 to-slate-900/90 border border-slate-700/80 rounded-3xl p-6 shadow-2xl min-w-[280px] backdrop-blur-md relative overflow-hidden">
-                                <div className="absolute top-0 right-0 w-32 h-32 bg-cyan-500/10 rounded-full blur-2xl"></div>
-                                
-                                <div className="flex items-center justify-between mb-4">
-                                    <span className="text-[11px] font-extrabold uppercase tracking-widest text-slate-400">Current Milestone</span>
-                                    <span className="px-2.5 py-1 rounded-full text-[10px] font-black bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
-                                        STAGE {currentStageNum}/9
-                                    </span>
-                                </div>
-
-                                <div className="flex items-end gap-3 mb-3">
-                                    <span className="text-4xl font-black bg-gradient-to-r from-white via-slate-100 to-slate-300 bg-clip-text text-transparent">
-                                        {progressPercent}%
-                                    </span>
-                                    <span className="text-xs text-slate-400 font-medium pb-1.5">Completed</span>
-                                </div>
-
-                                {/* Multi-Color Gradient Progress Bar */}
-                                <div className="w-full h-2.5 bg-slate-950 rounded-full overflow-hidden p-0.5 border border-slate-700/80 mb-3 shadow-inner">
-                                    <div
-                                        className="h-full rounded-full bg-gradient-to-r from-cyan-400 via-indigo-500 via-amber-400 to-emerald-400 transition-all duration-1000 shadow-sm"
-                                        style={{ width: `${progressPercent}%` }}
-                                    ></div>
-                                </div>
-
-                                <div className="text-xs font-bold text-slate-200 truncate flex items-center gap-1.5">
-                                    <CheckCheck className="w-4 h-4 text-emerald-400 shrink-0" />
-                                    <span>{STAGE_CONFIG[currentStageNum - 1]?.title}</span>
-                                </div>
-                            </div>
-                        )}
+                            );
+                        })}
                     </div>
                 </div>
+            )}
 
-                {/* Quick Switch Pills for User's Registered Vehicles */}
-                {userVehicles.length > 0 && (
-                    <div className="bg-slate-900/60 border border-slate-800/80 rounded-2xl p-4 md:p-5 backdrop-blur-xl">
-                        <div className="flex items-center justify-between mb-3">
-                            <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-2">
-                                <BikeIcon className="w-4 h-4 text-cyan-400" />
-                                Your Registered Fleet Vehicles ({userVehicles.length})
-                            </span>
-                            <Link to="/my-bikes" className="text-xs font-bold text-cyan-400 hover:text-cyan-300 flex items-center gap-1">
-                                Manage Fleet in My Bikes <ChevronRight className="w-3 h-3" />
-                            </Link>
+            {/* Vehicle Main Details Section */}
+            {trackingData ? (
+                <div className="space-y-8 animate-fade-in">
+                    
+                    {/* Vehicle Profile Command Card */}
+                    <div className="bg-white rounded-3xl border border-slate-200/80 p-6 md:p-8 shadow-xl shadow-slate-100/80 relative overflow-hidden">
+                        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-100">
+                            
+                            <div className="flex items-start gap-5">
+                                {trackingData.image_url ? (
+                                    <div className="relative group">
+                                        <img
+                                            src={trackingData.image_url}
+                                            alt={trackingData.name}
+                                            className="w-24 h-24 md:w-28 md:h-28 rounded-2xl object-cover border-2 border-indigo-100 shadow-md group-hover:scale-105 transition-all duration-300"
+                                        />
+                                    </div>
+                                ) : (
+                                    <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-100 to-purple-100 flex items-center justify-center text-indigo-600 border border-indigo-200 shadow-md">
+                                        <BikeIcon className="w-12 h-12" />
+                                    </div>
+                                )}
+
+                                <div className="space-y-1.5">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-indigo-50 text-indigo-700 text-xs font-mono font-black border border-indigo-200">
+                                            <span>{trackingData.tracking_id}</span>
+                                            <button
+                                                type="button"
+                                                onClick={() => handleCopy(trackingData.tracking_id)}
+                                                className="text-indigo-400 hover:text-indigo-900 transition-colors cursor-pointer ml-1"
+                                                title="Copy ID"
+                                            >
+                                                {copied ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                                            </button>
+                                        </div>
+
+                                        <span className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${
+                                            trackingData.status === 'approved' ? 'bg-emerald-100 text-emerald-800 border border-emerald-300' :
+                                            trackingData.status === 'rejected' ? 'bg-rose-100 text-rose-800 border border-rose-300' :
+                                            'bg-amber-100 text-amber-800 border border-amber-300'
+                                        }`}>
+                                            {trackingData.status === 'approved' ? '🟢 Live Fleet Active' :
+                                             trackingData.status === 'rejected' ? '❌ Rejected' : '🟡 In Review Pipeline'}
+                                        </span>
+
+                                        <span className="px-2.5 py-1 rounded-xl bg-slate-100 text-slate-700 text-xs font-bold border border-slate-200">
+                                            {trackingData.vehicle_type || 'bike'}
+                                        </span>
+                                    </div>
+
+                                    <h2 className="text-2xl md:text-3xl font-black text-slate-900">
+                                        {trackingData.name}
+                                    </h2>
+
+                                    <p className="text-slate-500 text-sm flex flex-wrap items-center gap-2 font-medium">
+                                        <span>{trackingData.model}</span>
+                                        <span>•</span>
+                                        <span>Year {trackingData.year}</span>
+                                        <span>•</span>
+                                        <span className="text-slate-800 font-mono font-bold bg-slate-100 px-2.5 py-0.5 rounded-lg border border-slate-200">
+                                            {trackingData.registration_number || 'Registration Pending'}
+                                        </span>
+                                    </p>
+                                </div>
+                            </div>
+
+                            {/* Quick Rate & Earnings Snippet */}
+                            <div className="flex flex-wrap items-center gap-3">
+                                <div className="bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-center min-w-[130px]">
+                                    <span className="text-[10px] uppercase font-bold text-slate-400 block">Rental Rate</span>
+                                    <span className="text-lg font-black text-indigo-700">₹{hourlyRate}<small className="text-xs text-slate-500">/hr</small></span>
+                                </div>
+                                <div className="bg-emerald-50/70 border border-emerald-200 rounded-2xl p-3.5 text-center min-w-[130px]">
+                                    <span className="text-[10px] uppercase font-bold text-emerald-600 block">Sponsor Share</span>
+                                    <span className="text-lg font-black text-emerald-700">70% <small className="text-xs text-emerald-600">(₹{sponsorHourlyShare.toFixed(1)}/h)</small></span>
+                                </div>
+                            </div>
                         </div>
-                        
-                        <div className="flex flex-wrap gap-2.5">
-                            {userVehicles.map((v) => {
-                                const tid = v.tracking_id || `RH-REQ-${v.id}`;
-                                const isSelected = trackingData && (trackingData.tracking_id === tid || trackingData.id === v.id);
 
-                                return (
-                                    <button
-                                        key={v.id}
-                                        type="button"
-                                        onClick={() => {
-                                            setSearchId(tid);
-                                            performLookup(tid);
-                                        }}
-                                        className={`px-4 py-2.5 rounded-xl text-xs font-bold flex items-center gap-2.5 transition-all cursor-pointer border ${
-                                            isSelected
-                                                ? 'bg-gradient-to-r from-cyan-500/20 via-indigo-500/20 to-purple-500/20 text-white border-cyan-400/80 shadow-lg shadow-cyan-500/10 ring-1 ring-cyan-400/50'
-                                                : 'bg-slate-800/50 hover:bg-slate-800 text-slate-300 border-slate-700/60'
-                                        }`}
-                                    >
-                                        <span className="w-2 h-2 rounded-full bg-cyan-400"></span>
-                                        <span>{v.name}</span>
-                                        <span className="px-1.5 py-0.5 rounded bg-black/40 text-[10px] font-mono text-cyan-300">{tid}</span>
-                                    </button>
-                                );
-                            })}
+                        {/* Document Verification Row */}
+                        <div className="mt-6 flex flex-wrap items-center justify-between gap-4 pt-2">
+                            <div className="flex flex-wrap items-center gap-2">
+                                <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mr-2">Digital Vault:</span>
+                                
+                                {trackingData.rc_url ? (
+                                    <a href={trackingData.rc_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-cyan-50 hover:bg-cyan-100 text-cyan-800 text-xs font-bold border border-cyan-200 transition-colors shadow-sm">
+                                        <FileText className="w-3.5 h-3.5 text-cyan-600" /> RC Book <ExternalLink className="w-3 h-3 text-cyan-400" />
+                                    </a>
+                                ) : <span className="text-xs text-slate-400 italic bg-slate-100 px-2.5 py-1 rounded-lg">Missing RC</span>}
+
+                                {trackingData.insurance_url ? (
+                                    <a href={trackingData.insurance_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-emerald-50 hover:bg-emerald-100 text-emerald-800 text-xs font-bold border border-emerald-200 transition-colors shadow-sm">
+                                        <Shield className="w-3.5 h-3.5 text-emerald-600" /> Insurance <ExternalLink className="w-3 h-3 text-emerald-400" />
+                                    </a>
+                                ) : <span className="text-xs text-slate-400 italic bg-slate-100 px-2.5 py-1 rounded-lg">Missing Insurance</span>}
+
+                                {trackingData.puc_url ? (
+                                    <a href={trackingData.puc_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-purple-50 hover:bg-purple-100 text-purple-800 text-xs font-bold border border-purple-200 transition-colors shadow-sm">
+                                        <Activity className="w-3.5 h-3.5 text-purple-600" /> PUC <ExternalLink className="w-3 h-3 text-purple-400" />
+                                    </a>
+                                ) : <span className="text-xs text-slate-400 italic bg-slate-100 px-2.5 py-1 rounded-lg">Missing PUC</span>}
+                            </div>
+
+                            <button
+                                type="button"
+                                onClick={() => window.print()}
+                                className="px-3.5 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 text-xs font-bold border border-slate-200 flex items-center gap-1.5 transition-colors cursor-pointer"
+                            >
+                                <Printer className="w-3.5 h-3.5 text-slate-500" /> Print Slip
+                            </button>
                         </div>
                     </div>
-                )}
 
-                {/* Main Content Area */}
-                {trackingData ? (
-                    <div className="space-y-8 animate-fade-in">
-                        
-                        {/* Vehicle Profile Command Card */}
-                        <div className="bg-gradient-to-b from-slate-900 via-slate-900/95 to-slate-950 rounded-3xl border border-slate-800 p-6 md:p-8 shadow-2xl relative overflow-hidden">
-                            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6 pb-6 border-b border-slate-800">
-                                
-                                <div className="flex items-start gap-5">
-                                    {trackingData.image_url ? (
-                                        <div className="relative group">
-                                            <img
-                                                src={trackingData.image_url}
-                                                alt={trackingData.name}
-                                                className="w-24 h-24 md:w-28 md:h-28 rounded-2xl object-cover border-2 border-indigo-500/40 shadow-xl group-hover:scale-105 transition-all duration-300"
-                                            />
-                                            <div className="absolute inset-0 rounded-2xl ring-1 ring-inset ring-white/10"></div>
-                                        </div>
-                                    ) : (
-                                        <div className="w-24 h-24 rounded-2xl bg-gradient-to-br from-indigo-900 to-slate-900 flex items-center justify-center text-cyan-400 border border-indigo-500/40 shadow-xl">
-                                            <BikeIcon className="w-12 h-12" />
-                                        </div>
-                                    )}
-
-                                    <div className="space-y-1.5">
+                    {/* Rejection Notice Banner (If Rejected by Admin) */}
+                    {(trackingData.status === 'rejected' || trackingData.rejection_reason) && (
+                        <div className="bg-gradient-to-br from-rose-50 via-white to-red-50 border-2 border-rose-400 rounded-3xl p-6 md:p-8 shadow-xl shadow-rose-100/50 relative overflow-hidden animate-fade-in">
+                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                                <div className="flex items-start gap-4">
+                                    <div className="w-14 h-14 rounded-2xl bg-rose-100 text-rose-600 border border-rose-300 flex items-center justify-center font-black text-2xl shrink-0 shadow-sm">
+                                        🛑
+                                    </div>
+                                    <div className="space-y-2">
                                         <div className="flex flex-wrap items-center gap-2">
-                                            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-slate-800/90 text-cyan-300 text-xs font-mono font-black border border-cyan-500/30">
-                                                <span>{trackingData.tracking_id}</span>
-                                                <button
-                                                    type="button"
-                                                    onClick={() => handleCopy(trackingData.tracking_id)}
-                                                    className="text-slate-400 hover:text-white transition-colors cursor-pointer ml-1"
-                                                    title="Copy ID"
-                                                >
-                                                    {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
-                                                </button>
-                                            </div>
-
-                                            <span className={`px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider ${
-                                                trackingData.status === 'approved' ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40' :
-                                                trackingData.status === 'rejected' ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40' :
-                                                'bg-amber-500/20 text-amber-300 border border-amber-500/40'
-                                            }`}>
-                                                {trackingData.status === 'approved' ? '🟢 Live Fleet Active' :
-                                                 trackingData.status === 'rejected' ? '❌ Rejected' : '🟡 In Review Pipeline'}
+                                            <span className="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-600 text-white shadow-md shadow-rose-200">
+                                                Application Not Approved
                                             </span>
-
-                                            <span className="px-2.5 py-1 rounded-xl bg-slate-800 text-slate-300 text-xs font-bold border border-slate-700">
-                                                {trackingData.vehicle_type || 'bike'}
+                                            <span className="text-xs text-rose-700 font-bold font-mono">
+                                                Stage {trackingData.rejected_by_stage || trackingData.current_stage || 1} Audit Review
                                             </span>
+                                            {trackingData.rejected_at && (
+                                                <span className="text-xs text-slate-500">
+                                                    • {new Date(trackingData.rejected_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                                                </span>
+                                            )}
                                         </div>
-
-                                        <h2 className="text-2xl md:text-3xl font-black text-white">
-                                            {trackingData.name}
-                                        </h2>
-
-                                        <p className="text-slate-400 text-sm flex flex-wrap items-center gap-2 font-medium">
-                                            <span>{trackingData.model}</span>
-                                            <span>•</span>
-                                            <span>Year {trackingData.year}</span>
-                                            <span>•</span>
-                                            <span className="text-slate-200 font-mono font-bold bg-slate-800/80 px-2 py-0.5 rounded-lg border border-slate-700">
-                                                {trackingData.registration_number || 'Registration Pending'}
+                                        <h3 className="text-xl md:text-2xl font-black text-slate-900">
+                                            Reason for Rejection
+                                        </h3>
+                                        <div className="bg-white border border-rose-200 rounded-2xl p-4 md:p-5 mt-2 shadow-sm">
+                                            <span className="text-[10px] font-black uppercase tracking-widest text-rose-600 block mb-1">
+                                                Auditor Remarks / Feedback:
                                             </span>
+                                            <p className="text-sm md:text-base text-rose-950 font-semibold leading-relaxed">
+                                                "{trackingData.rejection_reason || 'Vehicle does not meet current RentHub compliance or physical safety requirements.'}"
+                                            </p>
+                                        </div>
+                                        <p className="text-xs text-slate-500 pt-1">
+                                            📩 An official notice with these remarks has been sent to your registered email. You may resolve the issue and submit a new vehicle application.
                                         </p>
                                     </div>
                                 </div>
-
-                                {/* Quick Rate & Earnings Snippet */}
-                                <div className="flex flex-wrap items-center gap-3">
-                                    <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-3.5 text-center min-w-[130px]">
-                                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Rental Rate</span>
-                                        <span className="text-lg font-black text-cyan-300">₹{hourlyRate}<small className="text-xs text-slate-400">/hr</small></span>
-                                    </div>
-                                    <div className="bg-slate-800/60 border border-slate-700/80 rounded-2xl p-3.5 text-center min-w-[130px]">
-                                        <span className="text-[10px] uppercase font-bold text-slate-400 block">Sponsor Share</span>
-                                        <span className="text-lg font-black text-emerald-400">70% <small className="text-xs text-slate-400">(₹{sponsorHourlyShare.toFixed(1)}/h)</small></span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Document Verification Row */}
-                            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 pt-2">
-                                <div className="flex flex-wrap items-center gap-2">
-                                    <span className="text-xs font-extrabold uppercase tracking-wider text-slate-400 mr-2">Digital Vault:</span>
-                                    
-                                    {trackingData.rc_url ? (
-                                        <a href={trackingData.rc_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-cyan-300 text-xs font-bold border border-slate-700 transition-colors shadow-sm">
-                                            <FileText className="w-3.5 h-3.5 text-cyan-400" /> RC Book <ExternalLink className="w-3 h-3 text-slate-400" />
-                                        </a>
-                                    ) : <span className="text-xs text-slate-500 italic bg-slate-900/60 px-2.5 py-1 rounded-lg">Missing RC</span>}
-
-                                    {trackingData.insurance_url ? (
-                                        <a href={trackingData.insurance_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-emerald-300 text-xs font-bold border border-slate-700 transition-colors shadow-sm">
-                                            <Shield className="w-3.5 h-3.5 text-emerald-400" /> Insurance <ExternalLink className="w-3 h-3 text-slate-400" />
-                                        </a>
-                                    ) : <span className="text-xs text-slate-500 italic bg-slate-900/60 px-2.5 py-1 rounded-lg">Missing Insurance</span>}
-
-                                    {trackingData.puc_url ? (
-                                        <a href={trackingData.puc_url} target="_blank" rel="noreferrer" className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-purple-300 text-xs font-bold border border-slate-700 transition-colors shadow-sm">
-                                            <Activity className="w-3.5 h-3.5 text-purple-400" /> PUC <ExternalLink className="w-3 h-3 text-slate-400" />
-                                        </a>
-                                    ) : <span className="text-xs text-slate-500 italic bg-slate-900/60 px-2.5 py-1 rounded-lg">Missing PUC</span>}
-                                </div>
-
-                                <button
-                                    type="button"
-                                    onClick={() => window.print()}
-                                    className="px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-slate-300 text-xs font-bold border border-slate-700 flex items-center gap-1.5 transition-colors cursor-pointer"
-                                >
-                                    <Printer className="w-3.5 h-3.5 text-slate-400" /> Print Summary
-                                </button>
-                            </div>
-                        </div>
-
-                        {/* Rejection Notice Banner */}
-                        {(trackingData.status === 'rejected' || trackingData.rejection_reason) && (
-                            <div className="bg-gradient-to-br from-rose-950/90 via-slate-900 to-rose-950/90 border-2 border-rose-500/80 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in">
-                                <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
-                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
-                                    <div className="flex items-start gap-4">
-                                        <div className="w-14 h-14 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center font-black text-2xl shrink-0 shadow-lg shadow-rose-900/40">
-                                            🛑
-                                        </div>
-                                        <div className="space-y-2">
-                                            <div className="flex flex-wrap items-center gap-2">
-                                                <span className="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-500 text-white shadow-md shadow-rose-500/30">
-                                                    Application Not Approved
-                                                </span>
-                                                <span className="text-xs text-rose-300 font-mono">
-                                                    Stage {trackingData.rejected_by_stage || trackingData.current_stage || 1} Audit Review
-                                                </span>
-                                                {trackingData.rejected_at && (
-                                                    <span className="text-xs text-slate-400">
-                                                        • {new Date(trackingData.rejected_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
-                                                    </span>
-                                                )}
-                                            </div>
-                                            <h3 className="text-xl md:text-2xl font-black text-white">
-                                                Reason for Application Rejection
-                                            </h3>
-                                            <div className="bg-slate-950/80 border border-rose-500/40 rounded-2xl p-4 md:p-5 mt-2">
-                                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-400 block mb-1">
-                                                    Auditor Remarks / Feedback:
-                                                </span>
-                                                <p className="text-sm md:text-base text-rose-100 font-semibold leading-relaxed">
-                                                    "{trackingData.rejection_reason || 'Vehicle does not meet current RentHub compliance or physical safety requirements.'}"
-                                                </p>
-                                            </div>
-                                            <p className="text-xs text-slate-400 pt-1">
-                                                📩 An official notice with these remarks was dispatched to your registered email address. You may rectify the issue and submit a new vehicle application or contact our 24x7 desk.
-                                            </p>
-                                        </div>
-                                    </div>
-                                    <div className="flex flex-col sm:flex-row md:flex-col gap-3 shrink-0">
-                                        <Link
-                                            to="/add-bike"
-                                            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-extrabold text-xs shadow-lg shadow-rose-600/30 text-center transition-all"
-                                        >
-                                            Submit New Application →
-                                        </Link>
-                                        <a
-                                            href="tel:9040757683"
-                                            className="px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 text-center flex items-center justify-center gap-2 transition-all"
-                                        >
-                                            <Phone className="w-3.5 h-3.5 text-cyan-400" />
-                                            Call Support
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        )}
-
-                        {/* Interactive Timeline Controls & Filters */}
-                        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                            <div>
-                                <h3 className="text-xl font-black text-white flex items-center gap-2">
-                                    <Navigation className="w-5 h-5 text-cyan-400" />
-                                    Interactive Milestone Highway
-                                </h3>
-                                <p className="text-xs text-slate-400">Step-by-step audit verification, mechanical testing, and contract milestones.</p>
-                            </div>
-
-                            {/* Filter Tabs */}
-                            <div className="inline-flex rounded-2xl bg-slate-900/90 p-1 border border-slate-800 text-xs font-bold">
-                                {[
-                                    { id: 'all', label: 'All 9 Stages' },
-                                    { id: 'completed', label: 'Completed' },
-                                    { id: 'active', label: 'Current Step' },
-                                    { id: 'upcoming', label: 'Upcoming' }
-                                ].map((tab) => (
-                                    <button
-                                        key={tab.id}
-                                        type="button"
-                                        onClick={() => setStageFilter(tab.id)}
-                                        className={`px-3 py-1.5 rounded-xl transition-all cursor-pointer ${
-                                            stageFilter === tab.id
-                                                ? 'bg-gradient-to-r from-indigo-600 to-cyan-600 text-white shadow-md'
-                                                : 'text-slate-400 hover:text-white'
-                                        }`}
+                                <div className="flex flex-col sm:flex-row md:flex-col gap-3 shrink-0">
+                                    <Link
+                                        to="/add-bike"
+                                        className="px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white font-extrabold text-xs shadow-lg shadow-rose-200 text-center transition-all"
                                     >
-                                        {tab.label}
-                                    </button>
-                                ))}
+                                        Submit New Application →
+                                    </Link>
+                                    <a
+                                        href="tel:9040757683"
+                                        className="px-6 py-3 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 font-bold text-xs border border-slate-200 text-center flex items-center justify-center gap-2 transition-all shadow-sm"
+                                    >
+                                        <Phone className="w-3.5 h-3.5 text-rose-600" />
+                                        Call Support Desk
+                                    </a>
+                                </div>
                             </div>
                         </div>
+                    )}
 
-                        {/* 9-Stage Modern Metro Timeline Nodes */}
-                        <div className="space-y-4">
-                            {filteredStages.map((s) => {
+                    {/* Timeline Controls & Filters */}
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-2">
+                        <div>
+                            <h3 className="text-2xl font-black text-slate-900 flex items-center gap-2">
+                                <Navigation className="w-6 h-6 text-indigo-600" />
+                                Onboarding Highway Timeline
+                            </h3>
+                            <p className="text-xs md:text-sm text-slate-500">Step-by-step milestone progression from initial review to live customer fleet launch.</p>
+                        </div>
+
+                        {/* Filter Tabs */}
+                        <div className="inline-flex rounded-2xl bg-white p-1 border border-slate-200 text-xs font-bold shadow-sm">
+                            {[
+                                { id: 'all', label: 'All 9 Stages' },
+                                { id: 'completed', label: 'Completed' },
+                                { id: 'active', label: 'Current Step' },
+                                { id: 'upcoming', label: 'Upcoming' }
+                            ].map((tab) => (
+                                <button
+                                    key={tab.id}
+                                    type="button"
+                                    onClick={() => setStageFilter(tab.id)}
+                                    className={`px-3.5 py-1.5 rounded-xl transition-all cursor-pointer ${
+                                        stageFilter === tab.id
+                                            ? 'bg-gradient-to-r from-indigo-600 to-purple-600 text-white shadow-sm'
+                                            : 'text-slate-600 hover:text-slate-900'
+                                    }`}
+                                >
+                                    {tab.label}
+                                </button>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ========================================================================= */}
+                    {/* ALTERNATING CENTER-LINE TIMELINE LAYOUT (LEFT SIDE / RIGHT SIDE) */}
+                    {/* ========================================================================= */}
+                    <div className="relative py-8 md:py-12">
+                        
+                        {/* Central Spine Line on Desktop */}
+                        <div className="hidden md:block absolute left-1/2 top-4 bottom-4 w-1.5 -translate-x-1/2 bg-gradient-to-b from-cyan-400 via-indigo-500 via-purple-500 via-amber-400 to-emerald-500 rounded-full shadow-inner"></div>
+                        
+                        {/* Vertical Line on Mobile */}
+                        <div className="md:hidden absolute left-6 top-4 bottom-4 w-1 bg-gradient-to-b from-cyan-400 via-indigo-500 to-emerald-500 rounded-full"></div>
+
+                        <div className="space-y-8 md:space-y-12">
+                            {filteredStages.map((s, index) => {
                                 const isPassed = currentStageNum > s.number;
                                 const isCurrent = currentStageNum === s.number;
                                 const isPending = currentStageNum < s.number;
+                                
+                                // Alternating left vs right on desktop (Odd numbers on LEFT, Even numbers on RIGHT)
+                                const isLeft = s.number % 2 !== 0;
 
                                 return (
-                                    <div
-                                        key={s.number}
-                                        className={`rounded-3xl border transition-all duration-300 overflow-hidden relative ${
-                                            isCurrent
-                                                ? 'bg-gradient-to-b from-slate-900 via-slate-900 to-indigo-950/40 border-cyan-400/80 shadow-2xl shadow-cyan-500/10 ring-2 ring-cyan-400/30'
-                                                : isPassed
-                                                ? 'bg-slate-900/80 border-slate-800/90 hover:border-slate-700'
-                                                : 'bg-slate-950/60 border-slate-900 opacity-60'
-                                        }`}
-                                    >
-                                        {/* Colored Accent Stripe */}
-                                        <div className={`h-1.5 w-full bg-gradient-to-r ${s.color} ${isPending ? 'opacity-20' : 'opacity-100'}`}></div>
-
-                                        <div className="p-5 md:p-7">
-                                            <div className="flex flex-col md:flex-row md:items-start justify-between gap-4">
-                                                
-                                                <div className="flex items-start gap-4">
-                                                    {/* Glowing Stage Number Node */}
-                                                    <div className={`w-12 h-12 rounded-2xl flex items-center justify-center font-black text-sm shrink-0 shadow-lg transition-all ${
-                                                        isPassed
-                                                            ? 'bg-gradient-to-br from-emerald-500 to-teal-600 text-white shadow-emerald-500/30'
-                                                            : isCurrent
-                                                            ? `bg-gradient-to-br ${s.color} text-white ring-4 ring-cyan-400/40 shadow-xl shadow-cyan-500/30 animate-pulse`
-                                                            : 'bg-slate-800 text-slate-500 border border-slate-700'
-                                                    }`}>
-                                                        {isPassed ? (
-                                                            <Check className="w-6 h-6 stroke-[3]" />
-                                                        ) : (
-                                                            <s.icon className="w-6 h-6" />
-                                                        )}
-                                                    </div>
-
-                                                    <div className="space-y-1">
-                                                        <div className="flex flex-wrap items-center gap-2">
-                                                            <span className="text-[11px] font-black font-mono px-2 py-0.5 rounded-md bg-slate-800 text-cyan-300 border border-slate-700">
-                                                                STAGE {s.number}
-                                                            </span>
-                                                            <h4 className="text-base md:text-lg font-black text-white">
-                                                                {s.title}
-                                                            </h4>
-                                                            {isCurrent && (
-                                                                <span className="px-2.5 py-0.5 rounded-full bg-cyan-500 text-slate-950 font-black text-[10px] uppercase tracking-wider animate-bounce shadow-md">
-                                                                    Active Action
-                                                                </span>
-                                                            )}
-                                                            {isPassed && (
-                                                                <span className="px-2 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-bold text-[10px] border border-emerald-500/30">
-                                                                    ✓ Verified
-                                                                </span>
-                                                            )}
-                                                        </div>
-
-                                                        <div className="text-xs font-semibold text-cyan-400">
-                                                            {s.tagline}
-                                                        </div>
-
-                                                        <p className="text-xs md:text-sm text-slate-400 leading-relaxed max-w-3xl">
-                                                            {s.desc}
-                                                        </p>
-                                                    </div>
-                                                </div>
-
-                                                {/* ETA / Status Tag */}
-                                                <div className="text-left md:text-right shrink-0">
-                                                    <span className="text-[10px] uppercase font-bold text-slate-500 block">Milestone Timeline</span>
-                                                    <span className="text-xs font-bold text-slate-300">
-                                                        {isPassed ? '✅ Completed' : isCurrent ? '⚡ In Progress' : s.eta}
-                                                    </span>
-                                                </div>
-                                            </div>
-
-                                            {/* EXPANDED RICH STAGE PANELS */}
-
-                                            {/* STAGE 3: Scheduled Survey Date Card */}
-                                            {s.number === 3 && trackingData.survey_scheduled_date && (
-                                                <div className="mt-4 p-4 rounded-2xl bg-gradient-to-r from-sky-950/80 to-slate-900 border border-sky-500/40 text-sky-200 text-xs flex items-center justify-between gap-4 shadow-md">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="p-2.5 rounded-xl bg-sky-500/20 text-sky-400 border border-sky-400/30">
-                                                            <MapPin className="w-5 h-5" />
-                                                        </div>
-                                                        <div>
-                                                            <span className="text-[10px] uppercase font-bold text-sky-400 block">Confirmed Inspection Date</span>
-                                                            <span className="text-sm font-black text-white">
-                                                                {new Date(trackingData.survey_scheduled_date).toLocaleDateString('en-IN', { dateStyle: 'full' })}
-                                                            </span>
-                                                            <p className="text-sky-300/80 text-[11px] mt-0.5">RentHub field engineers will visit your registered address during daylight hours.</p>
-                                                        </div>
-                                                    </div>
-                                                    <span className="px-3 py-1 bg-sky-500/20 text-sky-300 rounded-xl font-bold text-xs border border-sky-500/30 shrink-0">
-                                                        Confirmed Slot
-                                                    </span>
-                                                </div>
-                                            )}
-
-                                            {/* STAGE 4: Mechanical Inspection Scorecard */}
-                                            {s.number === 4 && trackingData.survey_report && (
-                                                <div className="mt-4 p-5 rounded-2xl bg-slate-950/90 border border-emerald-500/40 shadow-lg space-y-3">
-                                                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                                                        <div className="flex items-center gap-2 text-emerald-400 font-extrabold text-xs uppercase tracking-wider">
-                                                            <Award className="w-4 h-4 text-emerald-400" />
-                                                            Certified Roadworthy Diagnostic Scorecard
-                                                        </div>
-                                                        <span className="px-2.5 py-0.5 rounded-md bg-emerald-500/20 text-emerald-300 font-black text-xs border border-emerald-500/40">
-                                                            {trackingData.survey_report.overall_rating || 'GRADE A CERTIFIED'}
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-                                                        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
-                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Tyres & Tread</span>
-                                                            <span className="font-extrabold text-sm text-emerald-300">{trackingData.survey_report.tyres || 'Good (85%)'}</span>
-                                                        </div>
-                                                        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
-                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Braking & Abs</span>
-                                                            <span className="font-extrabold text-sm text-emerald-300">{trackingData.survey_report.brakes || 'Tested & Passed'}</span>
-                                                        </div>
-                                                        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
-                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Engine & Compression</span>
-                                                            <span className="font-extrabold text-sm text-emerald-300">{trackingData.survey_report.engine || 'Smooth Output'}</span>
-                                                        </div>
-                                                        <div className="bg-slate-900/90 p-3 rounded-xl border border-slate-800">
-                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Electricals & Lights</span>
-                                                            <span className="font-extrabold text-sm text-emerald-300">{trackingData.survey_report.lights || 'Fully Functional'}</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* STAGE 5: Live Pricing & Interactive Earnings Calculator */}
-                                            {s.number === 5 && (
-                                                <div className="mt-4 p-5 rounded-2xl bg-gradient-to-r from-amber-950/40 via-slate-900 to-slate-950 border border-amber-500/40 shadow-lg space-y-4">
-                                                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                                                        <div className="flex items-center gap-2 text-amber-400 font-extrabold text-xs uppercase tracking-wider">
-                                                            <TrendingUp className="w-4 h-4 text-amber-400" />
-                                                            Live Revenue Share Terms & Earnings Calculator
-                                                        </div>
-                                                        <span className="px-2.5 py-1 rounded-full bg-amber-500/20 text-amber-300 font-black text-xs border border-amber-500/40">
-                                                            70% Payout Ratio
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                                                        <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Customer Hourly Rent</span>
-                                                            <span className="text-2xl font-black text-white">₹{hourlyRate}<small className="text-xs text-slate-400">/hr</small></span>
-                                                            <span className="text-[11px] text-slate-500 block mt-1">Platform Commission: 30%</span>
-                                                        </div>
-
-                                                        <div className="bg-slate-900 p-4 rounded-xl border border-slate-800">
-                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Your Net Payout Rate</span>
-                                                            <span className="text-2xl font-black text-emerald-400">₹{sponsorHourlyShare.toFixed(2)}<small className="text-xs text-slate-400">/hr</small></span>
-                                                            <span className="text-[11px] text-emerald-400/80 block mt-1">Direct bank / UPI transfers</span>
-                                                        </div>
-
-                                                        <div className="bg-gradient-to-br from-amber-950/60 to-slate-900 p-4 rounded-xl border border-amber-500/30">
-                                                            <div className="flex justify-between items-center mb-1">
-                                                                <span className="text-[10px] text-amber-300 uppercase font-bold">Projected Monthly</span>
-                                                                <span className="text-[10px] font-bold text-slate-400">{calcHours} hrs/day</span>
-                                                            </div>
-                                                            <span className="text-2xl font-black text-amber-300">₹{projectedMonthly}</span>
-                                                            
-                                                            <input
-                                                                type="range"
-                                                                min="2"
-                                                                max="14"
-                                                                value={calcHours}
-                                                                onChange={(e) => setCalcHours(parseInt(e.target.value))}
-                                                                className="w-full h-1.5 bg-slate-800 rounded-lg appearance-none cursor-pointer accent-amber-400 mt-2"
-                                                            />
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* STAGE 6: Interactive Digital Agreement Signing Card */}
-                                            {s.number === 6 && (currentStageNum === 5 || currentStageNum === 6) && !trackingData.agreement_accepted_at && (
-                                                <div className="mt-4 p-6 rounded-2xl bg-gradient-to-br from-rose-950/60 via-slate-900 to-slate-950 border-2 border-rose-500/60 shadow-xl space-y-4">
-                                                    <div className="flex items-center gap-2 text-rose-400 font-extrabold text-sm">
-                                                        <FileSignature className="w-5 h-5 text-rose-400" />
-                                                        Digital Agreement Signature Required
-                                                    </div>
-                                                    <p className="text-xs text-slate-300 leading-relaxed">
-                                                        Please review the proposed rental rate (<strong>₹{hourlyRate}/hr</strong>) and <strong>70% sponsor revenue payout</strong>. Check the agreement acknowledgment below to digitally execute your vehicle contract.
-                                                    </p>
-
-                                                    <label className="flex items-start gap-3 text-xs text-slate-200 font-bold cursor-pointer bg-slate-950/80 p-3.5 rounded-xl border border-slate-800">
-                                                        <input
-                                                            type="checkbox"
-                                                            checked={agreementAgreed}
-                                                            onChange={(e) => setAgreementAgreed(e.target.checked)}
-                                                            className="w-4 h-4 text-rose-600 rounded mt-0.5 cursor-pointer accent-rose-500"
-                                                        />
-                                                        <span>I agree to the proposed rental pricing, 70% sponsor payout share, weekly automated bank settlements, and RentHub vehicle terms.</span>
-                                                    </label>
-
-                                                    <button
-                                                        type="button"
-                                                        onClick={handleAcceptAgreement}
-                                                        disabled={acceptingAgreement || !agreementAgreed}
-                                                        className="px-7 py-3 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-extrabold text-xs shadow-lg shadow-rose-600/30 transition-all flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50 hover:scale-105"
-                                                    >
-                                                        {acceptingAgreement ? 'Digitally Signing...' : '🤝 Accept & Digitally Sign Agreement'}
-                                                    </button>
-                                                </div>
-                                            )}
-
-                                            {/* STAGE 8: Anti-Theft GPS Radar & Telemetry Card */}
-                                            {s.number === 8 && trackingData.gps_tracking && (
-                                                <div className="mt-4 p-5 rounded-2xl bg-gradient-to-r from-blue-950/50 via-slate-900 to-slate-950 border border-blue-500/40 shadow-lg space-y-3">
-                                                    <div className="flex items-center justify-between border-b border-slate-800 pb-3">
-                                                        <div className="flex items-center gap-2 text-cyan-400 font-extrabold text-xs uppercase tracking-wider">
-                                                            <Radio className="w-4 h-4 text-cyan-400 animate-pulse" />
-                                                            Live Anti-Theft GPS Telemetry & Hardware Status
-                                                        </div>
-                                                        <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/20 text-emerald-300 font-black text-xs border border-emerald-500/40">
-                                                            🟢 4G ONLINE
-                                                        </span>
-                                                    </div>
-
-                                                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
-                                                        <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Device IMEI</span>
-                                                            <span className="font-mono font-black text-cyan-300">{trackingData.gps_tracking.device_imei}</span>
-                                                        </div>
-                                                        <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Hardware Model</span>
-                                                            <span className="font-bold text-white">RentHub SafeTrack 4G AIS-140</span>
-                                                        </div>
-                                                        <div className="bg-slate-900 p-3 rounded-xl border border-slate-800">
-                                                            <span className="text-[10px] text-slate-400 block uppercase font-bold">Engine Immobilizer</span>
-                                                            <span className="font-bold text-emerald-400">Armed & Ready</span>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            )}
-
-                                            {/* STAGE 9: Vehicle LIVE Celebration Card */}
-                                            {s.number === 9 && currentStageNum === 9 && (
-                                                <div className="mt-4 p-6 rounded-2xl bg-gradient-to-r from-emerald-950/80 via-slate-900 to-teal-950/80 border-2 border-emerald-500/60 shadow-2xl space-y-3">
-                                                    <div className="flex items-center gap-3">
-                                                        <div className="w-10 h-10 rounded-xl bg-emerald-500 text-slate-950 flex items-center justify-center font-black text-lg">
-                                                            🚀
-                                                        </div>
-                                                        <div>
-                                                            <h4 className="text-base font-black text-white">Vehicle is LIVE in RentHub Customer Fleet!</h4>
-                                                            <p className="text-xs text-emerald-300">Customers can now book your vehicle. Track live ride hours and payouts in your Revenue dashboard.</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="pt-2 flex flex-wrap gap-3">
-                                                        <Link
-                                                            to="/my-bikes"
-                                                            className="px-5 py-2.5 rounded-xl bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-black text-xs transition-all shadow-md"
-                                                        >
-                                                            Manage Live Vehicle in My Fleet →
-                                                        </Link>
-                                                        <Link
-                                                            to="/revenue"
-                                                            className="px-5 py-2.5 rounded-xl bg-slate-800 hover:bg-slate-700 text-white font-bold text-xs transition-all border border-slate-700"
-                                                        >
-                                                            View Revenue & Payouts →
-                                                        </Link>
-                                                    </div>
-                                                </div>
+                                    <div key={s.number} className="relative flex flex-col md:flex-row items-center w-full">
+                                        
+                                        {/* Center Node Circle (Positioned in the middle on desktop) */}
+                                        <div className={`
+                                            absolute z-20 w-12 h-12 rounded-full border-4 border-white shadow-xl flex items-center justify-center font-black text-sm text-white transition-all
+                                            left-6 -translate-x-1/2 md:left-1/2 md:-translate-x-1/2
+                                            ${isPassed
+                                                ? 'bg-gradient-to-br from-emerald-500 to-teal-600 shadow-emerald-200'
+                                                : isCurrent
+                                                ? `bg-gradient-to-br ${s.color} ring-4 ring-indigo-300 shadow-indigo-300 animate-pulse scale-110`
+                                                : 'bg-slate-300 text-slate-600'
+                                            }
+                                        `}>
+                                            {isPassed ? (
+                                                <Check className="w-6 h-6 stroke-[3]" />
+                                            ) : (
+                                                <s.icon className="w-5 h-5" />
                                             )}
                                         </div>
+
+                                        {/* Desktop Alternating Card Architecture */}
+                                        <div className={`w-full flex ${isLeft ? 'md:justify-start' : 'md:justify-end'} pl-16 md:pl-0`}>
+                                            <div className={`
+                                                w-full md:w-[45%] rounded-3xl border-2 transition-all duration-300 overflow-hidden shadow-lg
+                                                ${isCurrent
+                                                    ? 'bg-white border-indigo-500 shadow-indigo-100/80 ring-2 ring-indigo-200 scale-[1.02]'
+                                                    : isPassed
+                                                    ? `${s.cardBg} ${s.borderColor} shadow-slate-100 hover:shadow-md`
+                                                    : 'bg-slate-50/80 border-slate-200 opacity-60'
+                                                }
+                                            `}>
+                                                
+                                                {/* Header Gradient Top Stripe */}
+                                                <div className={`h-2 w-full bg-gradient-to-r ${s.color} ${isPending ? 'opacity-30' : 'opacity-100'}`}></div>
+
+                                                <div className="p-6 md:p-7 space-y-4">
+                                                    
+                                                    <div className="flex items-start justify-between gap-3">
+                                                        <div className="space-y-1">
+                                                            <div className="flex flex-wrap items-center gap-2">
+                                                                <span className="text-[11px] font-black font-mono px-2.5 py-0.5 rounded-md bg-slate-100 text-slate-700 border border-slate-200">
+                                                                    STAGE {s.number}
+                                                                </span>
+                                                                {isCurrent && (
+                                                                    <span className="px-2.5 py-0.5 rounded-full bg-indigo-600 text-white font-black text-[10px] uppercase tracking-wider animate-bounce shadow-sm">
+                                                                        Current Action
+                                                                    </span>
+                                                                )}
+                                                                {isPassed && (
+                                                                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 text-emerald-800 font-bold text-[10px] border border-emerald-300">
+                                                                        ✓ Completed
+                                                                    </span>
+                                                                )}
+                                                            </div>
+                                                            <h4 className="text-lg font-black text-slate-900 pt-0.5">
+                                                                {s.title}
+                                                            </h4>
+                                                            <p className={`text-xs font-bold ${s.accentText}`}>
+                                                                {s.tagline}
+                                                            </p>
+                                                        </div>
+
+                                                        <span className="text-[11px] font-bold text-slate-400 shrink-0">
+                                                            {isPassed ? 'Done' : s.eta}
+                                                        </span>
+                                                    </div>
+
+                                                    <p className="text-xs md:text-sm text-slate-600 leading-relaxed">
+                                                        {s.desc}
+                                                    </p>
+
+                                                    {/* STAGE-SPECIFIC INTERACTIVE WIDGETS */}
+
+                                                    {/* Stage 3: Confirmed Survey Date */}
+                                                    {s.number === 3 && trackingData.survey_scheduled_date && (
+                                                        <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200 text-sky-900 text-xs flex items-center justify-between gap-3 shadow-inner">
+                                                            <div className="flex items-center gap-3">
+                                                                <div className="p-2.5 rounded-xl bg-sky-200 text-sky-800">
+                                                                    <MapPin className="w-5 h-5" />
+                                                                </div>
+                                                                <div>
+                                                                    <span className="text-[10px] uppercase font-bold text-sky-600 block">Inspection Date</span>
+                                                                    <span className="text-sm font-black text-slate-900">
+                                                                        {new Date(trackingData.survey_scheduled_date).toLocaleDateString('en-IN', { dateStyle: 'full' })}
+                                                                    </span>
+                                                                </div>
+                                                            </div>
+                                                            <span className="px-2.5 py-1 bg-sky-200 text-sky-900 rounded-lg font-bold text-[10px]">Slot Confirmed</span>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Stage 4: Mechanical Diagnostic Scorecard */}
+                                                    {s.number === 4 && trackingData.survey_report && (
+                                                        <div className="p-4 rounded-2xl bg-emerald-50/70 border border-emerald-200 space-y-3">
+                                                            <div className="flex items-center justify-between border-b border-emerald-100 pb-2">
+                                                                <span className="text-emerald-800 font-extrabold text-xs uppercase flex items-center gap-1.5">
+                                                                    <Award className="w-4 h-4 text-emerald-600" />
+                                                                    Roadworthy Audit Scorecard
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 font-black text-[10px]">
+                                                                    {trackingData.survey_report.overall_rating || 'GRADE A PASS'}
+                                                                </span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                <div className="bg-white p-2.5 rounded-xl border border-emerald-100">
+                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Tyres</span>
+                                                                    <span className="font-extrabold text-emerald-700">{trackingData.survey_report.tyres || 'Good (85%)'}</span>
+                                                                </div>
+                                                                <div className="bg-white p-2.5 rounded-xl border border-emerald-100">
+                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Brakes</span>
+                                                                    <span className="font-extrabold text-emerald-700">{trackingData.survey_report.brakes || 'Tested & Passed'}</span>
+                                                                </div>
+                                                                <div className="bg-white p-2.5 rounded-xl border border-emerald-100">
+                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Engine</span>
+                                                                    <span className="font-extrabold text-emerald-700">{trackingData.survey_report.engine || 'Smooth Output'}</span>
+                                                                </div>
+                                                                <div className="bg-white p-2.5 rounded-xl border border-emerald-100">
+                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Lights</span>
+                                                                    <span className="font-extrabold text-emerald-700">{trackingData.survey_report.lights || 'Functional'}</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Stage 5: Live Pricing Terms & Earnings Slider */}
+                                                    {s.number === 5 && (
+                                                        <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-3">
+                                                            <div className="flex items-center justify-between border-b border-amber-100 pb-2">
+                                                                <span className="text-amber-900 font-extrabold text-xs uppercase flex items-center gap-1.5">
+                                                                    <TrendingUp className="w-4 h-4 text-amber-600" />
+                                                                    70% Sponsor Revenue Share
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded bg-amber-200 text-amber-900 font-black text-[10px]">
+                                                                    Weekly Payouts
+                                                                </span>
+                                                            </div>
+
+                                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                <div className="bg-white p-2.5 rounded-xl border border-amber-100">
+                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Customer Rent</span>
+                                                                    <span className="text-base font-black text-slate-900">₹{hourlyRate}<small className="text-xs text-slate-500">/hr</small></span>
+                                                                </div>
+                                                                <div className="bg-white p-2.5 rounded-xl border border-amber-100">
+                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Your Share</span>
+                                                                    <span className="text-base font-black text-emerald-700">₹{sponsorHourlyShare.toFixed(1)}<small className="text-xs text-slate-500">/hr</small></span>
+                                                                </div>
+                                                            </div>
+
+                                                            <div className="bg-white p-3 rounded-xl border border-amber-100">
+                                                                <div className="flex justify-between items-center text-xs mb-1">
+                                                                    <span className="text-[10px] font-bold text-amber-800 uppercase">Estimated Monthly ROI</span>
+                                                                    <span className="font-extrabold text-slate-700">{calcHours} hrs/day</span>
+                                                                </div>
+                                                                <span className="text-xl font-black text-amber-700">₹{projectedMonthly}</span>
+                                                                <input
+                                                                    type="range"
+                                                                    min="2"
+                                                                    max="14"
+                                                                    value={calcHours}
+                                                                    onChange={(e) => setCalcHours(parseInt(e.target.value))}
+                                                                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500 mt-2"
+                                                                />
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Stage 6: Digital Agreement Acceptance Action */}
+                                                    {s.number === 6 && (currentStageNum === 5 || currentStageNum === 6) && !trackingData.agreement_accepted_at && (
+                                                        <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 space-y-3">
+                                                            <div className="flex items-center gap-2 text-rose-800 font-extrabold text-xs">
+                                                                <FileSignature className="w-4 h-4 text-rose-600" />
+                                                                Digital Agreement E-Sign Required
+                                                            </div>
+                                                            <label className="flex items-start gap-2.5 text-xs text-slate-700 font-semibold cursor-pointer bg-white p-3 rounded-xl border border-rose-200">
+                                                                <input
+                                                                    type="checkbox"
+                                                                    checked={agreementAgreed}
+                                                                    onChange={(e) => setAgreementAgreed(e.target.checked)}
+                                                                    className="w-4 h-4 text-rose-600 rounded mt-0.5 cursor-pointer accent-rose-600"
+                                                                />
+                                                                <span>I accept proposed rental pricing (₹{hourlyRate}/hr), 70% payout split, and RentHub partner terms.</span>
+                                                            </label>
+
+                                                            <button
+                                                                type="button"
+                                                                onClick={handleAcceptAgreement}
+                                                                disabled={acceptingAgreement || !agreementAgreed}
+                                                                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white font-black text-xs shadow-md shadow-rose-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                            >
+                                                                {acceptingAgreement ? 'Signing Agreement...' : '🤝 Accept & Digitally Sign Contract'}
+                                                            </button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Stage 8: GPS Radar Telemetry Box */}
+                                                    {s.number === 8 && trackingData.gps_tracking && (
+                                                        <div className="p-4 rounded-2xl bg-blue-50 border border-blue-200 space-y-2">
+                                                            <div className="flex items-center justify-between border-b border-blue-100 pb-2">
+                                                                <span className="text-blue-900 font-extrabold text-xs uppercase flex items-center gap-1.5">
+                                                                    <Radio className="w-4 h-4 text-blue-600 animate-pulse" />
+                                                                    4G GPS AIS-140 Telemetry
+                                                                </span>
+                                                                <span className="px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 font-black text-[10px]">
+                                                                    🟢 PAIRED
+                                                                </span>
+                                                            </div>
+                                                            <div className="grid grid-cols-2 gap-2 text-xs">
+                                                                <div className="bg-white p-2.5 rounded-xl border border-blue-100">
+                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">IMEI</span>
+                                                                    <span className="font-mono font-black text-blue-700">{trackingData.gps_tracking.device_imei}</span>
+                                                                </div>
+                                                                <div className="bg-white p-2.5 rounded-xl border border-blue-100">
+                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Immobilizer</span>
+                                                                    <span className="font-bold text-emerald-700">Armed & Ready</span>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Stage 9: Live Fleet Launch Celebration */}
+                                                    {s.number === 9 && currentStageNum === 9 && (
+                                                        <div className="p-4 rounded-2xl bg-emerald-100/70 border border-emerald-300 space-y-2">
+                                                            <div className="flex items-center gap-2">
+                                                                <span className="text-xl">🚀</span>
+                                                                <h5 className="font-black text-slate-900 text-sm">Vehicle LIVE in RentHub Fleet!</h5>
+                                                            </div>
+                                                            <p className="text-xs text-slate-600">Customers can now book this vehicle in real-time.</p>
+                                                            <div className="pt-2 flex gap-2">
+                                                                <Link to="/my-bikes" className="px-3.5 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-sm">
+                                                                    Manage in Fleet →
+                                                                </Link>
+                                                                <Link to="/revenue" className="px-3.5 py-1.5 bg-white text-slate-700 rounded-xl text-xs font-bold border border-slate-200">
+                                                                    View Earnings →
+                                                                </Link>
+                                                            </div>
+                                                        </div>
+                                                    )}
+
+                                                </div>
+                                            </div>
+                                        </div>
+
                                     </div>
                                 );
                             })}
                         </div>
-
-                        {/* 24/7 Helpline Card */}
-                        <div className="bg-gradient-to-r from-slate-900 via-indigo-950/50 to-slate-900 border border-slate-800 rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl">
-                            <div className="space-y-1">
-                                <h4 className="text-lg font-black text-white flex items-center gap-2">
-                                    <HelpCircle className="w-5 h-5 text-cyan-400" />
-                                    Have questions about your inspection or agreement?
-                                </h4>
-                                <p className="text-slate-400 text-xs md:text-sm">
-                                    Our dedicated onboarding team and automotive engineers are available 24x7 to assist you.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-3 shrink-0">
-                                <a
-                                    href="tel:9040757683"
-                                    className="px-6 py-3 rounded-2xl bg-cyan-500 hover:bg-cyan-400 text-slate-950 font-black text-xs transition-all flex items-center gap-2 shadow-lg shadow-cyan-500/20"
-                                >
-                                    <Phone className="w-4 h-4" />
-                                    Call 24x7 Desk: +91 90407 57683
-                                </a>
-                            </div>
-                        </div>
                     </div>
-                ) : !loading && (
-                    /* Empty / Search Prompt State */
-                    <div className="bg-slate-900/60 border border-slate-800/80 rounded-3xl p-12 text-center shadow-xl backdrop-blur-md">
-                        <div className="w-16 h-16 rounded-3xl bg-indigo-500/10 text-cyan-400 flex items-center justify-center mx-auto mb-4 border border-indigo-500/20 shadow-inner">
-                            <Search className="w-8 h-8" />
-                        </div>
-                        <h3 className="text-lg font-black text-white mb-2">Track Any Vehicle Application</h3>
-                        <p className="text-slate-400 text-xs md:text-sm max-w-md mx-auto mb-6">
-                            Enter your Tracking ID (`#RH-REQ-XXXX`) in the top search bar or select one of your registered vehicles to monitor milestone progression.
-                        </p>
-                    </div>
-                )}
 
-            </div>
+                    {/* 24/7 Helpline Card in Light Theme */}
+                    <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-indigo-700 text-white rounded-3xl p-6 md:p-8 flex flex-col md:flex-row items-center justify-between gap-6 shadow-xl shadow-indigo-200">
+                        <div className="space-y-1">
+                            <h4 className="text-lg md:text-xl font-black flex items-center gap-2">
+                                <HelpCircle className="w-5 h-5 text-indigo-200" />
+                                Need help with your onboarding or survey schedule?
+                            </h4>
+                            <p className="text-indigo-100 text-xs md:text-sm">
+                                Our fleet onboarding engineers and customer desk are available 24x7.
+                            </p>
+                        </div>
+                        <a
+                            href="tel:9040757683"
+                            className="px-6 py-3 rounded-2xl bg-white text-indigo-700 hover:bg-indigo-50 font-black text-xs transition-all flex items-center gap-2 shadow-lg shadow-black/10 shrink-0"
+                        >
+                            <Phone className="w-4 h-4 text-indigo-600" />
+                            Call 24x7 Desk: +91 90407 57683
+                        </a>
+                    </div>
+
+                </div>
+            ) : !loading && (
+                /* Empty Prompt State */
+                <div className="bg-white border border-slate-200/80 rounded-3xl p-12 text-center shadow-lg">
+                    <div className="w-16 h-16 rounded-3xl bg-indigo-50 text-indigo-600 flex items-center justify-center mx-auto mb-4 border border-indigo-100">
+                        <Search className="w-8 h-8" />
+                    </div>
+                    <h3 className="text-lg font-black text-slate-900 mb-2">Track Any Vehicle Application</h3>
+                    <p className="text-slate-500 text-xs md:text-sm max-w-md mx-auto">
+                        Enter your Tracking ID (`#RH-REQ-XXXX`) in the top search bar or select one of your registered fleet vehicles above.
+                    </p>
+                </div>
+            )}
+
         </div>
     );
 };
