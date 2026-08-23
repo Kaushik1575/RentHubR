@@ -24,16 +24,22 @@ api.interceptors.request.use(
     }
 );
 
-// Add a response interceptor to handle 401 errors (unauthorized)
+// Add a response interceptor to handle 401/403 errors (unauthorized/expired)
 api.interceptors.response.use(
     (response) => response,
     (error) => {
-        if (error.response && error.response.status === 401) {
-            // Prevent redirect loop if already on login page
-            if (window.location.pathname !== '/login') {
-                localStorage.removeItem('token');
-                localStorage.removeItem('user');
-                window.location.href = '/login';
+        if (error.response) {
+            const status = error.response.status;
+            const errorMsg = (error.response.data?.error || '').toLowerCase();
+
+            if (status === 401 || (status === 400 && errorMsg.includes('token')) || status === 403) {
+                // Prevent redirect loop if already on login or register page
+                const path = window.location.pathname;
+                if (path !== '/login' && path !== '/register') {
+                    localStorage.removeItem('token');
+                    localStorage.removeItem('user');
+                    window.location.href = '/login';
+                }
             }
         }
         return Promise.reject(error);

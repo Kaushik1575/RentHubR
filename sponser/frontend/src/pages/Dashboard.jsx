@@ -114,10 +114,10 @@ const Dashboard = () => {
 
             {/* Charts Section */}
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100">
+                <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 min-w-0">
                     <h2 className="text-lg font-semibold mb-4 text-gray-700">Monthly Revenue Trend</h2>
-                    <div className="h-72 md:h-80">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-72 md:h-80 w-full min-w-0">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
                             <AreaChart data={stats.revenueChart}>
                                 <defs>
                                     <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
@@ -135,10 +135,10 @@ const Dashboard = () => {
                     </div>
                 </div>
 
-                <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100">
+                <div className="bg-white p-4 md:p-6 rounded-xl shadow-sm border border-gray-100 min-w-0">
                     <h2 className="text-lg font-semibold mb-4 text-gray-700">Monthly Booking Activity</h2>
-                    <div className="h-72 md:h-80">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-72 md:h-80 w-full min-w-0">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={240}>
                             <BarChart data={stats.revenueChart}>
                                 <CartesianGrid strokeDasharray="3 3" vertical={false} />
                                 <XAxis dataKey="name" />
@@ -153,7 +153,7 @@ const Dashboard = () => {
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Most Rented Vehicles */}
-                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-1 flex flex-col">
+                <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100 lg:col-span-1 flex flex-col min-w-0">
                     <h2 className="text-lg font-bold mb-6 text-gray-900 flex items-center gap-2">
                         <div className="p-1.5 bg-brand-50 text-brand-600 rounded-lg">
                             <Truck className="w-5 h-5" />
@@ -161,9 +161,9 @@ const Dashboard = () => {
                         Most Rented Vehicles
                     </h2>
                     
-                    <div className="flex-1 flex flex-col justify-center">
-                        <div className="h-64 relative mb-4">
-                            <ResponsiveContainer width="100%" height="100%">
+                    <div className="flex-1 flex flex-col justify-center min-w-0">
+                        <div className="h-64 relative mb-4 w-full min-w-0">
+                            <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={200}>
                                 {stats.vehicleChart && stats.vehicleChart.length > 0 ? (
                                     <PieChart>
                                         <Pie

@@ -406,10 +406,10 @@ const Revenue = () => {
                 </div>
 
                 {/* Chart Section */}
-                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6">
+                <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-4 md:p-6 min-w-0">
                     <h3 className="text-lg font-bold text-gray-900 mb-6">Revenue Trend</h3>
-                    <div className="h-72 md:h-96 w-full">
-                        <ResponsiveContainer width="100%" height="100%">
+                    <div className="h-72 md:h-96 w-full min-w-0">
+                        <ResponsiveContainer width="100%" height="100%" minWidth={0} minHeight={250}>
                             <AreaChart data={filteredData.chartData}>
                                 <defs>
                                     <linearGradient id="colorRn" x1="0" y1="0" x2="0" y2="1">
