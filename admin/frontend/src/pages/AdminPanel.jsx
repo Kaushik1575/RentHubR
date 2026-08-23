@@ -2764,32 +2764,59 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
             {/* Reject Vehicle Request Modal (Mandatory Reason + Automated Email) */}
             {modal.type === 'rejectRequest' && modal.data && (
-                <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1050 }}>
                     <div className="modal-backdrop" onClick={() => setModal({ type: null })}></div>
-                    <div className="modal-content" style={{ maxWidth: '580px', width: '100%', borderRadius: '20px', overflow: 'hidden' }}>
-                        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', color: '#fff', padding: '20px 24px' }}>
+                    <div className="modal-content" style={{ maxWidth: '580px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)', border: '1px solid #fee2e2' }}>
+                        
+                        {/* Modal Header */}
+                        <div style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', shrink: 0 }}>
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>🛑 Reject Vehicle Application</h3>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800, letterSpacing: '-0.02em' }}>🛑 Reject Vehicle Application</h3>
                                 <p style={{ margin: '4px 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
-                                    A formal rejection notice and reason will be dispatched to the sponsor's email address.
+                                    A formal rejection notice and reason will be dispatched to the sponsor's email.
                                 </p>
                             </div>
-                            <button className="close-btn" style={{ color: '#fff' }} onClick={() => setModal({ type: null })}>&times;</button>
+                            <button
+                                type="button"
+                                onClick={() => setModal({ type: null })}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.2)',
+                                    border: 'none',
+                                    color: '#ffffff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginLeft: '12px',
+                                    shrink: 0
+                                }}
+                            >
+                                ✕
+                            </button>
                         </div>
-                        <div className="modal-body" style={{ padding: '24px' }}>
-                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', marginBottom: '20px' }}>
-                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
-                                    <strong style={{ color: '#0f172a' }}>{modal.data.name}</strong>
-                                    <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#4f46e5' }}>{modal.data.tracking_id || `RH-REQ-${modal.data.id}`}</span>
+
+                        {/* Modal Body (Scrollable) */}
+                        <div className="modal-body" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px', padding: '14px 16px', marginBottom: '20px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                    <strong style={{ color: '#0f172a', fontSize: '1rem' }}>{modal.data.name}</strong>
+                                    <span style={{ fontFamily: 'monospace', fontWeight: 800, color: '#4f46e5', background: '#eef2ff', padding: '2px 8px', borderRadius: '6px', fontSize: '0.8rem' }}>
+                                        {modal.data.tracking_id || `RH-REQ-${modal.data.id}`}
+                                    </span>
                                 </div>
                                 <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
-                                    <span>Reg: {modal.data.registration_number || 'N/A'}</span> • <span>Stage {modal.data.current_stage || 1}</span>
+                                    <span>Reg: <strong>{modal.data.registration_number || 'N/A'}</strong></span> • <span>Stage {modal.data.current_stage || 1} Review</span>
                                 </div>
                             </div>
 
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>
-                                    Quick Reason Presets (Click to Auto-fill):
+                            <div style={{ marginBottom: '18px' }}>
+                                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#1e293b', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                    Quick Presets (Click to Auto-fill):
                                 </label>
                                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
                                     {[
@@ -2799,31 +2826,35 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                         'Vehicle registration documents expired or discrepancy with RTO records.',
                                         'Sponsor declined proposed rental price and revenue sharing terms.',
                                         'Vehicle model older than RentHub fleet maximum age limit.'
-                                    ].map((preset, idx) => (
-                                        <button
-                                            key={idx}
-                                            type="button"
-                                            onClick={() => setStageFormData({ ...stageFormData, rejectionReason: preset })}
-                                            style={{
-                                                background: stageFormData.rejectionReason === preset ? '#fee2e2' : '#f1f5f9',
-                                                border: stageFormData.rejectionReason === preset ? '1px solid #f87171' : '1px solid #e2e8f0',
-                                                color: stageFormData.rejectionReason === preset ? '#991b1b' : '#475569',
-                                                padding: '5px 10px',
-                                                borderRadius: '8px',
-                                                fontSize: '0.75rem',
-                                                fontWeight: 600,
-                                                cursor: 'pointer',
-                                                textAlign: 'left'
-                                            }}
-                                        >
-                                            • {preset.slice(0, 48)}...
-                                        </button>
-                                    ))}
+                                    ].map((preset, idx) => {
+                                        const isSelected = stageFormData.rejectionReason === preset;
+                                        return (
+                                            <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() => setStageFormData({ ...stageFormData, rejectionReason: preset })}
+                                                style={{
+                                                    background: isSelected ? '#fee2e2' : '#f8fafc',
+                                                    border: isSelected ? '1.5px solid #ef4444' : '1px solid #e2e8f0',
+                                                    color: isSelected ? '#991b1b' : '#475569',
+                                                    padding: '6px 10px',
+                                                    borderRadius: '8px',
+                                                    fontSize: '0.74rem',
+                                                    fontWeight: isSelected ? 700 : 500,
+                                                    cursor: 'pointer',
+                                                    textAlign: 'left',
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                            >
+                                                • {preset.slice(0, 46)}...
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
-                            <div style={{ marginBottom: '16px' }}>
-                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
+                            <div style={{ marginBottom: '18px' }}>
+                                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 800, color: '#1e293b', marginBottom: '6px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
                                     Mandatory Rejection Remarks / Reason for Sponsor <span style={{ color: '#dc2626' }}>*</span>
                                 </label>
                                 <textarea
@@ -2834,23 +2865,35 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     placeholder="Explain specifically why the application was rejected so the sponsor can rectify the issue..."
                                     style={{
                                         width: '100%',
-                                        padding: '12px',
-                                        borderRadius: '10px',
+                                        padding: '12px 14px',
+                                        borderRadius: '12px',
                                         border: '1.5px solid #cbd5e1',
                                         fontSize: '0.85rem',
                                         fontFamily: 'inherit',
-                                        boxSizing: 'border-box'
+                                        boxSizing: 'border-box',
+                                        outline: 'none',
+                                        lineHeight: 1.5
                                     }}
                                 />
                             </div>
 
-                            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', fontSize: '0.78rem', color: '#991b1b' }}>
+                            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '12px', padding: '12px 14px', fontSize: '0.78rem', color: '#991b1b', lineHeight: 1.4 }}>
                                 ⚠️ <strong>Note:</strong> Once rejected, the vehicle status will update to <em>Rejected</em> and an automated email with your remarks will be dispatched immediately to the sponsor.
                             </div>
                         </div>
-                        <div className="modal-footer" style={{ padding: '16px 24px', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
-                            <button className="btn btn-secondary" onClick={() => setModal({ type: null })}>Cancel</button>
+
+                        {/* Modal Footer */}
+                        <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px', shrink: 0 }}>
                             <button
+                                type="button"
+                                className="btn btn-secondary"
+                                onClick={() => setModal({ type: null })}
+                                style={{ padding: '10px 18px', borderRadius: '10px', fontWeight: 600 }}
+                            >
+                                Cancel
+                            </button>
+                            <button
+                                type="button"
                                 className="btn"
                                 disabled={isSubmitting || !stageFormData.rejectionReason?.trim()}
                                 onClick={() => executeRejectRequest(modal.data.id, stageFormData.rejectionReason)}
@@ -2862,7 +2905,8 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     padding: '10px 22px',
                                     borderRadius: '10px',
                                     cursor: isSubmitting || !stageFormData.rejectionReason?.trim() ? 'not-allowed' : 'pointer',
-                                    opacity: isSubmitting || !stageFormData.rejectionReason?.trim() ? 0.6 : 1
+                                    opacity: isSubmitting || !stageFormData.rejectionReason?.trim() ? 0.5 : 1,
+                                    boxShadow: '0 4px 12px rgba(220, 38, 38, 0.25)'
                                 }}
                             >
                                 {isSubmitting ? 'Sending Notice...' : '🛑 Confirm & Dispatch Rejection Notice'}
