@@ -430,7 +430,7 @@ const AddBike = () => {
                             <button
                                 type="button"
                                 onClick={() => navigate('/my-bikes')}
-                                className="px-6 py-3.5 rounded-xl text-gray-600 font-semibold hover:bg-gray-50 transition-colors"
+                                className="px-6 py-3.5 rounded-xl text-gray-600 font-semibold hover:bg-gray-100 transition-colors cursor-pointer"
                             >
                                 Cancel
                             </button>
@@ -438,24 +438,30 @@ const AddBike = () => {
                                 type="submit"
                                 disabled={loading || !agreed}
                                 className={`
-                                    relative px-8 py-3.5 rounded-xl text-white font-bold shadow-lg overflow-hidden group
-                                    ${loading || !agreed
-                                        ? 'bg-gray-300 cursor-not-allowed shadow-none'
-                                        : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02]'
+                                    relative px-8 py-3.5 rounded-xl text-white font-bold shadow-lg overflow-hidden group transition-all duration-300 flex items-center justify-center gap-2 min-w-[200px]
+                                    ${!agreed
+                                        ? 'bg-gray-300 text-gray-500 cursor-not-allowed shadow-none'
+                                        : loading
+                                        ? 'bg-gradient-to-r from-indigo-700 via-purple-700 to-pink-700 cursor-wait shadow-indigo-500/20'
+                                        : 'bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 shadow-indigo-500/30 hover:shadow-indigo-500/50 hover:scale-[1.02] cursor-pointer'
                                     }
-                                    transition-all duration-300
                                 `}
                             >
-                                <span className={`flex items-center gap-2 relative z-10 ${loading ? 'opacity-0' : 'opacity-100'}`}>
-                                    Submit Vehicle <CheckCircle className="w-5 h-5" />
-                                </span>
-                                {loading && (
-                                    <div className="absolute inset-0 flex items-center justify-center z-20">
-                                        <div className="w-6 h-6 border-3 border-white/30 border-t-white rounded-full animate-spin"></div>
-                                    </div>
+                                {loading ? (
+                                    <>
+                                        <div className="w-5 h-5 border-2 border-white/40 border-t-white rounded-full animate-spin"></div>
+                                        <span>Submitting Application...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>Submit Vehicle</span>
+                                        <CheckCircle className="w-5 h-5" />
+                                    </>
                                 )}
                                 {/* Shine Effect */}
-                                <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12"></div>
+                                {!loading && agreed && (
+                                    <div className="absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-1000 bg-gradient-to-r from-transparent via-white/20 to-transparent skew-x-12 pointer-events-none"></div>
+                                )}
                             </button>
                         </div>
 
