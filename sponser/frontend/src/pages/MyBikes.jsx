@@ -355,9 +355,18 @@ const MyBikes = () => {
                                     {timelineModal.name} ({timelineModal.bikeNumber || timelineModal.registration_number})
                                 </p>
                             </div>
-                            <button onClick={() => setTimelineModal(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors">
-                                <X className="w-5 h-5 text-slate-500" />
-                            </button>
+                            <div className="flex items-center gap-2">
+                                <Link
+                                    to={`/track-application?id=${timelineModal.tracking_id || timelineModal.id}`}
+                                    className="px-3.5 py-1.5 rounded-xl bg-gradient-to-r from-cyan-600 to-indigo-600 hover:from-cyan-500 hover:to-indigo-500 text-white font-extrabold text-xs flex items-center gap-1.5 shadow-md shadow-indigo-200 transition-all"
+                                >
+                                    <span>🚀 Full Radar View</span>
+                                    <ExternalLink className="w-3 h-3" />
+                                </Link>
+                                <button onClick={() => setTimelineModal(null)} className="p-2 hover:bg-slate-100 rounded-full transition-colors cursor-pointer">
+                                    <X className="w-5 h-5 text-slate-500" />
+                                </button>
+                            </div>
                         </div>
 
                         <div className="p-6 space-y-6">
