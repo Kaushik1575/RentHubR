@@ -785,7 +785,6 @@ async function sendBookingCancelledEmail(userEmail, userName, bookingId, vehicle
         </div>
     `;
 
-
     return sendEmail({
         to: userEmail,
         subject: `Booking #${bookingId} Cancelled - RentHub Refund Details`,
@@ -793,6 +792,163 @@ async function sendBookingCancelledEmail(userEmail, userName, bookingId, vehicle
     });
 }
 
+/**
+ * Send email to customer with nearest bike garages and petrol pumps with Google Maps navigation links
+ */
+async function sendNearestLocationsEmail(userEmail, userName, bookingDetails = {}, nearbyData = {}) {
+    const { garages = [], petrolPumps = [], userCoordinates = {}, mapSearchLinks = {} } = nearbyData;
+    const vehicleName = bookingDetails.vehicleName || bookingDetails.bikeModel || 'Vehicle';
+    const bookingId = bookingDetails.bookingId || bookingDetails.id || 'Active Ride';
+
+    const renderGaragesHtml = garages.map((g, idx) => `
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div style="font-weight: 700; font-size: 16px; color: #1e293b;">
+                    ${idx + 1}. ${g.name}
+                </div>
+                <span style="display: inline-block; background: #ecfdf5; color: #059669; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid #a7f3d0;">
+                    📍 ${g.distanceText}
+                </span>
+            </div>
+            <p style="margin: 4px 0 10px 0; color: #64748b; font-size: 13px; line-height: 1.4;">
+                ${g.address}
+                ${g.phone ? `<br><strong style="color: #334155;">📞 Phone:</strong> <a href="tel:${g.phone}" style="color: #2563eb; text-decoration: none;">${g.phone}</a>` : ''}
+            </p>
+            <div style="text-align: right;">
+                <a href="${g.mapUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13px;">
+                    🗺️ Open Navigation in Maps &rarr;
+                </a>
+            </div>
+        </div>
+    `).join('');
+
+    const renderPetrolPumpsHtml = petrolPumps.map((p, idx) => `
+        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
+                <div style="font-weight: 700; font-size: 16px; color: #1e293b;">
+                    ${idx + 1}. ${p.name}
+                </div>
+                <span style="display: inline-block; background: #fffbeb; color: #d97706; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid #fde68a;">
+                    ⛽ ${p.distanceText}
+                </span>
+            </div>
+            <p style="margin: 4px 0 10px 0; color: #64748b; font-size: 13px; line-height: 1.4;">
+                ${p.address}
+                ${p.phone ? `<br><strong style="color: #334155;">📞 Phone:</strong> <a href="tel:${p.phone}" style="color: #2563eb; text-decoration: none;">${p.phone}</a>` : ''}
+            </p>
+            <div style="text-align: right;">
+                <a href="${p.mapUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13px;">
+                    🧭 Navigate to Fuel Station &rarr;
+                </a>
+            </div>
+        </div>
+    `).join('');
+
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Nearest Bike Garages & Petrol Pumps - RentHub Emergency</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td align="center" style="padding: 30px 10px;">
+                        <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                            
+                            <!-- Header Banner -->
+                            <tr>
+                                <td align="center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 35px 20px; color: #ffffff;">
+                                    <div style="display: inline-block; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 6px 16px; border-radius: 50px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">
+                                        🚨 Live Emergency Assistance
+                                    </div>
+                                    <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">
+                                        Nearest Garages & Petrol Pumps
+                                    </h1>
+                                    <p style="margin: 0; font-size: 14px; opacity: 0.85; max-width: 450px;">
+                                        Locations detected around your live GPS coordinates for <strong>${vehicleName}</strong> (Booking #${bookingId})
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <!-- Main Body -->
+                            <tr>
+                                <td style="padding: 30px 25px; background: #f8fafc;">
+                                    <p style="font-size: 15px; margin: 0 0 20px 0; color: #334155; line-height: 1.5;">
+                                        Hello <strong>${userName || 'Valued Customer'}</strong>,<br>
+                                        As requested during your AI voice assistance call, here are the nearest verified bike repair garages and petrol pumps closest to you. Click any link below to open <strong>turn-by-turn Google Maps navigation</strong>.
+                                    </p>
+
+                                    <!-- Section 1: Bike Garages -->
+                                    <div style="margin-bottom: 25px;">
+                                        <div style="display: flex; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #3b82f6; padding-bottom: 6px;">
+                                            <h2 style="margin: 0; font-size: 18px; color: #1e3a8a; font-weight: 800;">
+                                                🏍️ Nearest Bike Garages & Mechanics
+                                            </h2>
+                                        </div>
+                                        ${renderGaragesHtml || '<p style="color: #64748b; font-size: 14px;">No garage found in immediate 1km. Please use the Google Maps search button below.</p>'}
+                                    </div>
+
+                                    <!-- Section 2: Petrol Pumps -->
+                                    <div style="margin-bottom: 25px;">
+                                        <div style="display: flex; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #f97316; padding-bottom: 6px;">
+                                            <h2 style="margin: 0; font-size: 18px; color: #9a3412; font-weight: 800;">
+                                                ⛽ Nearest Petrol Pumps & Fuel Stations
+                                            </h2>
+                                        </div>
+                                        ${renderPetrolPumpsHtml || '<p style="color: #64748b; font-size: 14px;">No petrol pump found in immediate 1km. Please use the Google Maps search button below.</p>'}
+                                    </div>
+
+                                    <!-- Quick Maps Search Links -->
+                                    <div style="background: #ffffff; border: 1px dashed #cbd5e1; border-radius: 12px; padding: 20px; text-align: center; margin-bottom: 25px;">
+                                        <h4 style="margin: 0 0 10px 0; color: #0f172a; font-size: 15px;">🔍 Explore All Nearby Help on Google Maps</h4>
+                                        <div style="display: inline-block; margin: 4px;">
+                                            <a href="${mapSearchLinks.allGarages || `https://www.google.com/maps/search/bike+garage/@${userCoordinates.latitude || 20.2185},${userCoordinates.longitude || 85.7358},15z`}" target="_blank" style="display: inline-block; background: #f1f5f9; color: #2563eb; border: 1px solid #bfdbfe; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px;">
+                                                🏍️ All Bike Garages Near Me &rarr;
+                                            </a>
+                                        </div>
+                                        <div style="display: inline-block; margin: 4px;">
+                                            <a href="${mapSearchLinks.allPetrolPumps || `https://www.google.com/maps/search/petrol+pump/@${userCoordinates.latitude || 20.2185},${userCoordinates.longitude || 85.7358},15z`}" target="_blank" style="display: inline-block; background: #f1f5f9; color: #ea580c; border: 1px solid #fed7aa; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px;">
+                                                ⛽ All Petrol Pumps Near Me &rarr;
+                                            </a>
+                                        </div>
+                                    </div>
+
+                                    <!-- Human Helpline Box -->
+                                    <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 5px solid #ef4444; border-radius: 8px; padding: 18px; text-align: center;">
+                                        <h4 style="margin: 0 0 6px 0; color: #991b1b; font-size: 16px; font-weight: 800;">🚨 Still Facing Issues? Speak with Response Control</h4>
+                                        <p style="margin: 0 0 12px 0; color: #7f1d1d; font-size: 13px;">Our 24x7 Roadside Dispatch Team is standing by to help you.</p>
+                                        <a href="tel:+919040757683" style="display: inline-block; background: #dc2626; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 50px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);">
+                                            📞 Call 24x7 Control Room (+91 9040757683)
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Footer -->
+                            <tr>
+                                <td align="center" style="background-color: #0f172a; padding: 25px 20px; color: #94a3b8; font-size: 12px;">
+                                    <div style="color: #ffffff; font-size: 18px; font-weight: 800; margin-bottom: 6px;">RentHub Emergency Response</div>
+                                    <p style="margin: 0 0 6px 0;">Automated AI GPS Roadside Dispatch System</p>
+                                    <p style="margin: 0; color: #64748b; font-size: 11px;">© 2026 RentHub Inc. Ride safe and wear your helmet at all times.</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+    `;
+
+    return sendEmail({
+        to: userEmail,
+        subject: `📍 [Nearest Locations] Bike Garages & Petrol Pumps near you - Booking #${bookingId}`,
+        html: html
+    });
+}
 
 module.exports = {
     generateOTP,
@@ -803,9 +959,10 @@ module.exports = {
     sendRefundCompleteEmail,
     sendSOSLinkEmail,
     sendSOSAlertEmail,
+    sendNearestLocationsEmail,
     sendRideCompletedEmail,
     sendVehicleApprovedEmail,
     sendNewOfferEmail,
     sendEmail,
     SENDER_EMAIL
-};
+};

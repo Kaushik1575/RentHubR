@@ -194,6 +194,41 @@ const SOSActivate = () => {
         }
     };
 
+    const [speechRef] = useState({ current: null });
+    const [nearbyLoading, setNearbyLoading] = useState(false);
+    const [nearbySuccessMessage, setNearbySuccessMessage] = useState('');
+    const [nearbyPlacesData, setNearbyPlacesData] = useState(null);
+
+    // Option 3: Send Nearest Bike Garage & Petrol Pump to Email
+    const handleSendNearestLocations = async () => {
+        setNearbyLoading(true);
+        setNearbySuccessMessage('');
+        try {
+            const res = await fetch(getApiUrl('/api/sos-send-nearby'), {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bookingId: bookingId,
+                    gpsLocation: gpsData,
+                    userEmail: sosDataInfo?.userEmail,
+                    userName: sosDataInfo?.userName
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                setNearbyPlacesData(data.nearbyData || null);
+                setNearbySuccessMessage(data.message || `Nearest locations dispatched to ${sosDataInfo?.userEmail || 'your email'}!`);
+            } else {
+                throw new Error(data.error || 'Failed to dispatch nearest locations');
+            }
+        } catch (err) {
+            alert('Notice: ' + err.message);
+        } finally {
+            setNearbyLoading(false);
+        }
+    };
+
     // Option 1: Problem Solved
     const handleResolve = async () => {
         setFeedbackLoading(true);
@@ -235,7 +270,8 @@ const SOSActivate = () => {
                     bookingId: bookingId,
                     status: 'escalate_mechanic',
                     issueType: diagnosticGuides[activeIssue].title,
-                    details: `Customer selected Option 2 (Unresolved) on SOS Dashboard for ${diagnosticGuides[activeIssue].title}`
+                    details: `Customer selected Option 2 (Unresolved) on SOS Dashboard for ${diagnosticGuides[activeIssue].title}`,
+                    gpsLocation: gpsData
                 })
             });
             const data = await res.json();
@@ -399,7 +435,7 @@ const SOSActivate = () => {
                             </div>
                         </div>
 
-                        {/* Interactive Option 1 & 2 Action Buttons */}
+                        {/* Interactive Option 1, 2 & 3 Action Buttons */}
                         <div className="resolution-actions-wrapper">
                             <p className="resolution-heading">Did the AI guidance solve your issue?</p>
                             
@@ -407,7 +443,7 @@ const SOSActivate = () => {
                                 <button
                                     className="btn-option btn-option-solved"
                                     onClick={handleResolve}
-                                    disabled={feedbackLoading}
+                                    disabled={feedbackLoading || nearbyLoading}
                                 >
                                     <div className="option-badge">[1]</div>
                                     <div className="option-text">
@@ -419,7 +455,7 @@ const SOSActivate = () => {
                                 <button
                                     className="btn-option btn-option-unresolved"
                                     onClick={handleEscalateMechanic}
-                                    disabled={feedbackLoading}
+                                    disabled={feedbackLoading || nearbyLoading}
                                 >
                                     <div className="option-badge">[2]</div>
                                     <div className="option-text">
@@ -427,8 +463,74 @@ const SOSActivate = () => {
                                         <small>Dispatch roadside mechanic</small>
                                     </div>
                                 </button>
+
+                                <button
+                                    className="btn-option btn-option-locations"
+                                    onClick={handleSendNearestLocations}
+                                    disabled={feedbackLoading || nearbyLoading}
+                                >
+                                    <div className="option-badge">[3]</div>
+                                    <div className="option-text">
+                                        <strong>📍 Email Nearest Locations</strong>
+                                        <small>{nearbyLoading ? 'Finding & Emailing...' : 'Garages & Petrol Pumps to Inbox'}</small>
+                                    </div>
+                                </button>
                             </div>
                         </div>
+
+                        {/* On-Screen Live Nearby Locations Results */}
+                        {nearbySuccessMessage && (
+                            <div className="nearby-results-panel">
+                                <div className="status-box status-success" style={{ marginBottom: '14px' }}>
+                                    <span className="status-title">✉️ Locations Dispatched</span>
+                                    <p>{nearbySuccessMessage}</p>
+                                </div>
+
+                                {nearbyPlacesData && (
+                                    <div className="nearby-cards-container">
+                                        {/* Nearest Garage Preview */}
+                                        {nearbyPlacesData.garages && nearbyPlacesData.garages.length > 0 && (
+                                            <div className="nearby-preview-card">
+                                                <div className="preview-card-header">
+                                                    <span className="preview-type-badge garage-badge">🏍️ Nearest Bike Garage</span>
+                                                    <span className="preview-distance">{nearbyPlacesData.garages[0].distanceText}</span>
+                                                </div>
+                                                <h4 className="preview-name">{nearbyPlacesData.garages[0].name}</h4>
+                                                <p className="preview-addr">{nearbyPlacesData.garages[0].address}</p>
+                                                <a href={nearbyPlacesData.garages[0].mapUrl} target="_blank" rel="noreferrer" className="btn-preview-map">
+                                                    📍 Open Navigation in Maps &rarr;
+                                                </a>
+                                            </div>
+                                        )}
+
+                                        {/* Nearest Petrol Pump Preview */}
+                                        {nearbyPlacesData.petrolPumps && nearbyPlacesData.petrolPumps.length > 0 && (
+                                            <div className="nearby-preview-card">
+                                                <div className="preview-card-header">
+                                                    <span className="preview-type-badge fuel-badge">⛽ Nearest Petrol Pump</span>
+                                                    <span className="preview-distance">{nearbyPlacesData.petrolPumps[0].distanceText}</span>
+                                                </div>
+                                                <h4 className="preview-name">{nearbyPlacesData.petrolPumps[0].name}</h4>
+                                                <p className="preview-addr">{nearbyPlacesData.petrolPumps[0].address}</p>
+                                                <a href={nearbyPlacesData.petrolPumps[0].mapUrl} target="_blank" rel="noreferrer" className="btn-preview-map btn-preview-fuel">
+                                                    🧭 Navigate to Fuel Station &rarr;
+                                                </a>
+                                            </div>
+                                        )}
+
+                                        {/* Google Maps Search Buttons */}
+                                        <div className="preview-explore-links">
+                                            <a href={nearbyPlacesData.mapSearchLinks?.allGarages || '#'} target="_blank" rel="noreferrer" className="btn-explore-link">
+                                                🔍 All Garages Near Me
+                                            </a>
+                                            <a href={nearbyPlacesData.mapSearchLinks?.allPetrolPumps || '#'} target="_blank" rel="noreferrer" className="btn-explore-link">
+                                                🔍 All Petrol Pumps Near Me
+                                            </a>
+                                        </div>
+                                    </div>
+                                )}
+                            </div>
+                        )}
 
                         {/* Direct Call to Human Helpline */}
                         <div className="direct-call-footer">

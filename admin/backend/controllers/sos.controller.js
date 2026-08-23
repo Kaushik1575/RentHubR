@@ -1,5 +1,6 @@
 const supabase = require('../config/supabase');
-const { sendSOSAlertEmail, sendEmail } = require('../config/emailService');
+const { sendSOSAlertEmail, sendNearestLocationsEmail, sendEmail } = require('../config/emailService');
+const { findNearbyPlaces } = require('../services/nearbyPlacesService');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com'];
 
 const activateSOS = async (req, res) => {
@@ -93,10 +94,11 @@ const activateSOS = async (req, res) => {
         }
 
         const userPhone = booking.users?.phone_number || booking.phone_number || null;
+        const userEmail = booking.users?.email || booking.user_email || null;
         const sosData = {
             bookingId: booking.booking_id || booking.id,
             userName: booking.users?.full_name || 'Unknown User',
-            userEmail: booking.users?.email || 'Unknown Email',
+            userEmail: userEmail || 'Unknown Email',
             phoneNumber: userPhone || 'Unknown Phone',
             bikeModel: vehicleName,
             pickupLocation: booking.pickup_location || 'GITA Autonomous College BBSR',
@@ -134,9 +136,11 @@ const activateSOS = async (req, res) => {
             sosData: {
                 bookingId: sosData.bookingId,
                 userName: sosData.userName,
+                userEmail: sosData.userEmail,
                 phoneNumber: sosData.phoneNumber,
                 bikeModel: sosData.bikeModel,
-                googleMapsLink: sosData.googleMapsLink
+                googleMapsLink: sosData.googleMapsLink,
+                gpsLocation: sosData.gpsLocation
             }
         });
 
@@ -151,7 +155,7 @@ const activateSOS = async (req, res) => {
  */
 const handleSOSFeedback = async (req, res) => {
     try {
-        const { bookingId, status, issueType, details } = req.body;
+        const { bookingId, status, issueType, details, gpsLocation } = req.body;
 
         if (!bookingId) {
             return res.status(400).json({ error: 'Booking ID is required' });
@@ -159,19 +163,47 @@ const handleSOSFeedback = async (req, res) => {
 
         console.log(`🚨 Admin SOS Feedback - Booking: ${bookingId}, Status: ${status}`);
 
-        if (status === 'escalate_mechanic' || status === 'unresolved') {
-            let query = supabase.from('bookings').select('*, users:user_id(full_name, email, phone_number)');
-            if (bookingId.toString().startsWith('RH')) {
-                query = query.eq('booking_id', bookingId);
-            } else {
-                query = query.eq('id', bookingId);
+        let query = supabase.from('bookings').select('*, users:user_id(full_name, email, phone_number)');
+        if (bookingId.toString().startsWith('RH')) {
+            query = query.eq('booking_id', bookingId);
+        } else {
+            query = query.eq('id', bookingId);
+        }
+        const { data: booking } = await query.single();
+
+        const userName = booking?.users?.full_name || 'Customer';
+        const userEmail = booking?.users?.email || booking?.user_email || null;
+        const userPhone = booking?.users?.phone_number || 'N/A';
+        const vehicleName = booking?.vehicle_name || 'Vehicle';
+
+        // 1. Send Nearest Locations to Email (Option 3 / Nearby Request)
+        if (status === 'send_nearby_locations' || status === 'send_location' || status === 'send_nearest_locations') {
+            const nearbyData = await findNearbyPlaces(gpsLocation || booking?.pickup_location);
+
+            if (userEmail) {
+                await sendNearestLocationsEmail(
+                    userEmail,
+                    userName,
+                    {
+                        bookingId: bookingId,
+                        vehicleName: vehicleName
+                    },
+                    nearbyData
+                );
+                console.log(`✉️ [Admin SOS] Dispatched nearest locations email to ${userEmail} for booking ${bookingId}`);
             }
-            const { data: booking } = await query.single();
 
-            const userName = booking?.users?.full_name || 'Customer';
-            const userPhone = booking?.users?.phone_number || 'N/A';
-            const vehicleName = booking?.vehicle_name || 'Vehicle';
+            return res.json({
+                success: true,
+                message: `Nearest bike garages and petrol pumps sent to ${userEmail || 'registered email'}.`,
+                status: 'locations_sent',
+                userEmail: userEmail,
+                nearbyData: nearbyData
+            });
+        }
 
+        // 2. Escalate to Roadside Mechanic
+        if (status === 'escalate_mechanic' || status === 'unresolved') {
             const alertHtml = `
                 <div style="font-family: Arial, sans-serif; padding: 20px; background: #fff5f5; border: 2px solid #e53e3e; border-radius: 8px;">
                     <h2 style="color: #c53030; margin-top: 0;">🚨 URGENT: Roadside Mechanic Dispatch Requested!</h2>
@@ -193,6 +225,7 @@ const handleSOSFeedback = async (req, res) => {
                     subject: `🚨 [URGENT DISPATCH] Roadside Mechanic Needed - Booking ${bookingId}`,
                     html: alertHtml
                 });
+                console.log(`✉️ Emergency Mechanic Dispatch alert sent to admins for booking ${bookingId}`);
             } catch (emailErr) {
                 console.error('Error sending mechanic alert email:', emailErr.message);
             }
@@ -216,7 +249,81 @@ const handleSOSFeedback = async (req, res) => {
     }
 };
 
+/**
+ * Controller to find and email nearest bike garages and petrol pumps
+ */
+const sendNearestLocations = async (req, res) => {
+    try {
+        const { bookingId, gpsLocation, userEmail, userName } = req.body;
+
+        if (!bookingId && !userEmail) {
+            return res.status(400).json({ error: 'Booking ID or User Email is required' });
+        }
+
+        console.log(`📍 [Admin SOS Controller] Finding nearest locations for Booking: ${bookingId}, Email: ${userEmail}`);
+
+        let booking = null;
+        let recipientEmail = userEmail;
+        let recipientName = userName || 'Customer';
+        let vehicleName = 'Vehicle';
+
+        if (bookingId) {
+            let query = supabase.from('bookings').select(`
+                *,
+                users:user_id (
+                    full_name,
+                    email,
+                    phone_number
+                )
+            `);
+
+            if (bookingId.toString().startsWith('RH')) {
+                query = query.eq('booking_id', bookingId);
+            } else {
+                query = query.eq('id', bookingId);
+            }
+
+            const { data, error } = await query.single();
+            if (data && !error) {
+                booking = data;
+                recipientEmail = recipientEmail || booking.users?.email || booking.user_email;
+                recipientName = recipientName !== 'Customer' ? recipientName : (booking.users?.full_name || 'Customer');
+                vehicleName = booking.vehicle_name || 'Vehicle';
+            }
+        }
+
+        if (!recipientEmail) {
+            return res.status(400).json({ error: 'Recipient email not found for this booking' });
+        }
+
+        const nearbyData = await findNearbyPlaces(gpsLocation || booking?.pickup_location);
+
+        const emailResult = await sendNearestLocationsEmail(
+            recipientEmail,
+            recipientName,
+            {
+                bookingId: booking?.booking_id || bookingId || 'Active Ride',
+                vehicleName: vehicleName
+            },
+            nearbyData
+        );
+
+        return res.json({
+            success: true,
+            message: `Nearest bike garages and petrol pump locations sent successfully to ${recipientEmail}`,
+            userEmail: recipientEmail,
+            nearbyData: nearbyData,
+            emailSent: emailResult.success
+        });
+
+    } catch (error) {
+        console.error('Error in sendNearestLocations controller:', error);
+        return res.status(500).json({ error: 'Failed to process nearest locations request: ' + error.message });
+    }
+};
+
 module.exports = {
     activateSOS,
-    handleSOSFeedback
+    handleSOSFeedback,
+    sendNearestLocations
 };

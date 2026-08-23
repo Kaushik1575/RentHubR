@@ -14,6 +14,7 @@ UNIVERSAL RULES:
 3. On EVERY step of EVERY problem, the navigation options are:
    • Press 1: Problem Solved (Resolved).
    • Press 2: Next Step / Dispatch Roadside Mechanic.
+   • Press 3: Email Nearest Bike Garage & Petrol Pump Locations (or say "send location" / "send nearest garage").
    • Press 4: Transfer Live Call to Human Emergency Control Room (+919040757683).
 
 GREETING:
@@ -267,5 +268,38 @@ TOOLS EXECUTION RULES:
 ================================================================================
 - resolve_sos: Trigger when customer presses 1 (or says "solved" / "theek ho gaya" / "start ho gayi").
 - escalate_sos_mechanic: Trigger when customer presses 2 (or says "mechanic" / "unsolved" / "nahi hua").
+- send_nearest_locations: Trigger when customer presses 3 (or says "send location" / "send me the location" / "garage" / "petrol pump" / "still facing issue, send nearest garage or petrol pump").
+  * Action: Finds closest bike garages & petrol pumps and emails Google Maps directions to the user.
+  * Spoken Confirmation: "Maine aapke registered email par nearest bike garage aur petrol pump ki Google Maps location bhej di hai. Aap apna email check kar sakte hain."
 - transfer_call: Trigger when customer presses 4 (or says "human" / "agent" / "control room").
 ```
+
+---
+
+## 🛠️ Retell AI Custom Function Tool Configuration
+
+```json
+{
+  "name": "send_nearest_locations",
+  "description": "Dispatches the nearest bike repair garages, mechanic workshops, and petrol pump locations directly to the customer's registered email with clickable Google Maps turn-by-turn navigation links.",
+  "parameters": {
+    "type": "object",
+    "properties": {
+      "booking_id": {
+        "type": "string",
+        "description": "The customer's booking ID (e.g. RH-1234)"
+      },
+      "user_email": {
+        "type": "string",
+        "description": "The customer's registered email address"
+      },
+      "gps_location": {
+        "type": "string",
+        "description": "User's current GPS location coordinates if available"
+      }
+    },
+    "required": []
+  }
+}
+```
+

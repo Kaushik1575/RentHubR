@@ -157,11 +157,13 @@ const handleRetellWebhook = async (req, res) => {
 
         const event = body.event || body.type;
         const callData = body.call || body;
-        const metadata = callData.metadata || body.args || {};
+        const metadata = callData.metadata || body.args || (callData.retell_llm_dynamic_variables) || {};
         const bookingId = metadata.booking_id || metadata.bookingId;
         const userEmail = metadata.user_email || metadata.userEmail;
         const userName = metadata.user_name || metadata.userName || 'Customer';
         const vehicleName = metadata.vehicle_name || metadata.vehicleName || 'Vehicle';
+        const userPhone = metadata.user_phone || metadata.userPhone || callData.to_number || 'N/A';
+        const gpsLocation = metadata.gps_location || metadata.gpsLocation || null;
 
         const action = body.name || (callData.custom_analysis_data && callData.custom_analysis_data.user_intent) || (body.args && body.args.action);
 
@@ -198,6 +200,73 @@ const handleRetellWebhook = async (req, res) => {
                 }
             }
             return res.json({ success: true, message: 'Booking cancelled via Retell AI' });
+
+        // 3. SOS Solved Action
+        } else if (action === 'resolve_sos' || action === 'sos_resolved' || event === 'sos_resolved') {
+            return res.json({
+                success: true,
+                message: 'Issue marked as resolved',
+                response: 'Bohat accha! Aapka issue solve ho gaya hai. Safe riding!'
+            });
+
+        // 4. Send Nearest Locations to Email
+        } else if (
+            action === 'send_nearest_locations' ||
+            action === 'send_location' ||
+            action === 'send_nearby_help' ||
+            action === 'send_garage_petrol_pump' ||
+            action === 'send_nearby_locations_email' ||
+            event === 'location_email_requested'
+        ) {
+            let nearbyPlacesService;
+            try {
+                nearbyPlacesService = require('../../user/backend/services/nearbyPlacesService');
+            } catch (e) {
+                try { nearbyPlacesService = require('../../admin/backend/services/nearbyPlacesService'); } catch (e2) {}
+            }
+
+            let resolvedEmail = userEmail;
+            let resolvedName = userName;
+            let resolvedVehicle = vehicleName;
+
+            if (bookingId && supabase) {
+                let query = supabase.from('bookings').select('*, users:user_id(full_name, email)');
+                if (String(bookingId).startsWith('RH')) {
+                    query = query.eq('booking_id', bookingId);
+                } else {
+                    query = query.eq('id', bookingId);
+                }
+                const { data: dbBooking } = await query.single();
+                if (dbBooking) {
+                    resolvedEmail = resolvedEmail || dbBooking.users?.email || dbBooking.user_email;
+                    resolvedName = resolvedName !== 'Customer' ? resolvedName : (dbBooking.users?.full_name || 'Customer');
+                    resolvedVehicle = dbBooking.vehicle_name || resolvedVehicle;
+                }
+            }
+
+            let nearbyData = {};
+            if (nearbyPlacesService) {
+                nearbyData = await nearbyPlacesService.findNearbyPlaces(gpsLocation);
+            }
+
+            if (resolvedEmail && emailService?.sendNearestLocationsEmail) {
+                await emailService.sendNearestLocationsEmail(
+                    resolvedEmail,
+                    resolvedName,
+                    {
+                        bookingId: bookingId || 'Active Ride',
+                        vehicleName: resolvedVehicle
+                    },
+                    nearbyData
+                );
+            }
+
+            return res.json({
+                success: true,
+                response: `Maine aapke registered email par nearest bike garage aur petrol pump ki Google Maps location bhej di hai. Aap apna inbox check kar sakte hain.`,
+                message: `Locations sent to ${resolvedEmail}`,
+                nearbyData: nearbyData
+            });
         }
 
         res.json({ success: true, message: 'Retell AI Webhook Connected Successfully' });
@@ -213,3 +282,4 @@ router.all('/webhook', handleRetellWebhook);
 router.all('/', (req, res) => res.json({ success: true, message: 'Voice API Active' }));
 
 module.exports = router;
+

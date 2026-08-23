@@ -2,7 +2,8 @@ const express = require('express');
 const router = express.Router();
 const twilio = require('twilio');
 const supabase = require('../config/supabase');
-const { sendBookingConfirmationEmail, sendBookingCancelledEmail, sendEmail } = require('../config/emailService');
+const { sendBookingConfirmationEmail, sendBookingCancelledEmail, sendNearestLocationsEmail, sendEmail } = require('../config/emailService');
+const { findNearbyPlaces } = require('../services/nearbyPlacesService');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com'];
 
 // GET / POST /api/voice/welcome
@@ -135,6 +136,40 @@ router.post('/process-keypress', async (req, res) => {
         } catch (dbErr) {
             console.error('❌ Exception in Voice DB Cancel:', dbErr);
         }
+
+    } else if (digit === '3') {
+        twiml.say(
+            { voice: 'Polly.Aditi', language: 'hi-IN' },
+            "Maine aapke registered email par nearest bike garage aur petrol pump ki Google Maps location bhej di hai. Kripya apna email check karein. RentHub ke saath safe ride karein! Alvida."
+        );
+
+        try {
+            if (bookingId) {
+                let query = supabase.from('bookings').select('*, users:user_id(full_name, email)');
+                if (String(bookingId).startsWith('RH')) {
+                    query = query.eq('booking_id', bookingId);
+                } else {
+                    query = query.eq('id', bookingId);
+                }
+                const { data: dbBooking } = await query.single();
+                const recipientEmail = (dbBooking && (dbBooking.users?.email || dbBooking.user_email)) || userEmailParam;
+                const recipientName = (dbBooking && (dbBooking.users?.full_name || dbBooking.user_name)) || userNameParam;
+                const vehicle = (dbBooking && dbBooking.vehicle_name) || vehicleNameParam;
+
+                const nearbyData = await findNearbyPlaces(dbBooking?.pickup_location);
+                if (recipientEmail) {
+                    await sendNearestLocationsEmail(
+                        recipientEmail,
+                        recipientName,
+                        { bookingId: bookingId, vehicleName: vehicle },
+                        nearbyData
+                    );
+                    console.log(`✉️ [IVR] Dispatched nearest locations email to ${recipientEmail}`);
+                }
+            }
+        } catch (err) {
+            console.error('❌ Exception in IVR Keypress 3:', err);
+        }
     } else {
         twiml.say({ voice: 'Polly.Aditi', language: 'hi-IN' }, "Hame koi sahi option nahi mila. RentHub se judne ke liye dhanyavaad! Alvida.");
     }
@@ -142,6 +177,7 @@ router.post('/process-keypress', async (req, res) => {
     res.type('text/xml');
     res.send(twiml.toString());
 });
+
 
 // Handler for Retell AI Webhooks & Custom Tool Calls
 const handleRetellWebhook = async (req, res) => {
@@ -151,12 +187,13 @@ const handleRetellWebhook = async (req, res) => {
 
         const event = body.event || body.type;
         const callData = body.call || body;
-        const metadata = callData.metadata || body.args || {};
+        const metadata = callData.metadata || body.args || (callData.retell_llm_dynamic_variables) || {};
         const bookingId = metadata.booking_id || metadata.bookingId;
         const userEmail = metadata.user_email || metadata.userEmail;
         const userName = metadata.user_name || metadata.userName || 'Customer';
         const vehicleName = metadata.vehicle_name || metadata.vehicleName || 'Vehicle';
         const userPhone = metadata.user_phone || metadata.userPhone || callData.to_number || 'N/A';
+        const gpsLocation = metadata.gps_location || metadata.gpsLocation || null;
 
         const action = body.name || (callData.custom_analysis_data && callData.custom_analysis_data.user_intent) || (body.args && body.args.action);
 
@@ -199,10 +236,63 @@ const handleRetellWebhook = async (req, res) => {
             console.log(`✅ [Retell AI] SOS marked as resolved by user for Booking: ${bookingId}`);
             return res.json({
                 success: true,
-                message: 'Thank you! We have logged that your issue has been resolved. Safe riding with RentHub!'
+                message: 'Thank you! We have logged that your issue has been resolved. Safe riding with RentHub!',
+                response: 'Bohat accha! Aapka issue solve ho gaya hai. RentHub ke saath safe ride karein!'
             });
 
-        // 4. SOS Escalate / Roadside Mechanic Dispatch Action
+        // 4. Send Nearest Bike Garage / Petrol Pump Locations to Email (Option 3 / Customer Requests Location)
+        } else if (
+            action === 'send_nearest_locations' ||
+            action === 'send_location' ||
+            action === 'send_nearby_help' ||
+            action === 'send_garage_petrol_pump' ||
+            action === 'send_nearby_locations_email' ||
+            event === 'location_email_requested'
+        ) {
+            console.log(`📍 [Retell AI] Dispathing Nearest Locations Email for Booking: ${bookingId}, Email: ${userEmail}`);
+            
+            let resolvedEmail = userEmail;
+            let resolvedName = userName;
+            let resolvedVehicle = vehicleName;
+
+            if (bookingId) {
+                let query = supabase.from('bookings').select('*, users:user_id(full_name, email)');
+                if (String(bookingId).startsWith('RH')) {
+                    query = query.eq('booking_id', bookingId);
+                } else {
+                    query = query.eq('id', bookingId);
+                }
+                const { data: dbBooking } = await query.single();
+                if (dbBooking) {
+                    resolvedEmail = resolvedEmail || dbBooking.users?.email || dbBooking.user_email;
+                    resolvedName = resolvedName !== 'Customer' ? resolvedName : (dbBooking.users?.full_name || 'Customer');
+                    resolvedVehicle = dbBooking.vehicle_name || resolvedVehicle;
+                }
+            }
+
+            const nearbyData = await findNearbyPlaces(gpsLocation);
+
+            if (resolvedEmail) {
+                await sendNearestLocationsEmail(
+                    resolvedEmail,
+                    resolvedName,
+                    {
+                        bookingId: bookingId || 'Active Ride',
+                        vehicleName: resolvedVehicle
+                    },
+                    nearbyData
+                );
+                console.log(`✉️ [Retell AI] Successfully sent nearest locations email to ${resolvedEmail}`);
+            }
+
+            return res.json({
+                success: true,
+                response: `Maine aapke registered email par nearest bike garage aur petrol pump ki Google Maps location bhej di hai. Aap apna inbox check kar sakte hain.`,
+                message: `Locations sent to ${resolvedEmail}`,
+                nearbyData: nearbyData
+            });
+
+        // 5. SOS Escalate / Roadside Mechanic Dispatch Action
         } else if (action === 'escalate_sos_mechanic' || action === 'sos_unresolved' || action === 'request_mechanic' || event === 'mechanic_requested') {
             console.log(`🚨 [Retell AI] Roadside Mechanic Dispatch requested by user for Booking: ${bookingId}`);
             const issueDetail = (body.args && (body.args.issue || body.args.notes || body.args.reason)) || 'Customer requested mechanic via AI Voice Call';
@@ -236,10 +326,11 @@ const handleRetellWebhook = async (req, res) => {
 
             return res.json({
                 success: true,
-                message: 'Roadside mechanic alert sent to emergency operations team. A representative will contact you immediately.'
+                message: 'Roadside mechanic alert sent to emergency operations team. A representative will contact you immediately.',
+                response: 'Emergency roadside mechanic alert register ho gaya hai. Hamari team aapse turant contact karegi.'
             });
 
-        // 5. Fuel Leakage / High-Hazard Fire Alert
+        // 6. Fuel Leakage / High-Hazard Fire Alert
         } else if (action === 'fuel_leakage_alert' || action === 'fire_hazard') {
             console.log(`🔥 [Retell AI] FUEL LEAKAGE ALERT received for Booking: ${bookingId}`);
             try {
@@ -254,7 +345,8 @@ const handleRetellWebhook = async (req, res) => {
 
             return res.json({
                 success: true,
-                message: 'High priority hazard logged. Safety advice delivered to user.'
+                message: 'High priority hazard logged. Safety advice delivered to user.',
+                response: 'Safety alert register ho gaya hai. Kripya vehicle se 10 meter door rahein.'
             });
         }
 
@@ -271,3 +363,4 @@ router.all('/webhook', handleRetellWebhook);
 router.all('/', (req, res) => res.json({ success: true, message: 'Voice API Active' }));
 
 module.exports = router;
+
