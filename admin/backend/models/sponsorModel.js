@@ -78,27 +78,50 @@ class SponsorModel {
             gps_tracking: null
         };
 
-        const { data, error } = await supabase
-            .from('sponsor_vehicle_requests')
-            .insert([{
-                sponsor_id: sponsor_id,
-                vehicle_type: type || 'bike',
-                name: vehicleData.name,
-                registration_number: vehicleData.registration_number,
-                model: vehicleData.model,
-                year: vehicleData.year,
-                price: vehicleData.price,
-                image_url: vehicleData.image_url,
-                rc_url: vehicleData.rc_url,
-                insurance_url: vehicleData.insurance_url,
-                puc_url: vehicleData.puc_url,
-                status: 'pending',
-                vehicle_details: details
-            }])
-            .select()
-            .single();
+        const insertPayload = {
+            sponsor_id: sponsor_id,
+            vehicle_type: type || 'bike',
+            name: vehicleData.name,
+            registration_number: vehicleData.registration_number,
+            model: vehicleData.model,
+            year: vehicleData.year,
+            price: vehicleData.price,
+            image_url: vehicleData.image_url,
+            rc_url: vehicleData.rc_url,
+            insurance_url: vehicleData.insurance_url,
+            puc_url: vehicleData.puc_url,
+            status: 'pending'
+        };
 
-        if (error) throw error;
+        let result = null;
+
+        try {
+            const { data, error } = await supabase
+                .from('sponsor_vehicle_requests')
+                .insert([{
+                    ...insertPayload,
+                    vehicle_details: details
+                }])
+                .select()
+                .single();
+
+            if (!error && data) {
+                result = data;
+            }
+        } catch (e) {
+            console.warn('vehicle_details column check:', e.message);
+        }
+
+        if (!result) {
+            const { data, error } = await supabase
+                .from('sponsor_vehicle_requests')
+                .insert([insertPayload])
+                .select()
+                .single();
+
+            if (error) throw error;
+            result = data;
+        }
 
         // Automatically trigger Step 1 Email to Sponsor
         try {
@@ -106,7 +129,7 @@ class SponsorModel {
             if (sponsor && sponsor.email) {
                 const { sendSponsorTimelineEmail } = require('../config/emailService');
                 await sendSponsorTimelineEmail(sponsor.email, sponsor.full_name, {
-                    ...data,
+                    ...result,
                     ...details,
                     tracking_id: trackingId
                 }, 1);
@@ -115,7 +138,7 @@ class SponsorModel {
             console.warn('Error sending initial timeline email:', e.message);
         }
 
-        return { ...data, ...details, tracking_id: trackingId };
+        return { ...result, ...details, tracking_id: trackingId };
     }
 
     static async getSponsorVehicles(sponsorId) {

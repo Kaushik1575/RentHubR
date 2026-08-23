@@ -79,27 +79,52 @@ class SponsorModel {
             gps_tracking: null
         };
 
-        const { data, error } = await supabase
-            .from('sponsor_vehicle_requests')
-            .insert([{
-                sponsor_id: sponsor_id,
-                vehicle_type: type || 'bike',
-                name: name,
-                registration_number: registration_number,
-                model: model,
-                year: year,
-                price: price,
-                image_url: image_url,
-                rc_url: rc_url,
-                insurance_url: insurance_url,
-                puc_url: puc_url,
-                status: 'pending',
-                vehicle_details: details
-            }])
-            .select()
-            .single();
+        const insertPayload = {
+            sponsor_id: sponsor_id,
+            vehicle_type: type || 'bike',
+            name: name,
+            registration_number: registration_number,
+            model: model,
+            year: year,
+            price: price,
+            image_url: image_url,
+            rc_url: rc_url,
+            insurance_url: insurance_url,
+            puc_url: puc_url,
+            status: 'pending'
+        };
 
-        if (error) throw error;
+        let result = null;
+
+        // 1. Try inserting with vehicle_details JSON column
+        try {
+            const { data, error } = await supabase
+                .from('sponsor_vehicle_requests')
+                .insert([{
+                    ...insertPayload,
+                    vehicle_details: details
+                }])
+                .select()
+                .single();
+
+            if (!error && data) {
+                result = data;
+            }
+        } catch (e) {
+            console.warn('vehicle_details column check:', e.message);
+        }
+
+        // 2. Fallback if vehicle_details column is not yet present in Supabase table
+        if (!result) {
+            const { data, error } = await supabase
+                .from('sponsor_vehicle_requests')
+                .insert([insertPayload])
+                .select()
+                .single();
+
+            if (error) throw error;
+            result = data;
+        }
 
         // Automatically trigger Step 1 Email to Sponsor
         try {
@@ -107,7 +132,7 @@ class SponsorModel {
             if (sponsor && sponsor.email) {
                 const { sendSponsorTimelineEmail } = require('../config/sponsorEmailService');
                 await sendSponsorTimelineEmail(sponsor.email, sponsor.full_name, {
-                    ...data,
+                    ...result,
                     ...details,
                     tracking_id: trackingId
                 }, 1);
@@ -116,7 +141,7 @@ class SponsorModel {
             console.warn('Error sending initial timeline email:', e.message);
         }
 
-        return { ...data, ...details, tracking_id: trackingId };
+        return { ...result, ...details, tracking_id: trackingId };
     }
 
     static async getSponsorVehicles(sponsorId) {
