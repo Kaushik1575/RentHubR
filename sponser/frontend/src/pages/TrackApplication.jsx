@@ -252,9 +252,29 @@ const TrackApplication = () => {
             if (agreed) {
                 toast.success(res.data.message || 'Pricing terms accepted! Progression unlocked.');
                 setShowCounterForm(false);
+                setCounterPrice('');
+                setCounterReason('');
+                setTrackingData(prev => ({
+                    ...prev,
+                    terms_accepted: true,
+                    terms_declined: false,
+                    counter_offer_price: null,
+                    sponsor_requested_price: null,
+                    sponsor_price_remarks: null,
+                    agreement_accepted_at: new Date().toISOString(),
+                    current_stage: Math.max(prev?.current_stage || 5, 6)
+                }));
             } else {
                 toast.success(res.data.message || 'Counter-offer sent to admin for review!');
                 setShowCounterForm(false);
+                setTrackingData(prev => ({
+                    ...prev,
+                    terms_accepted: false,
+                    terms_declined: true,
+                    counter_offer_price: priceToSend,
+                    sponsor_requested_price: priceToSend,
+                    sponsor_price_remarks: reasonToSend
+                }));
             }
             performLookup(trackingData.tracking_id || trackingData.id);
         } catch (err) {
@@ -825,7 +845,7 @@ const TrackApplication = () => {
                                                                 /* After Admin sends price */
                                                                 <>
                                                                     {/* Pricing Comparison Grid */}
-                                                                    <div className={`grid gap-2 text-xs ${trackingData.counter_offer_price ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
+                                                                    <div className={`grid gap-2 text-xs ${(!trackingData.terms_accepted && !trackingData.agreement_accepted_at && (trackingData.current_stage < 6) && trackingData.counter_offer_price) ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
                                                                         <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-sm">
                                                                             <span className="text-[10px] text-slate-400 block uppercase font-bold">Proposed Rent</span>
                                                                             <span className="text-base font-black text-slate-900">₹{hourlyRate}<small className="text-xs text-slate-500">/hr</small></span>
@@ -834,7 +854,7 @@ const TrackApplication = () => {
                                                                             <span className="text-[10px] text-slate-400 block uppercase font-bold">Your Share (70%)</span>
                                                                             <span className="text-base font-black text-emerald-700">₹{sponsorHourlyShare.toFixed(1)}<small className="text-xs text-slate-500">/hr</small></span>
                                                                         </div>
-                                                                        {trackingData.counter_offer_price && (
+                                                                        {(!trackingData.terms_accepted && !trackingData.agreement_accepted_at && (trackingData.current_stage < 6) && trackingData.counter_offer_price) && (
                                                                             <>
                                                                                 <div className="bg-purple-50 p-2.5 rounded-xl border border-purple-200 shadow-sm">
                                                                                     <span className="text-[10px] text-purple-700 block uppercase font-bold">Your Counter Rate</span>
@@ -849,12 +869,12 @@ const TrackApplication = () => {
                                                                     </div>
 
                                                                     {/* Sponsor Agreement Decision Block */}
-                                                                    {(trackingData.terms_accepted || trackingData.agreement_accepted_at) ? (
+                                                                    {(trackingData.terms_accepted || trackingData.agreement_accepted_at || trackingData.current_stage >= 6) ? (
                                                                         <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center justify-between gap-2">
                                                                             <div>
                                                                                 <span className="text-[10px] uppercase font-bold text-emerald-600 block">Sponsor Decision</span>
-                                                                                <strong className="text-xs font-black">✓ Pricing Terms Accepted</strong>
-                                                                                <span className="text-[11px] text-emerald-700 block">Ready for Next Step: Digital Contract & GPS Fitment</span>
+                                                                                <strong className="text-xs font-black">✓ Pricing Terms Accepted & Approved</strong>
+                                                                                <span className="text-[11px] text-emerald-700 block">Official Rate: ₹{hourlyRate}/hr • 70% Payout: ₹{sponsorHourlyShare.toFixed(1)}/hr</span>
                                                                             </div>
                                                                             <span className="px-2.5 py-1 rounded-full bg-emerald-200 text-emerald-900 font-extrabold text-[10px] shrink-0">
                                                                                 Accepted

@@ -733,16 +733,18 @@ exports.respondPricingTerms = async (req, res) => {
         const sponsorName = request.sponsors?.full_name || 'Sponsor';
 
         if (agreed) {
-            await SponsorModel.updateRequestStage(requestId, 6, {
+            const updated = await SponsorModel.updateRequestStage(requestId, 6, {
                 notes: `Pricing terms agreed by ${sponsorName}. Proceeding to agreement contract.`,
                 terms_accepted: true,
                 terms_declined: false,
                 counter_offer_price: null,
+                sponsor_requested_price: null,
+                sponsor_price_remarks: null,
                 terms_accepted_at: new Date().toISOString(),
                 agreement_accepted_at: new Date().toISOString()
             });
 
-            const updated = await SponsorModel.updateRequestStage(requestId, 7, {
+            const updatedContract = await SponsorModel.updateRequestStage(requestId, 7, {
                 notes: 'Contract activated after sponsor terms acceptance. Ready for GPS installation.'
             });
 
@@ -750,7 +752,7 @@ exports.respondPricingTerms = async (req, res) => {
                 success: true,
                 agreed: true,
                 message: 'Pricing terms accepted! Progression unlocked for next step.',
-                request: updated
+                request: updatedContract
             });
         } else {
             const counterVal = parseFloat(counter_price) || null;
@@ -776,8 +778,8 @@ exports.respondPricingTerms = async (req, res) => {
             });
         }
     } catch (error) {
-        console.error('Error in respondPricingTerms:', error);
-        res.status(500).json({ error: error.message || 'Failed to process pricing decision' });
+        console.error('Error responding to pricing terms:', error);
+        res.status(500).json({ error: error.message || 'Failed to submit pricing decision' });
     }
 };
 
@@ -825,50 +827,53 @@ exports.getTimeline = async (req, res) => {
     }
 };
 
+// ============================================
+// PUBLIC TRACKING LOOKUP
+// ============================================
+
 exports.lookupTracking = async (req, res) => {
     try {
-        const identifier = (req.params.identifier || '').trim();
-        if (!identifier) {
+        const { identifier } = req.params;
+
+        if (!identifier || identifier.trim() === '') {
             return res.status(400).json({ error: 'Tracking ID or Request ID is required' });
         }
 
-        let request = null;
+        const cleanId = identifier.trim();
 
-        // 1. If numeric
-        if (/^\d+$/.test(identifier)) {
-            const { data } = await supabase
-                .from('sponsor_vehicle_requests')
-                .select('*, sponsors(full_name, email, phone_number)')
-                .eq('id', parseInt(identifier))
-                .maybeSingle();
-            request = data;
-        }
+        // 1. Search by exact tracking_id in vehicle_details JSON
+        let { data: request, error: queryError } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*, sponsors(*)')
+            .eq('vehicle_details->>tracking_id', cleanId)
+            .maybeSingle();
 
-        // 2. Try registration number match
-        if (!request) {
-            const { data: regData } = await supabase
+        // 2. Fallback: Search by numeric primary key ID if cleanId is a number
+        if (!request && !isNaN(cleanId)) {
+            const { data: reqById } = await supabase
                 .from('sponsor_vehicle_requests')
-                .select('*, sponsors(full_name, email, phone_number)')
-                .ilike('registration_number', identifier)
+                .select('*, sponsors(*)')
+                .eq('id', parseInt(cleanId))
                 .maybeSingle();
-            request = regData;
+
+            if (reqById) request = reqById;
         }
 
         // 3. Search tracking_id or partial ID across recent requests
         if (!request) {
-            const { data: allReqs } = await supabase
+            const { data: allRequests } = await supabase
                 .from('sponsor_vehicle_requests')
-                .select('*, sponsors(full_name, email, phone_number)')
+                .select('*, sponsors(*)')
                 .order('created_at', { ascending: false })
-                .limit(100);
+                .limit(50);
 
-            if (allReqs && allReqs.length > 0) {
-                request = allReqs.find(r => {
+            if (allRequests && allRequests.length > 0) {
+                const found = allRequests.find(r => {
                     const tid = r.vehicle_details?.tracking_id || `RH-REQ-${r.id}`;
-                    return tid.toLowerCase() === identifier.toLowerCase() ||
-                           String(r.id) === identifier ||
-                           (r.registration_number && r.registration_number.toLowerCase() === identifier.toLowerCase());
+                    return tid.toLowerCase() === cleanId.toLowerCase() ||
+                           tid.toLowerCase().replace(/[^a-z0-9]/g, '') === cleanId.toLowerCase().replace(/[^a-z0-9]/g, '');
                 });
+                if (found) request = found;
             }
         }
 
@@ -879,6 +884,7 @@ exports.lookupTracking = async (req, res) => {
         const details = request.vehicle_details || {};
         const trackingId = details.tracking_id || `RH-REQ-${request.id}`;
         const currentStage = details.current_stage || (request.status === 'approved' ? 9 : 1);
+        const isTermsAgreed = details.terms_accepted || !!details.agreement_accepted_at || currentStage >= 6;
 
         res.json({
             id: request.id,
@@ -903,11 +909,11 @@ exports.lookupTracking = async (req, res) => {
             gps_tracking: details.gps_tracking || null,
             survey_scheduled_date: details.survey_scheduled_date || null,
             agreement_accepted_at: details.agreement_accepted_at || null,
-            counter_offer_price: details.counter_offer_price || details.sponsor_requested_price || null,
-            sponsor_requested_price: details.counter_offer_price || details.sponsor_requested_price || null,
-            sponsor_price_remarks: details.sponsor_price_remarks || details.notes || null,
-            terms_accepted: details.terms_accepted || !!details.agreement_accepted_at,
-            terms_declined: details.terms_declined || false,
+            counter_offer_price: isTermsAgreed ? null : (details.counter_offer_price || details.sponsor_requested_price || null),
+            sponsor_requested_price: isTermsAgreed ? null : (details.counter_offer_price || details.sponsor_requested_price || null),
+            sponsor_price_remarks: isTermsAgreed ? null : (details.sponsor_price_remarks || null),
+            terms_accepted: isTermsAgreed,
+            terms_declined: isTermsAgreed ? false : (details.terms_declined || false),
             terms_accepted_at: details.terms_accepted_at || details.agreement_accepted_at || null,
             sponsor: request.sponsors
         });
@@ -915,6 +921,4 @@ exports.lookupTracking = async (req, res) => {
         console.error('Error in lookupTracking:', error);
         res.status(500).json({ error: 'Failed to look up tracking details' });
     }
-};
-
 
