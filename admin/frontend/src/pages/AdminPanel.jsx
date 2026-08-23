@@ -2368,11 +2368,36 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
             {/* STAGE MODAL 1: Schedule Physical Survey (Stage 3) */}
             {modal.type === 'stageScheduleSurvey' && (
-                <div className="modal active">
-                    <div className="modal-content" style={{ maxWidth: '500px' }}>
-                        <div className="modal-header">
-                            <h3><i className="fas fa-calendar-check" style={{ color: '#0284c7', marginRight: '8px' }}></i> Schedule Physical Survey</h3>
-                            <button className="close-btn" onClick={() => setModal({ type: null })}>&times;</button>
+                <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1050 }}>
+                    <div className="modal-backdrop" onClick={() => setModal({ type: null })}></div>
+                    <div className="modal-content" style={{ maxWidth: '520px', width: '100%', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e0f2fe' }}>
+                        <div style={{ background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>📅 Schedule Physical Survey</h3>
+                                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
+                                    Assign an engineer visit date for <strong>{modal.data?.name}</strong>.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setModal({ type: null })}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.2)',
+                                    border: 'none',
+                                    color: '#ffffff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                ✕
+                            </button>
                         </div>
                         <form onSubmit={(e) => {
                             e.preventDefault();
@@ -2381,34 +2406,81 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 notes: stageFormData.notes
                             });
                         }}>
-                            <div className="modal-body" style={{ padding: '20px' }}>
-                                <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '16px' }}>
-                                    Assign an inspection date for RentHub field engineers to visit the sponsor's location and physically review <strong>{modal.data?.name}</strong>.
+                            <div className="modal-body" style={{ padding: '24px', maxHeight: '75vh', overflowY: 'auto' }}>
+                                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '18px', lineHeight: 1.5 }}>
+                                    Assign an inspection date for RentHub field engineers to visit the sponsor's location and physically review the vehicle.
                                 </p>
-                                <div className="form-group" style={{ marginBottom: '14px' }}>
-                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Inspection Visit Date</label>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e293b', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                        Inspection Visit Date <span style={{ color: '#ef4444' }}>*</span>
+                                    </label>
                                     <input
                                         type="date"
-                                        className="form-control"
                                         value={stageFormData.survey_scheduled_date || ''}
                                         onChange={(e) => setStageFormData({ ...stageFormData, survey_scheduled_date: e.target.value })}
                                         required
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 14px',
+                                            borderRadius: '12px',
+                                            border: '1.5px solid #cbd5e1',
+                                            fontSize: '0.88rem',
+                                            fontFamily: 'inherit',
+                                            boxSizing: 'border-box'
+                                        }}
                                     />
                                 </div>
-                                <div className="form-group">
-                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Inspector / Field Notes</label>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e293b', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                        Inspector / Field Notes
+                                    </label>
                                     <textarea
-                                        className="form-control"
                                         rows="3"
                                         placeholder="e.g. Field Engineer Rahul assigned. Sponsor contacted for time slot 11 AM."
                                         value={stageFormData.notes || ''}
                                         onChange={(e) => setStageFormData({ ...stageFormData, notes: e.target.value })}
+                                        style={{
+                                            width: '100%',
+                                            padding: '12px 14px',
+                                            borderRadius: '12px',
+                                            border: '1.5px solid #cbd5e1',
+                                            fontSize: '0.85rem',
+                                            fontFamily: 'inherit',
+                                            boxSizing: 'border-box'
+                                        }}
                                     ></textarea>
                                 </div>
                             </div>
-                            <div className="modal-footer" style={{ padding: '15px 20px', display: 'flex', gap: '10px' }}>
-                                <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: null })}>Cancel</button>
-                                <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ background: '#0284c7' }}>
+                            <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setModal({ type: null })}
+                                    style={{
+                                        padding: '10px 18px',
+                                        borderRadius: '10px',
+                                        border: '1px solid #cbd5e1',
+                                        background: '#fff',
+                                        color: '#475569',
+                                        fontWeight: 600,
+                                        cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    style={{
+                                        padding: '10px 22px',
+                                        borderRadius: '10px',
+                                        border: 'none',
+                                        background: 'linear-gradient(135deg, #0284c7 0%, #0369a1 100%)',
+                                        color: '#fff',
+                                        fontWeight: 700,
+                                        cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                        boxShadow: '0 4px 12px rgba(2, 132, 199, 0.3)'
+                                    }}
+                                >
                                     {isSubmitting ? 'Scheduling...' : 'Confirm & Notify Sponsor 📩'}
                                 </button>
                             </div>
@@ -2419,11 +2491,36 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
             {/* STAGE MODAL 2: Physical Survey Inspection Report (Stage 4) */}
             {modal.type === 'stageSurveyReport' && (
-                <div className="modal active">
-                    <div className="modal-content" style={{ maxWidth: '550px' }}>
-                        <div className="modal-header">
-                            <h3><i className="fas fa-clipboard-check" style={{ color: '#059669', marginRight: '8px' }}></i> Submit Survey Inspection Report</h3>
-                            <button className="close-btn" onClick={() => setModal({ type: null })}>&times;</button>
+                <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1050 }}>
+                    <div className="modal-backdrop" onClick={() => setModal({ type: null })}></div>
+                    <div className="modal-content" style={{ maxWidth: '560px', width: '100%', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #d1fae5' }}>
+                        <div style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>📋 Submit Inspection Report</h3>
+                                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
+                                    Generate 24-point diagnostic scorecard for <strong>{modal.data?.name}</strong>.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setModal({ type: null })}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.2)',
+                                    border: 'none',
+                                    color: '#ffffff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                ✕
+                            </button>
                         </div>
                         <form onSubmit={(e) => {
                             e.preventDefault();
@@ -2438,71 +2535,90 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 notes: stageFormData.notes || 'Physical inspection completed with Grade A rating'
                             });
                         }}>
-                            <div className="modal-body" style={{ padding: '20px' }}>
-                                <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '16px' }}>
-                                    Record the field inspection findings for <strong>{modal.data?.name}</strong>. A digital condition scorecard will be emailed to the sponsor.
+                            <div className="modal-body" style={{ padding: '24px', maxHeight: '75vh', overflowY: 'auto' }}>
+                                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '18px' }}>
+                                    Record the field inspection findings. A digital condition scorecard will be emailed to the sponsor.
                                 </p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
-                                    <div className="form-group">
-                                        <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '4px' }}>Tyre Condition</label>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
+                                    <div>
+                                        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px' }}>Tyre Tread Condition</label>
                                         <input
                                             type="text"
-                                            className="form-control"
                                             value={stageFormData.tyres || ''}
                                             onChange={(e) => setStageFormData({ ...stageFormData, tyres: e.target.value })}
                                             placeholder="e.g. Good (85% tread)"
                                             required
+                                            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
                                         />
                                     </div>
-                                    <div className="form-group">
-                                        <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '4px' }}>Brakes & Suspension</label>
+                                    <div>
+                                        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px' }}>Brakes & Suspension</label>
                                         <input
                                             type="text"
-                                            className="form-control"
                                             value={stageFormData.brakes || ''}
                                             onChange={(e) => setStageFormData({ ...stageFormData, brakes: e.target.value })}
                                             placeholder="e.g. Tested & Working"
                                             required
+                                            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
                                         />
                                     </div>
-                                    <div className="form-group">
-                                        <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '4px' }}>Engine Performance</label>
+                                    <div>
+                                        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px' }}>Engine Performance</label>
                                         <input
                                             type="text"
-                                            className="form-control"
                                             value={stageFormData.engine || ''}
                                             onChange={(e) => setStageFormData({ ...stageFormData, engine: e.target.value })}
                                             placeholder="e.g. Smooth, No Noise"
                                             required
+                                            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
                                         />
                                     </div>
-                                    <div className="form-group">
-                                        <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '4px' }}>Lights & Electricals</label>
+                                    <div>
+                                        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px' }}>Lights & Electricals</label>
                                         <input
                                             type="text"
-                                            className="form-control"
                                             value={stageFormData.lights || ''}
                                             onChange={(e) => setStageFormData({ ...stageFormData, lights: e.target.value })}
                                             placeholder="e.g. Fully Functional"
                                             required
+                                            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
                                         />
                                     </div>
                                 </div>
-                                <div className="form-group">
-                                    <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '4px' }}>Inspector Overall Summary</label>
+                                <div>
+                                    <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px' }}>Overall Audit Summary</label>
                                     <textarea
-                                        className="form-control"
                                         rows="2"
                                         value={stageFormData.notes || ''}
                                         onChange={(e) => setStageFormData({ ...stageFormData, notes: e.target.value })}
                                         placeholder="e.g. Vehicle in pristine roadworthy condition. Recommended for onboarding."
+                                        style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
                                     ></textarea>
                                 </div>
                             </div>
-                            <div className="modal-footer" style={{ padding: '15px 20px', display: 'flex', gap: '10px' }}>
-                                <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: null })}>Cancel</button>
-                                <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ background: '#059669' }}>
-                                    {isSubmitting ? 'Generating Report...' : 'Publish Inspection Report 📋'}
+                            <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setModal({ type: null })}
+                                    style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    style={{
+                                        padding: '10px 22px',
+                                        borderRadius: '10px',
+                                        border: 'none',
+                                        background: 'linear-gradient(135deg, #059669 0%, #047857 100%)',
+                                        color: '#fff',
+                                        fontWeight: 700,
+                                        cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                        boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                                    }}
+                                >
+                                    {isSubmitting ? 'Publishing...' : 'Publish Inspection Report 📋'}
                                 </button>
                             </div>
                         </form>
@@ -2512,11 +2628,36 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
             {/* STAGE MODAL 3: Proposed Rental Price & Revenue Split (Stage 5) */}
             {modal.type === 'stagePricingDecision' && (
-                <div className="modal active">
-                    <div className="modal-content" style={{ maxWidth: '500px' }}>
-                        <div className="modal-header">
-                            <h3><i className="fas fa-hand-holding-usd" style={{ color: '#d97706', marginRight: '8px' }}></i> Set Pricing & Revenue Share</h3>
-                            <button className="close-btn" onClick={() => setModal({ type: null })}>&times;</button>
+                <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1050 }}>
+                    <div className="modal-backdrop" onClick={() => setModal({ type: null })}></div>
+                    <div className="modal-content" style={{ maxWidth: '520px', width: '100%', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #fef3c7' }}>
+                        <div style={{ background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>💰 Set Pricing & Revenue Share</h3>
+                                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
+                                    Set customer rate and 70% sponsor split for <strong>{modal.data?.name}</strong>.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setModal({ type: null })}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.2)',
+                                    border: 'none',
+                                    color: '#ffffff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                ✕
+                            </button>
                         </div>
                         <form onSubmit={(e) => {
                             e.preventDefault();
@@ -2529,41 +2670,64 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 notes: `Proposed pricing ₹${stageFormData.proposed_price}/hr with ${stageFormData.sponsor_percentage}% sponsor revenue share`
                             });
                         }}>
-                            <div className="modal-body" style={{ padding: '20px' }}>
-                                <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '16px' }}>
-                                    Set the official customer rental price and sponsor revenue share. An agreement link will be emailed to the sponsor for digital acceptance.
+                            <div className="modal-body" style={{ padding: '24px', maxHeight: '75vh', overflowY: 'auto' }}>
+                                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '18px' }}>
+                                    Set the official customer rental price and sponsor revenue share. An agreement link will be emailed to the sponsor for digital signature.
                                 </p>
-                                <div className="form-group" style={{ marginBottom: '14px' }}>
-                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Hourly Rental Price (₹/hr)</label>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e293b', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                        Hourly Customer Rental Price (₹/hr) <span style={{ color: '#ef4444' }}>*</span>
+                                    </label>
                                     <input
                                         type="number"
-                                        className="form-control"
                                         value={stageFormData.proposed_price || ''}
                                         onChange={(e) => setStageFormData({ ...stageFormData, proposed_price: e.target.value })}
                                         min="10"
                                         required
+                                        style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', boxSizing: 'border-box' }}
                                     />
                                 </div>
-                                <div className="form-group" style={{ marginBottom: '14px' }}>
-                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Sponsor Revenue Share (%)</label>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e293b', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                        Sponsor Revenue Share (%) <span style={{ color: '#ef4444' }}>*</span>
+                                    </label>
                                     <input
                                         type="number"
-                                        className="form-control"
                                         value={stageFormData.sponsor_percentage || 70}
                                         onChange={(e) => setStageFormData({ ...stageFormData, sponsor_percentage: e.target.value })}
                                         min="50"
                                         max="90"
                                         required
+                                        style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', boxSizing: 'border-box' }}
                                     />
-                                    <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
-                                        RentHub platform commission: {100 - (parseFloat(stageFormData.sponsor_percentage) || 70)}%
+                                    <small style={{ color: '#64748b', display: 'block', marginTop: '4px', fontSize: '0.78rem' }}>
+                                        RentHub platform management fee: {100 - (parseFloat(stageFormData.sponsor_percentage) || 70)}%
                                     </small>
                                 </div>
                             </div>
-                            <div className="modal-footer" style={{ padding: '15px 20px', display: 'flex', gap: '10px' }}>
-                                <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: null })}>Cancel</button>
-                                <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ background: '#d97706' }}>
-                                    {isSubmitting ? 'Submitting...' : 'Send Agreement to Sponsor 🤝'}
+                            <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setModal({ type: null })}
+                                    style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    style={{
+                                        padding: '10px 22px',
+                                        borderRadius: '10px',
+                                        border: 'none',
+                                        background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                                        color: '#fff',
+                                        fontWeight: 700,
+                                        cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                        boxShadow: '0 4px 12px rgba(217, 119, 6, 0.3)'
+                                    }}
+                                >
+                                    {isSubmitting ? 'Sending...' : 'Send Agreement to Sponsor 🤝'}
                                 </button>
                             </div>
                         </form>
@@ -2573,11 +2737,36 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
             {/* STAGE MODAL 4: Install & Pair GPS Tracker (Stage 8) */}
             {modal.type === 'stageGPSInstallation' && (
-                <div className="modal active">
-                    <div className="modal-content" style={{ maxWidth: '500px' }}>
-                        <div className="modal-header">
-                            <h3><i className="fas fa-map-marker-alt" style={{ color: '#4f46e5', marginRight: '8px' }}></i> Install Anti-Theft GPS Tracker</h3>
-                            <button className="close-btn" onClick={() => setModal({ type: null })}>&times;</button>
+                <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1050 }}>
+                    <div className="modal-backdrop" onClick={() => setModal({ type: null })}></div>
+                    <div className="modal-content" style={{ maxWidth: '520px', width: '100%', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e0e7ff' }}>
+                        <div style={{ background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>📍 Pair Anti-Theft GPS Tracker</h3>
+                                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
+                                    Pair hardware AIS-140 device for <strong>{modal.data?.name}</strong>.
+                                </p>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => setModal({ type: null })}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.2)',
+                                    border: 'none',
+                                    color: '#ffffff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                ✕
+                            </button>
                         </div>
                         <form onSubmit={(e) => {
                             e.preventDefault();
@@ -2590,25 +2779,46 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 notes: `GPS tracker (IMEI: ${stageFormData.device_imei}) fitted and paired with live telemetry`
                             });
                         }}>
-                            <div className="modal-body" style={{ padding: '20px' }}>
-                                <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '16px' }}>
-                                    Fit and pair the anti-theft GPS hardware device to <strong>{modal.data?.name}</strong> before approving the vehicle to go LIVE.
+                            <div className="modal-body" style={{ padding: '24px', maxHeight: '75vh', overflowY: 'auto' }}>
+                                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '18px' }}>
+                                    Fit and pair the anti-theft GPS hardware device to the vehicle before pushing to the live customer fleet.
                                 </p>
-                                <div className="form-group" style={{ marginBottom: '14px' }}>
-                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>GPS Device IMEI Number (15 Digits)</label>
+                                <div style={{ marginBottom: '16px' }}>
+                                    <label style={{ display: 'block', fontWeight: 700, fontSize: '0.82rem', color: '#1e293b', marginBottom: '6px', textTransform: 'uppercase' }}>
+                                        GPS Device IMEI Number (15 Digits) <span style={{ color: '#ef4444' }}>*</span>
+                                    </label>
                                     <input
                                         type="text"
-                                        className="form-control"
                                         value={stageFormData.device_imei || ''}
                                         onChange={(e) => setStageFormData({ ...stageFormData, device_imei: e.target.value })}
                                         placeholder="e.g. 864209048123456"
                                         required
+                                        style={{ width: '100%', padding: '12px 14px', borderRadius: '12px', border: '1.5px solid #cbd5e1', fontSize: '0.88rem', boxSizing: 'border-box', fontFamily: 'monospace', fontWeight: 700 }}
                                     />
                                 </div>
                             </div>
-                            <div className="modal-footer" style={{ padding: '15px 20px', display: 'flex', gap: '10px' }}>
-                                <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: null })}>Cancel</button>
-                                <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ background: '#4f46e5' }}>
+                            <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setModal({ type: null })}
+                                    style={{ padding: '10px 18px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', color: '#475569', fontWeight: 600, cursor: 'pointer' }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="submit"
+                                    disabled={isSubmitting}
+                                    style={{
+                                        padding: '10px 22px',
+                                        borderRadius: '10px',
+                                        border: 'none',
+                                        background: 'linear-gradient(135deg, #4f46e5 0%, #4338ca 100%)',
+                                        color: '#fff',
+                                        fontWeight: 700,
+                                        cursor: isSubmitting ? 'not-allowed' : 'pointer',
+                                        boxShadow: '0 4px 12px rgba(79, 70, 229, 0.3)'
+                                    }}
+                                >
                                     {isSubmitting ? 'Pairing...' : 'Pair GPS & Complete Stage 8 📍'}
                                 </button>
                             </div>
@@ -2619,19 +2829,39 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
             {/* STAGE MODAL 5: View Request Full 9-Stage Timeline */}
             {modal.type === 'viewRequestTimeline' && modal.data && (
-                <div className="modal active">
-                    <div className="modal-content" style={{ maxWidth: '650px' }}>
-                        <div className="modal-header">
+                <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1050 }}>
+                    <div className="modal-backdrop" onClick={() => setModal({ type: null })}></div>
+                    <div className="modal-content" style={{ maxWidth: '640px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #e0e7ff' }}>
+                        <div style={{ background: 'linear-gradient(135deg, #312e81 0%, #4f46e5 100%)', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                                <h3><i className="fas fa-history" style={{ color: '#4f46e5', marginRight: '8px' }}></i> Onboarding Timeline Log</h3>
-                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>📜 Onboarding Timeline Audit</h3>
+                                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
                                     {modal.data.name} ({modal.data.tracking_id || `RH-REQ-${modal.data.id}`})
                                 </p>
                             </div>
-                            <button className="close-btn" onClick={() => setModal({ type: null })}>&times;</button>
+                            <button
+                                type="button"
+                                onClick={() => setModal({ type: null })}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.2)',
+                                    border: 'none',
+                                    color: '#ffffff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '50%',
+                                    cursor: 'pointer',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center'
+                                }}
+                            >
+                                ✕
+                            </button>
                         </div>
-                        <div className="modal-body" style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
-                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                        <div className="modal-body" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
                                 {[
                                     { number: 1, title: '1. Bike & Documents Submitted', icon: '📝' },
                                     { number: 2, title: '2. Document & Vehicle Review', icon: '🔍' },
@@ -2641,7 +2871,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     { number: 6, title: '6. Sponsor Agreement', icon: '🤝' },
                                     { number: 7, title: '7. Contract Activated', icon: '✅' },
                                     { number: 8, title: '8. GPS Tracker Installation', icon: '📍' },
-                                    { number: 9, title: '9. Bike Goes LIVE', icon: '🟢' }
+                                    { number: 9, title: '9. Bike Goes LIVE in Fleet', icon: '🟢' }
                                 ].map((s) => {
                                     const currentStage = modal.data.current_stage || (modal.data.status === 'approved' ? 9 : 1);
                                     const isDone = currentStage >= s.number;
@@ -2651,16 +2881,16 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                         <div key={s.number} style={{
                                             display: 'flex',
                                             alignItems: 'flex-start',
-                                            gap: '12px',
-                                            padding: '12px 14px',
-                                            borderRadius: '10px',
+                                            gap: '14px',
+                                            padding: '14px 16px',
+                                            borderRadius: '14px',
                                             background: isCurrent ? '#eef2ff' : isDone ? '#f8fafc' : '#ffffff',
                                             border: isCurrent ? '1.5px solid #6366f1' : isDone ? '1px solid #e2e8f0' : '1px dashed #cbd5e1',
-                                            opacity: isDone ? 1 : 0.6
+                                            opacity: isDone ? 1 : 0.65
                                         }}>
                                             <div style={{
-                                                width: '28px',
-                                                height: '28px',
+                                                width: '30px',
+                                                height: '30px',
                                                 borderRadius: '50%',
                                                 background: isDone ? '#10b981' : '#e2e8f0',
                                                 color: isDone ? '#fff' : '#64748b',
@@ -2668,34 +2898,34 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                 alignItems: 'center',
                                                 justifyContent: 'center',
                                                 fontWeight: 'bold',
-                                                fontSize: '0.8rem',
+                                                fontSize: '0.82rem',
                                                 flexShrink: 0
                                             }}>
                                                 {isDone ? '✓' : s.number}
                                             </div>
                                             <div style={{ flex: 1 }}>
                                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                    <strong style={{ fontSize: '0.9rem', color: isDone ? '#0f172a' : '#64748b' }}>
+                                                    <strong style={{ fontSize: '0.92rem', color: isDone ? '#0f172a' : '#64748b' }}>
                                                         {s.icon} {s.title}
                                                     </strong>
                                                     {isCurrent && (
-                                                        <span style={{ background: '#4f46e5', color: '#fff', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>
-                                                            CURRENT
+                                                        <span style={{ background: '#4f46e5', color: '#fff', fontSize: '0.68rem', fontWeight: 'bold', padding: '3px 8px', borderRadius: '6px' }}>
+                                                            CURRENT ACTIVE
                                                         </span>
                                                     )}
                                                 </div>
                                                 {s.number === 4 && modal.data.survey_report && (
-                                                    <div style={{ fontSize: '0.78rem', color: '#166534', marginTop: '4px' }}>
+                                                    <div style={{ fontSize: '0.78rem', color: '#166534', marginTop: '6px', background: '#dcfce7', padding: '6px 10px', borderRadius: '8px' }}>
                                                         Tyres: {modal.data.survey_report.tyres} • Brakes: {modal.data.survey_report.brakes} • Engine: {modal.data.survey_report.engine}
                                                     </div>
                                                 )}
                                                 {s.number === 5 && modal.data.pricing_terms && (
-                                                    <div style={{ fontSize: '0.78rem', color: '#92400e', marginTop: '4px' }}>
+                                                    <div style={{ fontSize: '0.78rem', color: '#92400e', marginTop: '6px', background: '#fef3c7', padding: '6px 10px', borderRadius: '8px' }}>
                                                         Rate: ₹{modal.data.pricing_terms.proposed_price}/hr • Sponsor Share: {modal.data.pricing_terms.sponsor_percentage}%
                                                     </div>
                                                 )}
                                                 {s.number === 8 && modal.data.gps_tracking && (
-                                                    <div style={{ fontSize: '0.78rem', color: '#3730a3', marginTop: '4px' }}>
+                                                    <div style={{ fontSize: '0.78rem', color: '#3730a3', marginTop: '6px', background: '#e0e7ff', padding: '6px 10px', borderRadius: '8px' }}>
                                                         GPS IMEI: {modal.data.gps_tracking.device_imei}
                                                     </div>
                                                 )}
@@ -2705,8 +2935,14 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 })}
                             </div>
                         </div>
-                        <div className="modal-footer" style={{ padding: '12px 20px' }}>
-                            <button className="btn btn-secondary" onClick={() => setModal({ type: null })}>Close</button>
+                        <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end' }}>
+                            <button
+                                type="button"
+                                onClick={() => setModal({ type: null })}
+                                style={{ padding: '10px 20px', borderRadius: '10px', border: '1px solid #cbd5e1', background: '#fff', color: '#334155', fontWeight: 700, cursor: 'pointer' }}
+                            >
+                                Close Log
+                            </button>
                         </div>
                     </div>
                 </div>
