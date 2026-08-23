@@ -1206,7 +1206,16 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                                     <button
                                                                         style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                                                         onClick={() => {
-                                                                            setStageFormData({ requestId: r.id, tyres: 'Good (85%)', brakes: 'Tested & Working', engine: 'Smooth Performance', lights: 'Fully Functional', notes: 'Vehicle passed physical survey' });
+                                                                            setStageFormData({
+                                                                                requestId: r.id,
+                                                                                tyres_pass: true,
+                                                                                brakes_pass: true,
+                                                                                engine_pass: true,
+                                                                                lights_pass: true,
+                                                                                chassis_pass: true,
+                                                                                overall_rating: 'Grade A',
+                                                                                notes: 'Vehicle passed physical survey checklist'
+                                                                            });
                                                                             setModal({ type: 'stageSurveyReport', data: r });
                                                                         }}
                                                                     >
@@ -2489,16 +2498,16 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                 </div>
             )}
 
-            {/* STAGE MODAL 2: Physical Survey Inspection Report (Stage 4) */}
+            {/* STAGE MODAL 2: Physical Survey Inspection Report (Stage 4 - Checkbox Driven) */}
             {modal.type === 'stageSurveyReport' && (
                 <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1050 }}>
                     <div className="modal-backdrop" onClick={() => setModal({ type: null })}></div>
                     <div className="modal-content" style={{ maxWidth: '560px', width: '100%', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)', border: '1px solid #d1fae5' }}>
                         <div style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                             <div>
-                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>📋 Submit Inspection Report</h3>
+                                <h3 style={{ margin: 0, fontSize: '1.2rem', fontWeight: 800 }}>📋 1-Click Inspection Checklist</h3>
                                 <p style={{ margin: '4px 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
-                                    Generate 24-point diagnostic scorecard for <strong>{modal.data?.name}</strong>.
+                                    Mark diagnostic checks for <strong>{modal.data?.name}</strong>.
                                 </p>
                             </div>
                             <button
@@ -2526,74 +2535,114 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             e.preventDefault();
                             handleAdvanceStage(stageFormData.requestId, 4, {
                                 survey_report: {
-                                    tyres: stageFormData.tyres || 'Good (85%)',
-                                    brakes: stageFormData.brakes || 'Tested & Passed',
-                                    engine: stageFormData.engine || 'Smooth Performance',
-                                    lights: stageFormData.lights || 'Fully Functional',
-                                    overall_rating: stageFormData.overall_rating || 'Grade A'
+                                    tyres: stageFormData.tyres_pass !== false ? 'Good (85%+ Tread)' : 'Needs Attention',
+                                    brakes: stageFormData.brakes_pass !== false ? 'Tested & Passed' : 'Needs Servicing',
+                                    engine: stageFormData.engine_pass !== false ? 'Smooth Performance' : 'Engine Flagged',
+                                    lights: stageFormData.lights_pass !== false ? 'Fully Functional' : 'Faulty Bulb/Wiring',
+                                    chassis: stageFormData.chassis_pass !== false ? 'Chassis Sound' : 'Minor Scratches',
+                                    overall_rating: (stageFormData.tyres_pass !== false && stageFormData.brakes_pass !== false && stageFormData.engine_pass !== false && stageFormData.lights_pass !== false) ? 'Grade A (Roadworthy Pass)' : 'Grade B (Minor Issues)'
                                 },
-                                notes: stageFormData.notes || 'Physical inspection completed with Grade A rating'
+                                notes: stageFormData.notes || 'Vehicle passed all physical survey checks'
                             });
                         }}>
                             <div className="modal-body" style={{ padding: '24px', maxHeight: '75vh', overflowY: 'auto' }}>
-                                <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '18px' }}>
-                                    Record the field inspection findings. A digital condition scorecard will be emailed to the sponsor.
-                                </p>
-                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', marginBottom: '14px' }}>
-                                    <div>
-                                        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px' }}>Tyre Tread Condition</label>
-                                        <input
-                                            type="text"
-                                            value={stageFormData.tyres || ''}
-                                            onChange={(e) => setStageFormData({ ...stageFormData, tyres: e.target.value })}
-                                            placeholder="e.g. Good (85% tread)"
-                                            required
-                                            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px' }}>Brakes & Suspension</label>
-                                        <input
-                                            type="text"
-                                            value={stageFormData.brakes || ''}
-                                            onChange={(e) => setStageFormData({ ...stageFormData, brakes: e.target.value })}
-                                            placeholder="e.g. Tested & Working"
-                                            required
-                                            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px' }}>Engine Performance</label>
-                                        <input
-                                            type="text"
-                                            value={stageFormData.engine || ''}
-                                            onChange={(e) => setStageFormData({ ...stageFormData, engine: e.target.value })}
-                                            placeholder="e.g. Smooth, No Noise"
-                                            required
-                                            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px' }}>Lights & Electricals</label>
-                                        <input
-                                            type="text"
-                                            value={stageFormData.lights || ''}
-                                            onChange={(e) => setStageFormData({ ...stageFormData, lights: e.target.value })}
-                                            placeholder="e.g. Fully Functional"
-                                            required
-                                            style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                                        />
-                                    </div>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '14px' }}>
+                                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                                        Roadworthiness Checklist
+                                    </span>
+                                    <button
+                                        type="button"
+                                        onClick={() => {
+                                            setStageFormData({
+                                                ...stageFormData,
+                                                tyres_pass: true,
+                                                brakes_pass: true,
+                                                engine_pass: true,
+                                                lights_pass: true,
+                                                chassis_pass: true
+                                            });
+                                        }}
+                                        style={{
+                                            background: '#ecfdf5',
+                                            border: '1px solid #a7f3d0',
+                                            color: '#047857',
+                                            fontSize: '0.75rem',
+                                            fontWeight: 700,
+                                            padding: '4px 10px',
+                                            borderRadius: '8px',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        ✓ Select All Passed
+                                    </button>
                                 </div>
+
+                                <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '18px' }}>
+                                    {[
+                                        { key: 'tyres_pass', label: 'Tyres & Tread Condition', detail: 'Tread depth > 80% & no cuts/cracks' },
+                                        { key: 'brakes_pass', label: 'Brakes & Suspension System', detail: 'Front & rear brakes tested & operational' },
+                                        { key: 'engine_pass', label: 'Engine & Transmission Output', detail: 'Smooth idle, no oil leaks or abnormal smoke' },
+                                        { key: 'lights_pass', label: 'Lights, Horn & Electricals', detail: 'Headlight, indicators, brake light & battery OK' },
+                                        { key: 'chassis_pass', label: 'Chassis & Body Structural Integrity', detail: 'Frame alignment intact & no major rust/dents' }
+                                    ].map((item) => {
+                                        const isChecked = stageFormData[item.key] !== false;
+                                        return (
+                                            <label
+                                                key={item.key}
+                                                style={{
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    gap: '12px',
+                                                    padding: '12px 14px',
+                                                    borderRadius: '12px',
+                                                    border: isChecked ? '1.5px solid #10b981' : '1.5px solid #cbd5e1',
+                                                    background: isChecked ? '#f0fdf4' : '#f8fafc',
+                                                    cursor: 'pointer',
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                            >
+                                                <input
+                                                    type="checkbox"
+                                                    checked={isChecked}
+                                                    onChange={(e) => setStageFormData({ ...stageFormData, [item.key]: e.target.checked })}
+                                                    style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+                                                />
+                                                <div style={{ flex: 1 }}>
+                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        <strong style={{ fontSize: '0.88rem', color: isChecked ? '#065f46' : '#475569' }}>
+                                                            {item.label}
+                                                        </strong>
+                                                        <span style={{
+                                                            fontSize: '0.72rem',
+                                                            fontWeight: 800,
+                                                            padding: '2px 8px',
+                                                            borderRadius: '6px',
+                                                            background: isChecked ? '#d1fae5' : '#fee2e2',
+                                                            color: isChecked ? '#065f46' : '#991b1b'
+                                                        }}>
+                                                            {isChecked ? '✓ PASSED' : '✕ FLAGGED'}
+                                                        </span>
+                                                    </div>
+                                                    <p style={{ margin: '2px 0 0', fontSize: '0.76rem', color: '#64748b' }}>
+                                                        {item.detail}
+                                                    </p>
+                                                </div>
+                                            </label>
+                                        );
+                                    })}
+                                </div>
+
                                 <div>
-                                    <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px' }}>Overall Audit Summary</label>
-                                    <textarea
-                                        rows="2"
+                                    <label style={{ display: 'block', fontWeight: 700, fontSize: '0.8rem', color: '#1e293b', marginBottom: '4px', textTransform: 'uppercase' }}>
+                                        Optional Inspector Remarks
+                                    </label>
+                                    <input
+                                        type="text"
                                         value={stageFormData.notes || ''}
                                         onChange={(e) => setStageFormData({ ...stageFormData, notes: e.target.value })}
-                                        placeholder="e.g. Vehicle in pristine roadworthy condition. Recommended for onboarding."
-                                        style={{ width: '100%', padding: '10px 12px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
-                                    ></textarea>
+                                        placeholder="e.g. Vehicle in roadworthy condition. Recommended for onboarding."
+                                        style={{ width: '100%', padding: '10px 14px', borderRadius: '10px', border: '1.5px solid #cbd5e1', fontSize: '0.85rem', boxSizing: 'border-box' }}
+                                    />
                                 </div>
                             </div>
                             <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
