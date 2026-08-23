@@ -5,6 +5,7 @@ import { Scanner } from '@yudiel/react-qr-scanner';
 import './AdminPanelStyles.css';
 import AdminIssues from '../components/AdminIssues';
 import AdminOffers from '../components/AdminOffers';
+import AdminReports from '../components/AdminReports';
 
 
 const AdminPanel = () => {
@@ -529,6 +530,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     <nav className="sidebar-nav">
                         <ul>
                             <li><a className={`nav-link ${activeTab === 'dashboard' ? 'active' : ''}`} onClick={() => { setActiveTab('dashboard'); setIsSidebarOpen(false); }}><i className="fas fa-tachometer-alt"></i> Dashboard</a></li>
+                            <li><a className={`nav-link ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }}><i className="fas fa-chart-pie"></i> Analytics & Reports</a></li>
                             <li><a className={`nav-link ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}><i className="fas fa-users"></i> User Management</a></li>
                             <li><a className={`nav-link ${activeTab === 'bookings' ? 'active' : ''}`} onClick={() => { setActiveTab('bookings'); setIsSidebarOpen(false); }}><i className="fas fa-calendar-check"></i> Bookings</a></li>
                             <li><a className={`nav-link ${activeTab === 'vehicles' ? 'active' : ''}`} onClick={() => { setActiveTab('vehicles'); setIsSidebarOpen(false); }}><i className="fas fa-motorcycle"></i> Vehicles</a></li>
@@ -1396,6 +1398,13 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {activeTab === 'offers' && (
                         <div id="offers" className="content-section active">
                             <AdminOffers />
+                        </div>
+                    )}
+
+                    {/* ANALYTICS & REPORTS */}
+                    {activeTab === 'reports' && (
+                        <div id="reports" className="content-section active" style={{ padding: '24px' }}>
+                            <AdminReports token={token} />
                         </div>
                     )}
                 </main>

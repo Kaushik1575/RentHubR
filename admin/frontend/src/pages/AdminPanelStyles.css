@@ -212,3 +212,37 @@
 .btn-icon-only:hover {
     transform: scale(1.1);
 }
+
+/* Print / PDF Report Media Styles */
+@media print {
+    .admin-sidebar,
+    .admin-mobile-header,
+    .sidebar-overlay,
+    .admin-reports-wrapper button,
+    .admin-reports-wrapper input,
+    .admin-reports-wrapper select,
+    .sidebar-footer {
+        display: none !important;
+    }
+
+    .admin-container {
+        display: block !important;
+        padding: 0 !important;
+        margin: 0 !important;
+    }
+
+    .admin-content {
+        padding: 0 !important;
+        margin: 0 !important;
+        width: 100% !important;
+    }
+
+    .admin-reports-wrapper {
+        padding: 0 !important;
+    }
+
+    body {
+        background: white !important;
+        color: #000000 !important;
+    }
+}

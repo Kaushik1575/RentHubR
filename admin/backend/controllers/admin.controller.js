@@ -1675,6 +1675,478 @@ const updateWithdrawalStatus = async (req, res) => {
     }
 };
 
+/**
+ * Admin Analytics & Report Generation Controller
+ */
+const getAnalyticsReport = async (req, res) => {
+    try {
+        const {
+            timeframe = 'month',
+            startDate: customStartDate,
+            endDate: customEndDate,
+            vehicleCategory = 'all',
+            status = 'all'
+        } = req.query;
+
+        // Current IST Date setup
+        const now = new Date(new Date().toLocaleString('en-US', { timeZone: 'Asia/Kolkata' }));
+        const formatYMD = (d) => {
+            const year = d.getFullYear();
+            const month = String(d.getMonth() + 1).padStart(2, '0');
+            const day = String(d.getDate()).padStart(2, '0');
+            return `${year}-${month}-${day}`;
+        };
+
+        let filterStartDate = '';
+        let filterEndDate = '';
+
+        // Calculate Date Range
+        if (timeframe === 'today') {
+            filterStartDate = formatYMD(now);
+            filterEndDate = formatYMD(now);
+        } else if (timeframe === 'yesterday') {
+            const y = new Date(now);
+            y.setDate(y.getDate() - 1);
+            filterStartDate = formatYMD(y);
+            filterEndDate = formatYMD(y);
+        } else if (timeframe === 'week' || timeframe === 'this_week') {
+            const dayOfWeek = now.getDay(); // 0 is Sunday
+            const diff = now.getDate() - dayOfWeek + (dayOfWeek === 0 ? -6 : 1); // Monday
+            const startOfWeek = new Date(now);
+            startOfWeek.setDate(diff);
+            filterStartDate = formatYMD(startOfWeek);
+            filterEndDate = formatYMD(now);
+        } else if (timeframe === 'last_7_days') {
+            const past7 = new Date(now);
+            past7.setDate(past7.getDate() - 6);
+            filterStartDate = formatYMD(past7);
+            filterEndDate = formatYMD(now);
+        } else if (timeframe === 'month' || timeframe === 'this_month') {
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            const endOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0);
+            filterStartDate = formatYMD(startOfMonth);
+            filterEndDate = formatYMD(endOfMonth);
+        } else if (timeframe === 'last_month') {
+            const startOfLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+            const endOfLastMonth = new Date(now.getFullYear(), now.getMonth(), 0);
+            filterStartDate = formatYMD(startOfLastMonth);
+            filterEndDate = formatYMD(endOfLastMonth);
+        } else if (timeframe === 'year' || timeframe === 'this_year') {
+            filterStartDate = `${now.getFullYear()}-01-01`;
+            filterEndDate = `${now.getFullYear()}-12-31`;
+        } else if (timeframe === 'custom') {
+            filterStartDate = customStartDate || formatYMD(now);
+            filterEndDate = customEndDate || formatYMD(now);
+        } else {
+            // Default to this month
+            const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+            filterStartDate = formatYMD(startOfMonth);
+            filterEndDate = formatYMD(now);
+        }
+
+        // Fetch All Bookings with user and reward data
+        const { data: bookings, error: bError } = await supabase
+            .from('bookings')
+            .select(`
+                *,
+                users:user_id (
+                    id,
+                    full_name,
+                    email,
+                    phone_number,
+                    created_at
+                ),
+                rewards:reward_id (
+                    coupon_code,
+                    reward_type
+                )
+            `)
+            .order('id', { ascending: false });
+
+        if (bError) throw bError;
+
+        // Fetch All Vehicles (bikes, cars, scooty)
+        const [bikesRes, carsRes, scootyRes] = await Promise.all([
+            supabase.from('bikes').select('*'),
+            supabase.from('cars').select('*'),
+            supabase.from('scooty').select('*')
+        ]);
+
+        const allVehicles = [
+            ...(bikesRes.data || []).map(v => ({ ...v, category: 'bike' })),
+            ...(carsRes.data || []).map(v => ({ ...v, category: 'car' })),
+            ...(scootyRes.data || []).map(v => ({ ...v, category: 'scooty' }))
+        ];
+
+        const vehicleMap = {};
+        allVehicles.forEach(v => {
+            vehicleMap[v.id] = v;
+        });
+
+        // Enrich and Filter Bookings
+        const enrichedBookings = (bookings || []).map(b => {
+            const v = vehicleMap[b.vehicle_id];
+            const duration = parseInt(b.duration) || 0;
+            const vehiclePrice = v ? parseFloat(v.price) || 0 : 0;
+            const totalAmt = b.total_amount ? parseFloat(b.total_amount) : (duration * vehiclePrice);
+            const advPayment = b.advance_payment ? parseFloat(b.advance_payment) : Math.ceil(totalAmt * 0.3);
+            const remainingAmt = Math.max(0, totalAmt - advPayment);
+
+            // Determine booking date (start_date or created_at)
+            const bookingDate = b.start_date || (b.created_at ? b.created_at.slice(0, 10) : 'N/A');
+            const vCategory = v ? v.category : normalizeVehicleType(b.vehicle_type || 'bike');
+
+            return {
+                id: b.id,
+                booking_id: b.booking_id || `RH-${b.id}`,
+                user_id: b.user_id || b.users?.id,
+                customerName: b.users?.full_name || 'Guest User',
+                customerEmail: b.users?.email || 'N/A',
+                customerPhone: b.users?.phone_number || 'N/A',
+                userCreatedAt: b.users?.created_at || null,
+                vehicleId: b.vehicle_id,
+                vehicleName: v ? v.name : (b.vehicle_name || 'Vehicle'),
+                vehicleCategory: vCategory,
+                vehiclePrice: vehiclePrice,
+                startDate: b.start_date || 'N/A',
+                startTime: b.start_time || 'N/A',
+                duration: duration,
+                totalAmount: totalAmt,
+                advancePayment: advPayment,
+                remainingAmount: remainingAmt,
+                status: b.status || 'pending',
+                refundAmount: parseFloat(b.refund_amount) || 0,
+                refundStatus: b.refund_status || 'N/A',
+                createdAt: b.created_at || null,
+                date: bookingDate
+            };
+        });
+
+        // Apply Date Range Filter
+        let filteredBookings = enrichedBookings.filter(b => {
+            if (!b.date || b.date === 'N/A') return false;
+            return b.date >= filterStartDate && b.date <= filterEndDate;
+        });
+
+        // Apply Category Filter
+        if (vehicleCategory && vehicleCategory !== 'all') {
+            filteredBookings = filteredBookings.filter(b => b.vehicleCategory === vehicleCategory);
+        }
+
+        // Apply Status Filter
+        if (status && status !== 'all') {
+            filteredBookings = filteredBookings.filter(b => b.status === status);
+        }
+
+        // 1. KPI Aggregations
+        const totalBookings = filteredBookings.length;
+        const completedBookings = filteredBookings.filter(b => ['completed', 'ride_completed', 'ride_ended', 'payment_success'].includes(b.status)).length;
+        const confirmedBookings = filteredBookings.filter(b => ['confirmed', 'active', 'ride_started', 'ongoing'].includes(b.status)).length;
+        const cancelledBookings = filteredBookings.filter(b => b.status === 'cancelled').length;
+        const riderNotComeBookings = filteredBookings.filter(b => b.status === 'rider_not_come').length;
+        const pendingBookings = filteredBookings.filter(b => b.status === 'pending').length;
+
+        const cancellationRate = totalBookings > 0 ? parseFloat(((cancelledBookings / totalBookings) * 100).toFixed(1)) : 0;
+        const completionRate = totalBookings > 0 ? parseFloat(((completedBookings / totalBookings) * 100).toFixed(1)) : 0;
+
+        // Financials
+        // Gross booking value (all non-cancelled)
+        const grossRevenue = filteredBookings
+            .filter(b => b.status !== 'cancelled')
+            .reduce((sum, b) => sum + (b.totalAmount || 0), 0);
+
+        const advanceCollected = filteredBookings
+            .reduce((sum, b) => sum + (b.advancePayment || 0), 0);
+
+        const balanceCollected = filteredBookings
+            .filter(b => ['completed', 'ride_completed', 'ride_ended'].includes(b.status))
+            .reduce((sum, b) => sum + (b.remainingAmount || 0), 0);
+
+        const totalRefunds = filteredBookings
+            .filter(b => b.status === 'cancelled')
+            .reduce((sum, b) => sum + (b.refundAmount || 0), 0);
+
+        const netRevenue = Math.max(0, grossRevenue - totalRefunds);
+        const averageOrderValue = (completedBookings + confirmedBookings) > 0
+            ? Math.round(grossRevenue / (completedBookings + confirmedBookings))
+            : 0;
+
+        const totalRideHours = filteredBookings
+            .filter(b => b.status !== 'cancelled')
+            .reduce((sum, b) => sum + (b.duration || 0), 0);
+
+        const averageDurationHours = (completedBookings + confirmedBookings) > 0
+            ? parseFloat((totalRideHours / (completedBookings + confirmedBookings)).toFixed(1))
+            : 0;
+
+        // 2. Rider & Customer Analytics
+        const riderMap = {};
+        filteredBookings.forEach(b => {
+            const uKey = b.user_id || b.customerEmail;
+            if (!uKey || uKey === 'N/A') return;
+
+            if (!riderMap[uKey]) {
+                const isNew = b.userCreatedAt ? b.userCreatedAt.slice(0, 10) >= filterStartDate : false;
+                riderMap[uKey] = {
+                    userId: b.user_id,
+                    name: b.customerName,
+                    email: b.customerEmail,
+                    phone: b.customerPhone,
+                    isNewUser: isNew,
+                    bookingsCount: 0,
+                    completedCount: 0,
+                    cancelledCount: 0,
+                    totalSpent: 0
+                };
+            }
+
+            riderMap[uKey].bookingsCount += 1;
+            if (['completed', 'ride_completed', 'ride_ended'].includes(b.status)) {
+                riderMap[uKey].completedCount += 1;
+            }
+            if (b.status === 'cancelled') {
+                riderMap[uKey].cancelledCount += 1;
+            }
+            if (b.status !== 'cancelled') {
+                riderMap[uKey].totalSpent += b.totalAmount;
+            }
+        });
+
+        const ridersList = Object.values(riderMap);
+        const uniqueRidersCount = ridersList.length;
+        const newRidersCount = ridersList.filter(r => r.isNewUser).length;
+        const returningRidersCount = Math.max(0, uniqueRidersCount - newRidersCount);
+
+        // Top 10 Riders by spend
+        const topRiders = [...ridersList]
+            .sort((a, b) => b.totalSpent - a.totalSpent)
+            .slice(0, 10);
+
+        // 3. Vehicle & Category Breakdown
+        const categoryStats = {
+            bike: { name: 'Bikes', count: 0, revenue: 0, completed: 0, cancelled: 0 },
+            scooty: { name: 'Scooty', count: 0, revenue: 0, completed: 0, cancelled: 0 },
+            car: { name: 'Cars', count: 0, revenue: 0, completed: 0, cancelled: 0 }
+        };
+
+        const vehicleStatsMap = {};
+
+        filteredBookings.forEach(b => {
+            const cat = b.vehicleCategory || 'bike';
+            if (categoryStats[cat]) {
+                categoryStats[cat].count += 1;
+                if (b.status !== 'cancelled') {
+                    categoryStats[cat].revenue += b.totalAmount;
+                }
+                if (['completed', 'ride_completed', 'ride_ended'].includes(b.status)) {
+                    categoryStats[cat].completed += 1;
+                }
+                if (b.status === 'cancelled') {
+                    categoryStats[cat].cancelled += 1;
+                }
+            }
+
+            // Per-Vehicle performance
+            const vId = b.vehicleId || b.vehicleName;
+            if (!vehicleStatsMap[vId]) {
+                vehicleStatsMap[vId] = {
+                    id: b.vehicleId,
+                    name: b.vehicleName,
+                    category: b.vehicleCategory,
+                    price: b.vehiclePrice,
+                    bookingsCount: 0,
+                    completedCount: 0,
+                    revenue: 0
+                };
+            }
+            vehicleStatsMap[vId].bookingsCount += 1;
+            if (b.status !== 'cancelled') {
+                vehicleStatsMap[vId].revenue += b.totalAmount;
+            }
+            if (['completed', 'ride_completed', 'ride_ended'].includes(b.status)) {
+                vehicleStatsMap[vId].completedCount += 1;
+            }
+        });
+
+        // Top 5 Performing Vehicles
+        const topVehicles = Object.values(vehicleStatsMap)
+            .sort((a, b) => b.revenue - a.revenue)
+            .slice(0, 5);
+
+        // 4. Daily Trend Series
+        // Generate daily intervals between filterStartDate and filterEndDate
+        const trendMap = {};
+        const curDate = new Date(filterStartDate);
+        const stopDate = new Date(filterEndDate);
+
+        // Limit range to prevent massive loop if years selected
+        let safetyCounter = 0;
+        while (curDate <= stopDate && safetyCounter < 366) {
+            const dStr = formatYMD(curDate);
+            const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+            trendMap[dStr] = {
+                date: dStr,
+                dayName: dayNames[curDate.getDay()],
+                displayDate: new Date(dStr).toLocaleDateString('en-IN', { month: 'short', day: 'numeric' }),
+                totalBookings: 0,
+                completed: 0,
+                cancelled: 0,
+                revenue: 0,
+                advance: 0
+            };
+            curDate.setDate(curDate.getDate() + 1);
+            safetyCounter++;
+        }
+
+        filteredBookings.forEach(b => {
+            if (trendMap[b.date]) {
+                trendMap[b.date].totalBookings += 1;
+                if (['completed', 'ride_completed', 'ride_ended'].includes(b.status)) {
+                    trendMap[b.date].completed += 1;
+                }
+                if (b.status === 'cancelled') {
+                    trendMap[b.date].cancelled += 1;
+                }
+                if (b.status !== 'cancelled') {
+                    trendMap[b.date].revenue += b.totalAmount;
+                    trendMap[b.date].advance += b.advancePayment;
+                }
+            }
+        });
+
+        const dailyTrends = Object.values(trendMap);
+
+        // Response Payload
+        res.json({
+            success: true,
+            filter: {
+                timeframe,
+                startDate: filterStartDate,
+                endDate: filterEndDate,
+                vehicleCategory,
+                status
+            },
+            kpis: {
+                totalBookings,
+                completedBookings,
+                confirmedBookings,
+                cancelledBookings,
+                riderNotComeBookings,
+                pendingBookings,
+                cancellationRate,
+                completionRate,
+                grossRevenue,
+                advanceCollected,
+                balanceCollected,
+                totalRefunds,
+                netRevenue,
+                averageOrderValue,
+                totalRideHours,
+                averageDurationHours
+            },
+            riders: {
+                uniqueRidersCount,
+                newRidersCount,
+                returningRidersCount,
+                topRiders
+            },
+            fleet: {
+                totalVehiclesInFleet: allVehicles.length,
+                categoryStats,
+                topVehicles
+            },
+            trends: dailyTrends,
+            bookings: filteredBookings
+        });
+
+    } catch (error) {
+        console.error('Error generating analytics report:', error);
+        res.status(500).json({ error: 'Failed to generate analytics report', details: error.message });
+    }
+};
+
+/**
+ * Export Analytics Report as CSV
+ */
+const exportReportCSV = async (req, res) => {
+    try {
+        const {
+            timeframe = 'month',
+            startDate,
+            endDate,
+            vehicleCategory = 'all',
+            status = 'all'
+        } = req.query;
+
+        // Mock req/res internal call to getAnalyticsReport data
+        let reportData = null;
+        await getAnalyticsReport(
+            { query: { timeframe, startDate, endDate, vehicleCategory, status } },
+            {
+                json: (data) => { reportData = data; },
+                status: () => ({ json: (err) => { throw new Error(err.error); } })
+            }
+        );
+
+        if (!reportData || !reportData.success) {
+            return res.status(500).send('Error generating report data');
+        }
+
+        const { kpis, filter, bookings } = reportData;
+
+        // Build CSV Content
+        let csv = '\uFEFF'; // UTF-8 BOM for Excel support
+
+        // Header Section
+        csv += 'RENTHUB ADMINISTRATIVE ANALYTICS REPORT\n';
+        csv += `Report Period:,"${filter.startDate} to ${filter.endDate}"\n`;
+        csv += `Filter Applied:,"Timeframe: ${filter.timeframe} | Category: ${filter.vehicleCategory} | Status: ${filter.status}"\n`;
+        csv += `Generated At:,"${new Date().toLocaleString('en-IN')}"\n\n`;
+
+        // KPI Summary Block
+        csv += 'EXECUTIVE KPI SUMMARY\n';
+        csv += `Total Bookings,${kpis.totalBookings}\n`;
+        csv += `Completed Rides,${kpis.completedBookings}\n`;
+        csv += `Confirmed / Active Rides,${kpis.confirmedBookings}\n`;
+        csv += `Cancelled Bookings,${kpis.cancelledBookings}\n`;
+        csv += `Rider No-Shows,${kpis.riderNotComeBookings}\n`;
+        csv += `Cancellation Rate,${kpis.cancellationRate}%\n`;
+        csv += `Gross Booking Value (INR),Rs ${kpis.grossRevenue}\n`;
+        csv += `Advance Online Collected (INR),Rs ${kpis.advanceCollected}\n`;
+        csv += `Cash on Pickup Settled (INR),Rs ${kpis.balanceCollected}\n`;
+        csv += `Total Refunds Disbursed (INR),Rs ${kpis.totalRefunds}\n`;
+        csv += `Net Revenue (INR),Rs ${kpis.netRevenue}\n`;
+        csv += `Average Booking Value (INR),Rs ${kpis.averageOrderValue}\n`;
+        csv += `Unique Riders,${reportData.riders.uniqueRidersCount}\n\n`;
+
+        // Category Breakdown Block
+        csv += 'CATEGORY PERFORMANCE\n';
+        csv += 'Category,Total Bookings,Revenue (INR),Completed,Cancelled\n';
+        Object.entries(reportData.fleet.categoryStats).forEach(([key, cat]) => {
+            csv += `"${cat.name}",${cat.count},Rs ${cat.revenue},${cat.completed},${cat.cancelled}\n`;
+        });
+        csv += '\n';
+
+        // Detailed Bookings Table
+        csv += 'DETAILED BOOKINGS LOG\n';
+        csv += 'Booking ID,Customer Name,Customer Email,Customer Phone,Vehicle Name,Category,Start Date,Start Time,Duration (hrs),Total Amount (INR),Advance Paid (INR),Balance (INR),Status,Refund (INR)\n';
+
+        bookings.forEach(b => {
+            const clean = (val) => `"${String(val || '').replace(/"/g, '""')}"`;
+            csv += `${clean(b.booking_id)},${clean(b.customerName)},${clean(b.customerEmail)},${clean(b.customerPhone)},${clean(b.vehicleName)},${clean(b.vehicleCategory)},${clean(b.startDate)},${clean(b.startTime)},${b.duration},${b.totalAmount},${b.advancePayment},${b.remainingAmount},${clean(b.status)},${b.refundAmount}\n`;
+        });
+
+        const filename = `RentHub_Report_${filter.startDate}_to_${filter.endDate}.csv`;
+        res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+        res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+        res.status(200).send(csv);
+
+    } catch (error) {
+        console.error('Error exporting report CSV:', error);
+        res.status(500).json({ error: 'Failed to export CSV report' });
+    }
+};
+
 module.exports = {
     getAllBookings,
     getBookingById,
@@ -1704,5 +2176,8 @@ module.exports = {
     getSponsorEarnings,
     deleteVehicleRequest,
     getAllWithdrawalRequests,
-    updateWithdrawalStatus
+    updateWithdrawalStatus,
+    getAnalyticsReport,
+    exportReportCSV
 };
+

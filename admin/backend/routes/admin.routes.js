@@ -53,6 +53,10 @@ router.get('/sponsor-earnings', verifyAdminToken, adminController.getSponsorEarn
 router.get('/withdrawal/requests', verifyAdminToken, adminController.getAllWithdrawalRequests);
 router.put('/withdrawal/requests/:id', verifyAdminToken, adminController.updateWithdrawalStatus);
 
+// Analytics & Reports
+router.get('/reports/analytics', verifyAdminToken, adminController.getAnalyticsReport);
+router.get('/reports/export-csv', verifyAdminToken, adminController.exportReportCSV);
+
 // Reminders (Cron & Manual)
 // Schedule manual reminder check
 router.post('/cron/reminders/manual', verifyAdminToken, adminController.manualReminderCheck);
