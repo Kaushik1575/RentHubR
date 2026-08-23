@@ -1,18 +1,8 @@
-// RentHub - Nearby Places Service
-// Discovers closest Bike Garages / Repair Workshops and Petrol Pumps / Fuel Stations
-// using GPS coordinates, Haversine distance, and OpenStreetMap Overpass with dynamic GPS-based fallbacks.
-
-const path = require('path');
-require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
-
 const fetch = globalThis.fetch;
 
-/**
- * Calculates straight-line distance in kilometers using the Haversine formula
- */
 function calculateDistance(lat1, lon1, lat2, lon2) {
     if (!lat1 || !lon1 || !lat2 || !lon2) return 0.5;
-    const R = 6371; // Earth's radius in km
+    const R = 6371;
     const dLat = (lat2 - lat1) * (Math.PI / 180);
     const dLon = (lon2 - lon1) * (Math.PI / 180);
     const a =
@@ -24,22 +14,14 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
     return Math.round(d * 10) / 10;
 }
 
-/**
- * Robustly parses latitude & longitude from various input formats
- * (e.g. Object, GPS string, Google Maps URL, or default location)
- */
 function parseCoordinates(input) {
-    // Default: Bhubaneswar area if no location is available
     const defaultCoords = { latitude: 20.2185, longitude: 85.7358 };
-
     if (!input) return defaultCoords;
 
     if (typeof input === 'object') {
         const lat = parseFloat(input.latitude || input.lat);
         const lng = parseFloat(input.longitude || input.lng || input.lon);
-        if (!isNaN(lat) && !isNaN(lng)) {
-            return { latitude: lat, longitude: lng };
-        }
+        if (!isNaN(lat) && !isNaN(lng)) return { latitude: lat, longitude: lng };
     }
 
     if (typeof input === 'string') {
@@ -69,11 +51,6 @@ function parseCoordinates(input) {
     return defaultCoords;
 }
 
-/**
- * Discovers nearest bike repair shops and petrol pumps around the user's GPS coordinates
- * @param {object|string} userLocation - GPS coords or string
- * @returns {Promise<object>} - Categorized places with distances and navigation links
- */
 async function findNearbyPlaces(userLocation) {
     const { latitude, longitude } = parseCoordinates(userLocation);
 
@@ -147,7 +124,7 @@ out center 25;`;
                 }
             }
         } catch (err) {
-            console.warn(`⚠️ Overpass mirror ${url} failed:`, err.message);
+            console.warn(`Overpass mirror ${url} failed:`, err.message);
         }
     }
 
@@ -200,7 +177,6 @@ out center 25;`;
         });
     }
 
-    // Sort ascending by distance
     garages.sort((a, b) => a.distanceKm - b.distanceKm);
     petrolPumps.sort((a, b) => a.distanceKm - b.distanceKm);
 
@@ -216,8 +192,21 @@ out center 25;`;
     };
 }
 
-module.exports = {
-    findNearbyPlaces,
-    parseCoordinates,
-    calculateDistance
-};
+async function runTest() {
+    const locations = [
+        { name: 'Bangalore Koramangala', coords: { latitude: 12.9352, longitude: 77.6245 } },
+        { name: 'Bhubaneswar GITA', coords: { latitude: 20.2185, longitude: 85.7358 } },
+        { name: 'Mumbai Andheri', coords: { latitude: 19.1136, longitude: 72.8697 } }
+    ];
+
+    for (const l of locations) {
+        console.log(`\n================ Testing ${l.name} ================`);
+        const res = await findNearbyPlaces(l.coords);
+        console.log(`Garages (${res.garages.length}):`);
+        res.garages.forEach(g => console.log(` - ${g.name} (${g.distanceText}) -> ${g.mapUrl}`));
+        console.log(`Petrol Pumps (${res.petrolPumps.length}):`);
+        res.petrolPumps.forEach(p => console.log(` - ${p.name} (${p.distanceText}) -> ${p.mapUrl}`));
+    }
+}
+
+runTest().catch(console.error);
