@@ -296,6 +296,10 @@ TOOLS EXECUTION RULES:
       "gps_location": {
         "type": "string",
         "description": "User's current GPS location coordinates if available"
+      },
+      "location": {
+        "type": "string",
+        "description": "The user's current city, landmark, or area if mentioned during the call (e.g. 'Patia', 'Koramangala Bangalore', 'Connaught Place')"
       }
     },
     "required": []

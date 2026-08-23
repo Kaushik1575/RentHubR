@@ -188,14 +188,19 @@ const handleRetellWebhook = async (req, res) => {
         const event = body.event || body.type;
         const callData = body.call || body;
         const metadata = callData.metadata || body.args || (callData.retell_llm_dynamic_variables) || {};
-        const bookingId = metadata.booking_id || metadata.bookingId;
-        const userEmail = metadata.user_email || metadata.userEmail;
+        const bookingId = metadata.booking_id || metadata.bookingId || (body.args && body.args.booking_id);
+        const userEmail = metadata.user_email || metadata.userEmail || (body.args && body.args.user_email);
         const userName = metadata.user_name || metadata.userName || 'Customer';
         const vehicleName = metadata.vehicle_name || metadata.vehicleName || 'Vehicle';
         const userPhone = metadata.user_phone || metadata.userPhone || callData.to_number || 'N/A';
-        const gpsLocation = metadata.gps_location || metadata.gpsLocation || null;
+        const gpsLocation = (body.args && (body.args.location || body.args.area || body.args.landmark || body.args.city || body.args.gps_location || body.args.address)) ||
+                            (body.arguments && (body.arguments.location || body.arguments.area || body.arguments.landmark || body.arguments.city || body.arguments.gps_location || body.arguments.address)) ||
+                            metadata.gps_location ||
+                            metadata.gpsLocation ||
+                            metadata.location ||
+                            null;
 
-        const action = body.name || (callData.custom_analysis_data && callData.custom_analysis_data.user_intent) || (body.args && body.args.action);
+        const action = body.name || body.func_name || body.function_name || body.tool_name || (callData.custom_analysis_data && callData.custom_analysis_data.user_intent) || (body.args && body.args.action) || (body.arguments && body.arguments.action) || '';
 
         // 1. Booking Confirmation Action
         if (action === 'confirm' || action === 'confirm_booking' || event === 'booking_confirmed') {
