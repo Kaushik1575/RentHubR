@@ -722,27 +722,42 @@ const TrackApplication = () => {
                                                                     <Award className="w-4 h-4 text-emerald-600" />
                                                                     Roadworthy Audit Scorecard
                                                                 </span>
-                                                                <span className="px-2 py-0.5 rounded bg-emerald-200 text-emerald-900 font-black text-[10px]">
-                                                                    {trackingData.survey_report.overall_rating || 'GRADE A PASS'}
+                                                                <span className={`px-2.5 py-0.5 rounded-full font-black text-[10px] ${
+                                                                    trackingData.survey_report.overall_status === 'FAILED'
+                                                                        ? 'bg-rose-100 text-rose-800 border border-rose-300'
+                                                                        : 'bg-emerald-200 text-emerald-900 border border-emerald-300'
+                                                                }`}>
+                                                                    {trackingData.survey_report.overall_status === 'FAILED' ? '❌ FAILED' : '✓ PASSED'} • {trackingData.survey_report.overall_rating || 'Grade A'}
                                                                 </span>
                                                             </div>
-                                                            <div className="grid grid-cols-2 gap-2 text-xs">
-                                                                <div className="bg-white p-2.5 rounded-xl border border-emerald-100">
-                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Tyres</span>
-                                                                    <span className="font-extrabold text-emerald-700">{trackingData.survey_report.tyres || 'Good (85%)'}</span>
-                                                                </div>
-                                                                <div className="bg-white p-2.5 rounded-xl border border-emerald-100">
-                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Brakes</span>
-                                                                    <span className="font-extrabold text-emerald-700">{trackingData.survey_report.brakes || 'Tested & Passed'}</span>
-                                                                </div>
-                                                                <div className="bg-white p-2.5 rounded-xl border border-emerald-100">
-                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Engine</span>
-                                                                    <span className="font-extrabold text-emerald-700">{trackingData.survey_report.engine || 'Smooth Output'}</span>
-                                                                </div>
-                                                                <div className="bg-white p-2.5 rounded-xl border border-emerald-100">
-                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Lights</span>
-                                                                    <span className="font-extrabold text-emerald-700">{trackingData.survey_report.lights || 'Functional'}</span>
-                                                                </div>
+                                                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                                                                {[
+                                                                    { label: '🛞 Tyres', val: trackingData.survey_report.tyres || 'Good' },
+                                                                    { label: '🛑 Brakes', val: trackingData.survey_report.brakes || 'Good' },
+                                                                    { label: '⚙️ Engine', val: trackingData.survey_report.engine || 'Good' },
+                                                                    { label: '💡 Lights', val: trackingData.survey_report.lights || 'Good' },
+                                                                    { label: '🛡️ Chassis', val: trackingData.survey_report.chassis || 'Good' }
+                                                                ].map((item, idx) => {
+                                                                    const isEx = item.val.includes('Excellent') || item.val === 'Excellent';
+                                                                    const isGood = item.val.includes('Good') || item.val === 'Good';
+                                                                    const isFair = item.val.includes('Fair') || item.val === 'Fair';
+                                                                    const isRepair = item.val.includes('Repair') || item.val === 'Needs Repair';
+
+                                                                    return (
+                                                                        <div key={idx} className="bg-white p-2.5 rounded-xl border border-emerald-100 flex flex-col justify-between">
+                                                                            <span className="text-[10px] text-slate-400 block font-bold mb-1">{item.label}</span>
+                                                                            <span className={`font-extrabold text-[11px] px-1.5 py-0.5 rounded w-fit ${
+                                                                                isEx ? 'bg-emerald-100 text-emerald-800' :
+                                                                                isGood ? 'bg-green-100 text-green-800' :
+                                                                                isFair ? 'bg-amber-100 text-amber-900' :
+                                                                                isRepair ? 'bg-orange-100 text-orange-800' :
+                                                                                'bg-rose-100 text-rose-800'
+                                                                            }`}>
+                                                                                {item.val}
+                                                                            </span>
+                                                                        </div>
+                                                                    );
+                                                                })}
                                                             </div>
                                                         </div>
                                                     )}
