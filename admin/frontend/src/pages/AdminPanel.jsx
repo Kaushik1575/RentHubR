@@ -1263,15 +1263,43 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                                 {/* Step 5 / 6 Waiting / Agreement Signed */}
                                                                 {(currentStage === 5 || currentStage === 6) && (
                                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                                        <div style={{ background: r.terms_declined ? '#fef2f2' : r.agreement_accepted_at ? '#ecfdf5' : '#fffbeb', border: `1px solid ${r.terms_declined ? '#fca5a5' : r.agreement_accepted_at ? '#a7f3d0' : '#fde68a'}`, color: r.terms_declined ? '#991b1b' : r.agreement_accepted_at ? '#065f46' : '#b45309', padding: '10px', borderRadius: '8px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                                                            {r.terms_declined ? '✕ Sponsor Requested Price Revision' : r.agreement_accepted_at ? '🤝 Agreement Accepted by Sponsor' : '⏳ Waiting for Sponsor Agreement Acceptance'}
+                                                                        <div style={{
+                                                                            background: (r.terms_declined || r.counter_offer_price) ? '#fef2f2' : (r.agreement_accepted_at || r.terms_accepted) ? '#ecfdf5' : '#fffbeb',
+                                                                            border: `1px solid ${(r.terms_declined || r.counter_offer_price) ? '#fca5a5' : (r.agreement_accepted_at || r.terms_accepted) ? '#a7f3d0' : '#fde68a'}`,
+                                                                            color: (r.terms_declined || r.counter_offer_price) ? '#991b1b' : (r.agreement_accepted_at || r.terms_accepted) ? '#065f46' : '#b45309',
+                                                                            padding: '10px 12px',
+                                                                            borderRadius: '8px',
+                                                                            textAlign: 'center',
+                                                                            fontSize: '0.85rem',
+                                                                            fontWeight: 'bold'
+                                                                        }}>
+                                                                            {(r.counter_offer_price)
+                                                                                ? `💬 Sponsor Counter-Offer: Asked ₹${r.counter_offer_price}/hr (Action Required: Re-propose Price)`
+                                                                                : r.terms_declined
+                                                                                ? '✕ Sponsor Declined Pricing Terms'
+                                                                                : (r.agreement_accepted_at || r.terms_accepted)
+                                                                                ? '✓ Pricing Terms Agreed by Sponsor'
+                                                                                : '⏳ Waiting for Sponsor Price Agreement'}
                                                                         </div>
-                                                                        <button
-                                                                            style={{ width: '100%', padding: '10px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}
-                                                                            onClick={() => handleAdvanceStage(r.id, 7, { notes: 'Contract officially activated by Admin' })}
-                                                                        >
-                                                                            <i className="fas fa-file-signature"></i> Step 7: Activate Contract
-                                                                        </button>
+
+                                                                        {/* Step 7 Button: STRICTLY LOCKED until Sponsor Agrees to Terms */}
+                                                                        {(r.terms_accepted || r.agreement_accepted_at) && !r.terms_declined && !r.counter_offer_price ? (
+                                                                            <button
+                                                                                style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                                                onClick={() => handleAdvanceStage(r.id, 7, { notes: 'Contract officially activated by Admin' })}
+                                                                            >
+                                                                                <i className="fas fa-file-signature"></i> Step 7: Activate Contract
+                                                                            </button>
+                                                                        ) : (
+                                                                            <button
+                                                                                type="button"
+                                                                                disabled={true}
+                                                                                title="Sponsor must agree to the pricing terms in Step 5 before you can activate contract"
+                                                                                style={{ width: '100%', padding: '11px', background: '#f1f5f9', color: '#94a3b8', border: '1.5px dashed #cbd5e1', borderRadius: '8px', fontWeight: '700', fontSize: '0.82rem', cursor: 'not-allowed', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                                                            >
+                                                                                <i className="fas fa-lock"></i> Step 7 Locked (Awaiting Sponsor Agreement)
+                                                                            </button>
+                                                                        )}
                                                                     </div>
                                                                 )}
 

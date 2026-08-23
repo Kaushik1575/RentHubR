@@ -1294,8 +1294,33 @@ const updateVehicleRequestStage = async (req, res) => {
             return res.status(400).json({ error: 'Invalid stage number (must be 1-9)' });
         }
 
+        const targetStage = parseInt(stage);
+
+        // Fetch current vehicle request details
+        const { data: currentReq, error: fetchErr } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*')
+            .eq('id', requestId)
+            .single();
+
+        if (fetchErr || !currentReq) {
+            return res.status(404).json({ error: 'Vehicle request not found' });
+        }
+
+        const details = currentReq.vehicle_details || {};
+
+        // Gate stages 7 and above: Sponsor MUST have agreed to pricing terms
+        if (targetStage >= 7) {
+            const hasAgreed = (details.terms_accepted || !!details.agreement_accepted_at) && !details.terms_declined && !details.counter_offer_price;
+            if (!hasAgreed) {
+                return res.status(400).json({
+                    error: 'Cannot advance to Contract Activation (Stage 7). The sponsor has not yet agreed to the pricing terms.'
+                });
+            }
+        }
+
         const SponsorModel = require('../models/sponsorModel');
-        const updated = await SponsorModel.updateRequestStage(requestId, parseInt(stage), {
+        const updated = await SponsorModel.updateRequestStage(requestId, targetStage, {
             notes,
             survey_report,
             survey_scheduled_date,
