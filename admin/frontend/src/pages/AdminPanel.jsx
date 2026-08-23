@@ -141,9 +141,12 @@ const AdminPanel = () => {
 
     // Filtered Vehicles
     const filteredVehicles = vehicles.filter(v => {
-        const matchesSearch = v.name.toLowerCase().includes(vehicleSearch.toLowerCase()) || 
-                             v.id.toString().includes(vehicleSearch) ||
-                             (v.category && v.category.toLowerCase().includes(vehicleSearch.toLowerCase()));
+        const searchLower = vehicleSearch.toLowerCase();
+        const matchesSearch = (v.name && v.name.toLowerCase().includes(searchLower)) || 
+                             (v.id && v.id.toString().includes(vehicleSearch)) ||
+                             (v.category && v.category.toLowerCase().includes(searchLower)) ||
+                             (v.sponsor_name && v.sponsor_name.toLowerCase().includes(searchLower)) ||
+                             (v.sponsor_phone && v.sponsor_phone.includes(vehicleSearch));
         const matchesType = vehicleTypeFilter === 'all' || v.type === vehicleTypeFilter;
         return matchesSearch && matchesType;
     });
@@ -860,6 +863,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                         <thead>
                                             <tr>
                                                 <th>Vehicle Info</th>
+                                                <th>Sponsor / Owner</th>
                                                 <th>Specs</th>
                                                 <th>Price / Hr</th>
                                                 <th>Status</th>
@@ -869,7 +873,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                         <tbody>
                                             {filteredVehicles.length === 0 ? (
                                                 <tr>
-                                                    <td colSpan="5" className="text-center py-5">
+                                                    <td colSpan="6" className="text-center py-5">
                                                         <div className="no-results">
                                                             <i className="fas fa-search"></i>
                                                             <p>No vehicles match your search criteria.</p>
@@ -890,6 +894,40 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                             <div className="vehicle-meta">
                                                                 <span className="v-name">{v.name}</span>
                                                                 <span className="v-id">ID: #{v.id} • {v.category || 'Standard'}</span>
+                                                            </div>
+                                                        </div>
+                                                    </td>
+                                                    <td>
+                                                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                                                            <div style={{
+                                                                width: '34px',
+                                                                height: '34px',
+                                                                borderRadius: '50%',
+                                                                background: v.sponsor_name && v.sponsor_name !== 'RentHub Fleet' ? 'linear-gradient(135deg, #4f46e5, #7c3aed)' : '#e2e8f0',
+                                                                color: v.sponsor_name && v.sponsor_name !== 'RentHub Fleet' ? '#ffffff' : '#64748b',
+                                                                display: 'flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                fontWeight: 'bold',
+                                                                fontSize: '0.82rem',
+                                                                flexShrink: 0
+                                                            }}>
+                                                                {(v.sponsor_name || 'RH').substring(0, 2).toUpperCase()}
+                                                            </div>
+                                                            <div>
+                                                                <div style={{ fontWeight: '600', color: '#1e293b', fontSize: '0.9rem' }}>
+                                                                    {v.sponsor_name || 'RentHub Fleet'}
+                                                                </div>
+                                                                {v.sponsor_phone ? (
+                                                                    <div style={{ fontSize: '0.78rem', color: '#64748b' }}>
+                                                                        <i className="fas fa-phone-alt" style={{ marginRight: '4px', fontSize: '0.7rem' }}></i>
+                                                                        {v.sponsor_phone}
+                                                                    </div>
+                                                                ) : (
+                                                                    <span style={{ fontSize: '0.72rem', background: '#f1f5f9', padding: '2px 6px', borderRadius: '4px', color: '#64748b' }}>
+                                                                        Internal Fleet
+                                                                    </span>
+                                                                )}
                                                             </div>
                                                         </div>
                                                     </td>
@@ -2013,13 +2051,88 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
             {modal.type === 'viewVehicle' && (
                 <div className="modal">
-                    <div className="modal-content">
+                    <div className="modal-content" style={{ maxWidth: '600px', width: '95%' }}>
                         <span className="close-button" onClick={() => setModal({ type: null })}>&times;</span>
-                        <h2>Vehicle Details</h2>
-                        <p><strong>Name:</strong> {modal.data.name}</p>
-                        <p><strong>Type:</strong> {modal.data.type}</p>
-                        <p><strong>Price:</strong> {modal.data.price}</p>
-                        <p><strong>Status:</strong> {modal.data.status}</p>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '15px', borderBottom: '1px solid #e2e8f0', paddingBottom: '15px', marginBottom: '20px' }}>
+                            <div style={{
+                                width: '65px',
+                                height: '65px',
+                                borderRadius: '12px',
+                                overflow: 'hidden',
+                                background: '#f8fafc',
+                                border: '1px solid #e2e8f0',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center'
+                            }}>
+                                {modal.data.image_url ? (
+                                    <img src={modal.data.image_url} alt={modal.data.name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                                ) : (
+                                    <i className={`fas ${modal.data.type === 'car' ? 'fa-car' : 'fa-motorcycle'}`} style={{ fontSize: '1.6rem', color: '#64748b' }}></i>
+                                )}
+                            </div>
+                            <div>
+                                <h2 style={{ margin: '0 0 5px 0', fontSize: '1.35rem', color: '#1e293b' }}>{modal.data.name}</h2>
+                                <span style={{ fontSize: '0.85rem', color: '#64748b' }}>ID: #{modal.data.id} • Type: {modal.data.type?.toUpperCase()}</span>
+                            </div>
+                        </div>
+
+                        {/* Sponsor / Owner Card */}
+                        <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '10px', padding: '16px', marginBottom: '20px' }}>
+                            <h4 style={{ margin: '0 0 12px 0', color: '#4f46e5', display: 'flex', alignItems: 'center', gap: '8px', fontSize: '0.95rem' }}>
+                                <i className="fas fa-user-tie"></i> Vehicle Sponsor / Owner Information
+                            </h4>
+                            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', fontSize: '0.9rem' }}>
+                                <div>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem', textTransform: 'uppercase' }}>Sponsor Name</span>
+                                    <strong style={{ color: '#1e293b' }}>{modal.data.sponsor_name || 'RentHub Fleet (Internal)'}</strong>
+                                </div>
+                                <div>
+                                    <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem', textTransform: 'uppercase' }}>Contact Phone</span>
+                                    <strong style={{ color: '#1e293b' }}>{modal.data.sponsor_phone || 'N/A'}</strong>
+                                </div>
+                                {modal.data.sponsor_email && (
+                                    <div>
+                                        <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem', textTransform: 'uppercase' }}>Email</span>
+                                        <span style={{ color: '#334155' }}>{modal.data.sponsor_email}</span>
+                                    </div>
+                                )}
+                                {modal.data.sponsor_upi && (
+                                    <div>
+                                        <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem', textTransform: 'uppercase' }}>UPI ID</span>
+                                        <span style={{ color: '#334155' }}>{modal.data.sponsor_upi}</span>
+                                    </div>
+                                )}
+                            </div>
+                        </div>
+
+                        {/* Vehicle Specifications Grid */}
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '14px', fontSize: '0.9rem' }}>
+                            <div>
+                                <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem' }}>Category</span>
+                                <strong>{modal.data.category || 'Standard'}</strong>
+                            </div>
+                            <div>
+                                <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem' }}>Registration Number</span>
+                                <strong>{modal.data.registration_number || 'N/A'}</strong>
+                            </div>
+                            <div>
+                                <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem' }}>Model / Year</span>
+                                <strong>{modal.data.model || 'N/A'} ({modal.data.year || 'N/A'})</strong>
+                            </div>
+                            <div>
+                                <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem' }}>Engine</span>
+                                <strong>{modal.data.engine || 'N/A'}</strong>
+                            </div>
+                            <div>
+                                <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem' }}>Hourly Price</span>
+                                <strong style={{ color: '#10b981', fontSize: '1.05rem' }}>₹{modal.data.price}/hr</strong>
+                            </div>
+                            <div>
+                                <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem' }}>Status</span>
+                                <span className={`status-pill ${modal.data.status === 'Available' ? 'available' : 'busy'}`}>{modal.data.status || 'Active'}</span>
+                            </div>
+                        </div>
                     </div>
                 </div>
             )}

@@ -972,16 +972,40 @@ const blockUser = async (req, res) => {
 // Vehicles management
 const getAllVehicles = async (req, res) => {
     try {
-        const bikes = await supabase.from('bikes').select('*');
-        const cars = await supabase.from('cars').select('*');
-        const scooty = await supabase.from('scooty').select('*');
+        const [bikesRes, carsRes, scootyRes, sponsorsRes] = await Promise.all([
+            supabase.from('bikes').select('*'),
+            supabase.from('cars').select('*'),
+            supabase.from('scooty').select('*'),
+            supabase.from('sponsors').select('id, full_name, email, phone_number, upi_id, address, profile_picture')
+        ]);
+
+        const sponsorsMap = new Map((sponsorsRes.data || []).map(s => [s.id, s]));
+
+        const attachSponsor = (v, type) => {
+            const sponsor = v.sponsor_id ? sponsorsMap.get(v.sponsor_id) : null;
+            return {
+                ...v,
+                type,
+                sponsor_name: sponsor ? sponsor.full_name : 'RentHub Fleet',
+                sponsor_phone: sponsor ? sponsor.phone_number : null,
+                sponsor_email: sponsor ? sponsor.email : null,
+                sponsor_upi: sponsor ? sponsor.upi_id : null,
+                sponsor_address: sponsor ? sponsor.address : null,
+                sponsor_avatar: sponsor ? sponsor.profile_picture : null,
+                sponsor_details: sponsor || null
+            };
+        };
+
         const allVehicles = [
-            ...(bikes.data || []).map(v => ({ ...v, type: 'bike' })),
-            ...(cars.data || []).map(v => ({ ...v, type: 'car' })),
-            ...(scooty.data || []).map(v => ({ ...v, type: 'scooty' }))
+            ...(bikesRes.data || []).map(v => attachSponsor(v, 'bike')),
+            ...(carsRes.data || []).map(v => attachSponsor(v, 'car')),
+            ...(scootyRes.data || []).map(v => attachSponsor(v, 'scooty'))
         ];
         res.json(allVehicles);
-    } catch (error) { res.status(500).json({ error: 'Error' }); }
+    } catch (error) {
+        console.error('Error fetching all vehicles:', error);
+        res.status(500).json({ error: 'Error fetching vehicles' });
+    }
 };
 
 const getVehicleById = async (req, res) => {
@@ -990,8 +1014,22 @@ const getVehicleById = async (req, res) => {
         if (type === 'car') type = 'cars';
         if (type === 'bike') type = 'bikes';
         if (type === 'scooty') type = 'scooty';
-        const { data } = await supabase.from(type).select('*').eq('id', id).single();
-        res.json(data);
+        const { data, error } = await supabase.from(type).select('*').eq('id', id).single();
+        if (error || !data) return res.status(404).json({ error: 'Vehicle not found' });
+
+        let sponsor = null;
+        if (data.sponsor_id) {
+            const { data: sData } = await supabase.from('sponsors').select('id, full_name, email, phone_number, upi_id, address').eq('id', data.sponsor_id).single();
+            sponsor = sData;
+        }
+
+        res.json({
+            ...data,
+            sponsor_name: sponsor ? sponsor.full_name : 'RentHub Fleet',
+            sponsor_phone: sponsor ? sponsor.phone_number : null,
+            sponsor_email: sponsor ? sponsor.email : null,
+            sponsor_details: sponsor || null
+        });
     } catch (error) { res.status(500).json({ error: 'Error' }); }
 };
 
