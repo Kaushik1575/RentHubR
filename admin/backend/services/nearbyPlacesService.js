@@ -102,15 +102,22 @@ out center 25;`;
     let places = [];
 
     for (const url of mirrors) {
+        let timeoutId;
         try {
+            const controller = new AbortController();
+            timeoutId = setTimeout(() => controller.abort(), 4000);
+
             const response = await fetch(url, {
                 method: 'POST',
                 body: 'data=' + encodeURIComponent(query),
                 headers: {
                     'Content-Type': 'application/x-www-form-urlencoded',
                     'User-Agent': 'RentHub-Nearby-Service/1.0'
-                }
+                },
+                signal: controller.signal
             });
+
+            if (timeoutId) clearTimeout(timeoutId);
 
             if (response && response.ok) {
                 const text = await response.text();
@@ -147,9 +154,11 @@ out center 25;`;
                 }
             }
         } catch (err) {
+            if (timeoutId) clearTimeout(timeoutId);
             console.warn(`⚠️ Overpass mirror ${url} failed:`, err.message);
         }
     }
+
 
     let garages = places.filter(p => p.type === 'garage');
     let petrolPumps = places.filter(p => p.type === 'petrol_pump');
