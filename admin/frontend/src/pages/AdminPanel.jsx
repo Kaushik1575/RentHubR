@@ -1224,39 +1224,40 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                                 )}
 
                                                                 {/* Sponsor Counter-Offer Notice for Admin */}
-                                                                {(r.counter_offer_price || r.sponsor_requested_price) && (
+                                                                {(r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.sponsor_requested_price || r.vehicle_details?.sponsor_requested_price) && (
                                                                     <div style={{ background: '#f5f3ff', border: '1.5px solid #c4b5fd', borderRadius: '10px', padding: '10px 12px', marginBottom: '8px' }}>
                                                                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                                             <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#4c1d95', textTransform: 'uppercase' }}>
                                                                                 💬 Sponsor Counter-Offer
                                                                             </span>
                                                                             <span style={{ background: '#6366f1', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>
-                                                                                ₹{r.counter_offer_price || r.sponsor_requested_price}/hr Requested
+                                                                                ₹{r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.sponsor_requested_price || r.vehicle_details?.sponsor_requested_price}/hr Requested
                                                                             </span>
                                                                         </div>
-                                                                        {(r.sponsor_price_remarks) && (
+                                                                        {(r.sponsor_price_remarks || r.vehicle_details?.sponsor_price_remarks) && (
                                                                             <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#5b21b6', fontStyle: 'italic' }}>
-                                                                                "{r.sponsor_price_remarks}"
+                                                                                "{r.sponsor_price_remarks || r.vehicle_details?.sponsor_price_remarks}"
                                                                             </p>
                                                                         )}
                                                                     </div>
                                                                 )}
 
                                                                 {/* Step 4 -> Step 5 or Step 5 Revision */}
-                                                                {(currentStage === 4 || ((currentStage === 5 || currentStage === 6) && (r.counter_offer_price || r.terms_declined))) && (
+                                                                {(currentStage === 4 || ((currentStage === 5 || currentStage === 6) && (r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.terms_declined || r.vehicle_details?.terms_declined))) && (
                                                                     <button
-                                                                        style={{ width: '100%', padding: '12px', background: r.counter_offer_price ? 'linear-gradient(135deg, #7c3aed, #6366f1)' : 'linear-gradient(135deg, #d97706, #b45309)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}
+                                                                        style={{ width: '100%', padding: '12px', background: (r.counter_offer_price || r.vehicle_details?.counter_offer_price) ? 'linear-gradient(135deg, #7c3aed, #6366f1)' : 'linear-gradient(135deg, #d97706, #b45309)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}
                                                                         onClick={() => {
+                                                                            const askedRate = r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.price || 65;
                                                                             setStageFormData({
                                                                                 requestId: r.id,
-                                                                                proposed_price: r.counter_offer_price || r.price || 65,
+                                                                                proposed_price: askedRate,
                                                                                 sponsor_percentage: 70,
-                                                                                notes: r.counter_offer_price ? `Revised pricing to ₹${r.counter_offer_price}/hr per sponsor request` : 'Revenue terms proposed'
+                                                                                notes: (r.counter_offer_price || r.vehicle_details?.counter_offer_price) ? `Revised pricing to ₹${askedRate}/hr per sponsor request` : 'Revenue terms proposed'
                                                                             });
                                                                             setModal({ type: 'stagePricingDecision', data: r });
                                                                         }}
                                                                     >
-                                                                        <i className="fas fa-hand-holding-usd"></i> {r.counter_offer_price ? `Review & Re-Propose (Asked ₹${r.counter_offer_price}/hr)` : 'Step 5: Propose Price & 70% Split'}
+                                                                        <i className="fas fa-hand-holding-usd"></i> {(r.counter_offer_price || r.vehicle_details?.counter_offer_price) ? `Review & Re-Propose (Asked ₹${r.counter_offer_price || r.vehicle_details?.counter_offer_price}/hr)` : 'Step 5: Propose Price & 70% Split'}
                                                                     </button>
                                                                 )}
 

@@ -178,6 +178,79 @@ class SponsorModel {
         if (error) throw error;
         return true;
     }
+
+    static async updateRequestStage(requestId, stageNumber, stagePayload = {}) {
+        const { data: request, error: reqError } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*, sponsors(*)')
+            .eq('id', requestId)
+            .single();
+
+        if (reqError || !request) throw new Error('Request not found');
+
+        const details = request.vehicle_details || {};
+        const history = details.stage_history || [];
+        const trackingId = details.tracking_id || `RH-REQ-${request.id}`;
+
+        const stageNames = {
+            1: 'SUBMITTED',
+            2: 'DOC_REVIEW',
+            3: 'PHYSICAL_SURVEY',
+            4: 'SURVEY_REPORT',
+            5: 'PRICE_DECISION',
+            6: 'SPONSOR_AGREEMENT',
+            7: 'CONTRACT_ACTIVATED',
+            8: 'GPS_INSTALLATION',
+            9: 'BIKE_LIVE'
+        };
+
+        const stageTitle = stageNames[stageNumber] || `STAGE_${stageNumber}`;
+        history.push({
+            stage: stageNumber,
+            title: stageTitle,
+            completed_at: new Date().toISOString(),
+            notes: stagePayload.notes || `Advanced to Stage ${stageNumber}`
+        });
+
+        const updatedDetails = {
+            ...details,
+            ...stagePayload,
+            tracking_id: trackingId,
+            current_stage: stageNumber,
+            stage_name: stageTitle,
+            stage_history: history,
+            survey_scheduled_date: stagePayload.survey_scheduled_date !== undefined ? stagePayload.survey_scheduled_date : details.survey_scheduled_date,
+            survey_report: stagePayload.survey_report !== undefined ? stagePayload.survey_report : details.survey_report,
+            pricing_terms: stagePayload.pricing_terms !== undefined ? stagePayload.pricing_terms : details.pricing_terms,
+            gps_tracking: stagePayload.gps_tracking !== undefined ? stagePayload.gps_tracking : details.gps_tracking,
+            agreement_accepted_at: stagePayload.agreement_accepted_at !== undefined ? stagePayload.agreement_accepted_at : details.agreement_accepted_at,
+            terms_accepted: stagePayload.terms_accepted !== undefined ? stagePayload.terms_accepted : details.terms_accepted,
+            terms_declined: stagePayload.terms_declined !== undefined ? stagePayload.terms_declined : details.terms_declined,
+            counter_offer_price: stagePayload.counter_offer_price !== undefined ? stagePayload.counter_offer_price : details.counter_offer_price,
+            sponsor_requested_price: stagePayload.sponsor_requested_price !== undefined ? stagePayload.sponsor_requested_price : details.sponsor_requested_price,
+            sponsor_price_remarks: stagePayload.sponsor_price_remarks !== undefined ? stagePayload.sponsor_price_remarks : details.sponsor_price_remarks
+        };
+
+        let newStatus = request.status;
+        if (stageNumber === 9) {
+            newStatus = 'approved';
+        } else if (stagePayload.status) {
+            newStatus = stagePayload.status;
+        }
+
+        const { data: updatedReq, error: updateError } = await supabase
+            .from('sponsor_vehicle_requests')
+            .update({
+                status: newStatus,
+                vehicle_details: updatedDetails
+            })
+            .eq('id', requestId)
+            .select()
+            .single();
+
+        if (updateError) throw updateError;
+        return updatedReq;
+    }
 }
 
 module.exports = SponsorModel;

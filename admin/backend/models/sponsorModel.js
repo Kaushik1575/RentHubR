@@ -266,15 +266,21 @@ class SponsorModel {
 
         const updatedDetails = {
             ...details,
+            ...stagePayload,
             tracking_id: trackingId,
             current_stage: stageNumber,
             stage_name: stageTitle,
             stage_history: history,
-            survey_scheduled_date: stagePayload.survey_scheduled_date || details.survey_scheduled_date,
-            survey_report: stagePayload.survey_report || details.survey_report,
-            pricing_terms: stagePayload.pricing_terms || details.pricing_terms,
-            gps_tracking: stagePayload.gps_tracking || details.gps_tracking,
-            agreement_accepted_at: stagePayload.agreement_accepted_at || details.agreement_accepted_at
+            survey_scheduled_date: stagePayload.survey_scheduled_date !== undefined ? stagePayload.survey_scheduled_date : details.survey_scheduled_date,
+            survey_report: stagePayload.survey_report !== undefined ? stagePayload.survey_report : details.survey_report,
+            pricing_terms: stagePayload.pricing_terms !== undefined ? stagePayload.pricing_terms : details.pricing_terms,
+            gps_tracking: stagePayload.gps_tracking !== undefined ? stagePayload.gps_tracking : details.gps_tracking,
+            agreement_accepted_at: stagePayload.agreement_accepted_at !== undefined ? stagePayload.agreement_accepted_at : details.agreement_accepted_at,
+            terms_accepted: stagePayload.terms_accepted !== undefined ? stagePayload.terms_accepted : details.terms_accepted,
+            terms_declined: stagePayload.terms_declined !== undefined ? stagePayload.terms_declined : details.terms_declined,
+            counter_offer_price: stagePayload.counter_offer_price !== undefined ? stagePayload.counter_offer_price : details.counter_offer_price,
+            sponsor_requested_price: stagePayload.sponsor_requested_price !== undefined ? stagePayload.sponsor_requested_price : details.sponsor_requested_price,
+            sponsor_price_remarks: stagePayload.sponsor_price_remarks !== undefined ? stagePayload.sponsor_price_remarks : details.sponsor_price_remarks
         };
 
         let newStatus = request.status;
