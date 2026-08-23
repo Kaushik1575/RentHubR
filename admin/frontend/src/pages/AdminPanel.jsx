@@ -440,24 +440,41 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
         setModal({ type: 'addVehicle' });
     };
 
-    const executeRejectRequest = async (id) => {
+    const executeRejectRequest = async (id, reason) => {
+        if (!reason || !reason.trim()) {
+            setPopup({ isOpen: true, type: 'error', title: 'Reason Required', message: 'Please enter a rejection reason for the sponsor.' });
+            return;
+        }
+
+        setIsSubmitting(true);
         try {
             const res = await fetch(`/api/admin/vehicle-requests/${id}/reject`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({ reason: reason.trim() })
             });
+            const data = await res.json();
             if (res.ok) {
                 loadRequests();
                 setModal({ type: null });
-                setPopup({ isOpen: true, type: 'success', title: 'Rejected', message: 'Request rejected/removed' });
+                setPopup({ isOpen: true, type: 'success', title: 'Application Rejected', message: data.message || 'Vehicle request rejected and notice email sent to sponsor.' });
             } else {
-                setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to reject' });
+                setPopup({ isOpen: true, type: 'error', title: 'Error', message: data.error || 'Failed to reject request' });
             }
-        } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error rejecting request' }); }
+        } catch (e) {
+            setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error rejecting request' });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
-    const handleRejectRequest = (id) => {
-        setModal({ type: 'confirmRejectRequest', data: { id } });
+    const handleRejectRequest = (requestOrId) => {
+        const reqObj = typeof requestOrId === 'object' ? requestOrId : requests.find(r => r.id === requestOrId) || { id: requestOrId };
+        setModal({ type: 'rejectRequest', data: reqObj });
+        setStageFormData({ rejectionReason: '' });
     };
 
     const executeDeleteRequest = async (id) => {
@@ -2745,17 +2762,115 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                 cancelText="Cancel"
             />
 
-            {/* Reject Request Confirmation */}
-            <StatusPopup
-                isOpen={modal.type === 'confirmRejectRequest'}
-                onClose={() => setModal({ type: null })}
-                onConfirm={() => executeRejectRequest(modal.data.id)}
-                type="confirm"
-                title="Reject Request"
-                message="Are you sure you want to reject this vehicle request?"
-                confirmText="Yes, Reject"
-                cancelText="Cancel"
-            />
+            {/* Reject Vehicle Request Modal (Mandatory Reason + Automated Email) */}
+            {modal.type === 'rejectRequest' && modal.data && (
+                <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <div className="modal-backdrop" onClick={() => setModal({ type: null })}></div>
+                    <div className="modal-content" style={{ maxWidth: '580px', width: '100%', borderRadius: '20px', overflow: 'hidden' }}>
+                        <div className="modal-header" style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', color: '#fff', padding: '20px 24px' }}>
+                            <div>
+                                <h3 style={{ margin: 0, fontSize: '1.25rem', fontWeight: 800 }}>🛑 Reject Vehicle Application</h3>
+                                <p style={{ margin: '4px 0 0', fontSize: '0.8rem', opacity: 0.9 }}>
+                                    A formal rejection notice and reason will be dispatched to the sponsor's email address.
+                                </p>
+                            </div>
+                            <button className="close-btn" style={{ color: '#fff' }} onClick={() => setModal({ type: null })}>&times;</button>
+                        </div>
+                        <div className="modal-body" style={{ padding: '24px' }}>
+                            <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px', padding: '14px', marginBottom: '20px' }}>
+                                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '4px' }}>
+                                    <strong style={{ color: '#0f172a' }}>{modal.data.name}</strong>
+                                    <span style={{ fontFamily: 'monospace', fontWeight: 700, color: '#4f46e5' }}>{modal.data.tracking_id || `RH-REQ-${modal.data.id}`}</span>
+                                </div>
+                                <div style={{ fontSize: '0.8rem', color: '#64748b' }}>
+                                    <span>Reg: {modal.data.registration_number || 'N/A'}</span> • <span>Stage {modal.data.current_stage || 1}</span>
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#1e293b', marginBottom: '8px' }}>
+                                    Quick Reason Presets (Click to Auto-fill):
+                                </label>
+                                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                    {[
+                                        'RC Book / Insurance document copy is blurred or illegible. Please upload clear scanned copies.',
+                                        'Failed physical mechanical survey: Tyre tread depth below safety threshold.',
+                                        'Engine diagnostic test failed roadworthiness inspection.',
+                                        'Vehicle registration documents expired or discrepancy with RTO records.',
+                                        'Sponsor declined proposed rental price and revenue sharing terms.',
+                                        'Vehicle model older than RentHub fleet maximum age limit.'
+                                    ].map((preset, idx) => (
+                                        <button
+                                            key={idx}
+                                            type="button"
+                                            onClick={() => setStageFormData({ ...stageFormData, rejectionReason: preset })}
+                                            style={{
+                                                background: stageFormData.rejectionReason === preset ? '#fee2e2' : '#f1f5f9',
+                                                border: stageFormData.rejectionReason === preset ? '1px solid #f87171' : '1px solid #e2e8f0',
+                                                color: stageFormData.rejectionReason === preset ? '#991b1b' : '#475569',
+                                                padding: '5px 10px',
+                                                borderRadius: '8px',
+                                                fontSize: '0.75rem',
+                                                fontWeight: 600,
+                                                cursor: 'pointer',
+                                                textAlign: 'left'
+                                            }}
+                                        >
+                                            • {preset.slice(0, 48)}...
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <div style={{ marginBottom: '16px' }}>
+                                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 700, color: '#1e293b', marginBottom: '6px' }}>
+                                    Mandatory Rejection Remarks / Reason for Sponsor <span style={{ color: '#dc2626' }}>*</span>
+                                </label>
+                                <textarea
+                                    rows="4"
+                                    required
+                                    value={stageFormData.rejectionReason || ''}
+                                    onChange={(e) => setStageFormData({ ...stageFormData, rejectionReason: e.target.value })}
+                                    placeholder="Explain specifically why the application was rejected so the sponsor can rectify the issue..."
+                                    style={{
+                                        width: '100%',
+                                        padding: '12px',
+                                        borderRadius: '10px',
+                                        border: '1.5px solid #cbd5e1',
+                                        fontSize: '0.85rem',
+                                        fontFamily: 'inherit',
+                                        boxSizing: 'border-box'
+                                    }}
+                                />
+                            </div>
+
+                            <div style={{ background: '#fef2f2', border: '1px solid #fecaca', borderRadius: '10px', padding: '10px 14px', fontSize: '0.78rem', color: '#991b1b' }}>
+                                ⚠️ <strong>Note:</strong> Once rejected, the vehicle status will update to <em>Rejected</em> and an automated email with your remarks will be dispatched immediately to the sponsor.
+                            </div>
+                        </div>
+                        <div className="modal-footer" style={{ padding: '16px 24px', background: '#f8fafc', display: 'flex', justifyContent: 'flex-end', gap: '10px' }}>
+                            <button className="btn btn-secondary" onClick={() => setModal({ type: null })}>Cancel</button>
+                            <button
+                                className="btn"
+                                disabled={isSubmitting || !stageFormData.rejectionReason?.trim()}
+                                onClick={() => executeRejectRequest(modal.data.id, stageFormData.rejectionReason)}
+                                style={{
+                                    background: 'linear-gradient(135deg, #b91c1c 0%, #dc2626 100%)',
+                                    color: '#fff',
+                                    fontWeight: 700,
+                                    border: 'none',
+                                    padding: '10px 22px',
+                                    borderRadius: '10px',
+                                    cursor: isSubmitting || !stageFormData.rejectionReason?.trim() ? 'not-allowed' : 'pointer',
+                                    opacity: isSubmitting || !stageFormData.rejectionReason?.trim() ? 0.6 : 1
+                                }}
+                            >
+                                {isSubmitting ? 'Sending Notice...' : '🛑 Confirm & Dispatch Rejection Notice'}
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Delete Request Confirmation */}
             <StatusPopup

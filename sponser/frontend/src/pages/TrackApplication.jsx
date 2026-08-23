@@ -506,6 +506,64 @@ const TrackApplication = () => {
                             </div>
                         </div>
 
+                        {/* Rejection Notice Banner */}
+                        {(trackingData.status === 'rejected' || trackingData.rejection_reason) && (
+                            <div className="bg-gradient-to-br from-rose-950/90 via-slate-900 to-rose-950/90 border-2 border-rose-500/80 rounded-3xl p-6 md:p-8 shadow-2xl relative overflow-hidden animate-fade-in">
+                                <div className="absolute top-0 right-0 w-48 h-48 bg-rose-500/10 rounded-full blur-3xl pointer-events-none"></div>
+                                <div className="flex flex-col md:flex-row md:items-start justify-between gap-6">
+                                    <div className="flex items-start gap-4">
+                                        <div className="w-14 h-14 rounded-2xl bg-rose-500/20 text-rose-400 border border-rose-500/40 flex items-center justify-center font-black text-2xl shrink-0 shadow-lg shadow-rose-900/40">
+                                            🛑
+                                        </div>
+                                        <div className="space-y-2">
+                                            <div className="flex flex-wrap items-center gap-2">
+                                                <span className="px-3 py-1 rounded-xl text-xs font-black uppercase tracking-wider bg-rose-500 text-white shadow-md shadow-rose-500/30">
+                                                    Application Not Approved
+                                                </span>
+                                                <span className="text-xs text-rose-300 font-mono">
+                                                    Stage {trackingData.rejected_by_stage || trackingData.current_stage || 1} Audit Review
+                                                </span>
+                                                {trackingData.rejected_at && (
+                                                    <span className="text-xs text-slate-400">
+                                                        • {new Date(trackingData.rejected_at).toLocaleString('en-IN', { dateStyle: 'medium', timeStyle: 'short' })}
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <h3 className="text-xl md:text-2xl font-black text-white">
+                                                Reason for Application Rejection
+                                            </h3>
+                                            <div className="bg-slate-950/80 border border-rose-500/40 rounded-2xl p-4 md:p-5 mt-2">
+                                                <span className="text-[10px] font-black uppercase tracking-widest text-rose-400 block mb-1">
+                                                    Auditor Remarks / Feedback:
+                                                </span>
+                                                <p className="text-sm md:text-base text-rose-100 font-semibold leading-relaxed">
+                                                    "{trackingData.rejection_reason || 'Vehicle does not meet current RentHub compliance or physical safety requirements.'}"
+                                                </p>
+                                            </div>
+                                            <p className="text-xs text-slate-400 pt-1">
+                                                📩 An official notice with these remarks was dispatched to your registered email address. You may rectify the issue and submit a new vehicle application or contact our 24x7 desk.
+                                            </p>
+                                        </div>
+                                    </div>
+                                    <div className="flex flex-col sm:flex-row md:flex-col gap-3 shrink-0">
+                                        <Link
+                                            to="/add-bike"
+                                            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white font-extrabold text-xs shadow-lg shadow-rose-600/30 text-center transition-all"
+                                        >
+                                            Submit New Application →
+                                        </Link>
+                                        <a
+                                            href="tel:9040757683"
+                                            className="px-6 py-3 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold text-xs border border-slate-700 text-center flex items-center justify-center gap-2 transition-all"
+                                        >
+                                            <Phone className="w-3.5 h-3.5 text-cyan-400" />
+                                            Call Support
+                                        </a>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
                         {/* Interactive Timeline Controls & Filters */}
                         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                             <div>

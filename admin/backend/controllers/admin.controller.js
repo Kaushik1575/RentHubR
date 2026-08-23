@@ -1388,16 +1388,95 @@ const approveVehicle = async (req, res) => {
 
 const rejectVehicle = async (req, res) => {
     try {
-        const { error } = await supabase
-            .from('sponsor_vehicle_requests')
-            .update({ status: 'rejected' })
-            .eq('id', req.params.id);
+        const reason = (req.body.reason || req.body.rejection_reason || '').trim();
+        if (!reason) {
+            return res.status(400).json({ error: 'Rejection reason is mandatory. Please provide specific feedback for the sponsor.' });
+        }
 
-        if (error) throw error;
-        res.json({ message: 'Vehicle rejected/removed successfully' });
+        // Fetch existing request
+        const { data: request, error: reqErr } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*')
+            .eq('id', req.params.id)
+            .single();
+
+        if (reqErr || !request) {
+            return res.status(404).json({ error: 'Vehicle request not found' });
+        }
+
+        const currentDetails = request.vehicle_details || {};
+        const history = currentDetails.stage_history || [];
+        const currentStage = currentDetails.current_stage || 1;
+
+        history.push({
+            stage: currentStage,
+            title: `Rejected: ${reason}`,
+            completed_at: new Date().toISOString(),
+            status: 'rejected'
+        });
+
+        const updatedDetails = {
+            ...currentDetails,
+            status: 'rejected',
+            rejection_reason: reason,
+            rejected_at: new Date().toISOString(),
+            rejected_by_stage: currentStage,
+            stage_history: history
+        };
+
+        // Try updating with vehicle_details column
+        let updated = null;
+        try {
+            const { data, error } = await supabase
+                .from('sponsor_vehicle_requests')
+                .update({
+                    status: 'rejected',
+                    vehicle_details: updatedDetails
+                })
+                .eq('id', req.params.id)
+                .select()
+                .single();
+
+            if (!error && data) updated = data;
+        } catch (e) {
+            console.warn('Fallback updating rejection without vehicle_details column:', e.message);
+        }
+
+        if (!updated) {
+            const { data, error } = await supabase
+                .from('sponsor_vehicle_requests')
+                .update({ status: 'rejected' })
+                .eq('id', req.params.id)
+                .select()
+                .single();
+            if (error) throw error;
+            updated = data;
+        }
+
+        // Dispatch Rejection Notice Email to Sponsor via Resend
+        try {
+            const { data: sponsor } = await supabase.from('sponsors').select('*').eq('id', request.sponsor_id).single();
+            if (sponsor && sponsor.email) {
+                const { sendSponsorRejectionEmail } = require('../config/emailService');
+                await sendSponsorRejectionEmail(
+                    sponsor.email,
+                    sponsor.full_name,
+                    { ...request, ...updatedDetails },
+                    reason,
+                    currentStage
+                );
+            }
+        } catch (emailErr) {
+            console.warn('Warning sending rejection email:', emailErr.message);
+        }
+
+        res.json({
+            message: 'Vehicle request rejected and rejection email sent to sponsor',
+            request: { ...updated, ...updatedDetails }
+        });
     } catch (error) {
         console.error('Error rejecting vehicle:', error);
-        res.status(500).json({ error: 'Failed to reject vehicle' });
+        res.status(500).json({ error: error.message || 'Failed to reject vehicle' });
     }
 };
 

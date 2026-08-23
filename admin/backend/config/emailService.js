@@ -1210,6 +1210,133 @@ async function sendSponsorTimelineEmail(sponsorEmail, sponsorName, vehicleData, 
     });
 }
 
+// Send Sponsor Application Rejection Notice Email
+async function sendSponsorRejectionEmail(sponsorEmail, sponsorName, vehicleData, rejectionReason, stageNumber = 1) {
+    if (!sponsorEmail) return { success: false, error: 'No sponsor email provided' };
+
+    const trackingId = vehicleData.tracking_id || `RH-REQ-${vehicleData.id || '1001'}`;
+    const vehicleName = vehicleData.name || 'Your Vehicle';
+    const regNumber = vehicleData.registration_number || vehicleData.bikeNumber || 'In Verification';
+    const stageNames = [
+        'Application & Docs Submission',
+        'Document & Vehicle Review',
+        'Physical Survey Visit',
+        'Survey Inspection Scorecard',
+        'Price & Revenue Share Terms',
+        'Sponsor Agreement Signing',
+        'Contract Activation',
+        'Anti-Theft GPS Installation',
+        'Fleet Live Publishing'
+    ];
+    const stageName = stageNames[stageNumber - 1] || `Stage ${stageNumber}`;
+
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Vehicle Application Status: Rejected</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td style="padding: 30px 10px;">
+                        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #fee2e2;">
+                            <!-- Top Alert Banner -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #991b1b 0%, #b91c1c 50%, #dc2626 100%); padding: 35px 30px; text-align: center; color: #ffffff;">
+                                    <div style="display: inline-block; background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.3); border-radius: 50px; padding: 6px 16px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 12px;">
+                                        ⚠️ ONBOARDING APPLICATION NOTICE
+                                    </div>
+                                    <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 800; color: #ffffff;">Application Not Approved</h1>
+                                    <p style="margin: 0; font-size: 15px; color: #fecaca; font-weight: 500;">
+                                        Tracking ID: <strong style="color: #ffffff; letter-spacing: 1px;">${trackingId}</strong>
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <!-- Main Body Content -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <p style="font-size: 16px; margin: 0 0 15px 0;">Hello <strong>${sponsorName || 'Valued Sponsor'}</strong>,</p>
+                                    <p style="font-size: 15px; color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Thank you for submitting your vehicle <strong>${vehicleName}</strong> (${regNumber}) to the RentHub Sponsor Fleet. After review during <strong>${stageName}</strong>, our operations team was unable to approve this application.
+                                    </p>
+
+                                    <!-- Rejection Reason Highlight Box -->
+                                    <div style="background: #fef2f2; border-left: 5px solid #dc2626; border-radius: 8px; padding: 18px 20px; margin-bottom: 25px;">
+                                        <h3 style="margin: 0 0 6px 0; font-size: 15px; text-transform: uppercase; color: #991b1b; font-weight: 800; letter-spacing: 0.5px;">
+                                            🛑 Auditor Rejection Reason:
+                                        </h3>
+                                        <p style="margin: 0; font-size: 15px; color: #7f1d1d; font-weight: 600; line-height: 1.5;">
+                                            "${rejectionReason || 'Vehicle does not meet current RentHub compliance or physical inspection safety criteria.'}"
+                                        </p>
+                                    </div>
+
+                                    <!-- Vehicle Snapshot Table -->
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin-bottom: 25px;">
+                                        <h4 style="margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px;">Vehicle Application Details</h4>
+                                        <table width="100%" style="font-size: 14px; border-collapse: collapse;">
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #64748b;">Vehicle Name:</td>
+                                                <td style="padding: 4px 0; font-weight: 700; text-align: right; color: #0f172a;">${vehicleName}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #64748b;">Registration No:</td>
+                                                <td style="padding: 4px 0; font-weight: 700; text-align: right; color: #0f172a;">${regNumber}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #64748b;">Stage Rejected At:</td>
+                                                <td style="padding: 4px 0; font-weight: 700; text-align: right; color: #dc2626;">Stage ${stageNumber}: ${stageName}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #64748b;">Tracking ID:</td>
+                                                <td style="padding: 4px 0; font-weight: 700; text-align: right; color: #4f46e5;">${trackingId}</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- Next Steps -->
+                                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 10px; padding: 16px 20px; margin-bottom: 25px;">
+                                        <h4 style="margin: 0 0 6px 0; font-size: 14px; color: #92400e; font-weight: 800;">What are the next steps?</h4>
+                                        <p style="margin: 0; font-size: 13px; color: #78350f; line-height: 1.5;">
+                                            You can resolve the noted issue (such as uploading clear document copies or servicing mechanical parts) and submit a fresh application at any time, or contact our support desk for assistance.
+                                        </p>
+                                    </div>
+
+                                    <!-- CTA Button -->
+                                    <div style="text-align: center; margin: 25px 0 10px 0;">
+                                        <a href="https://renthub-sponsor.onrender.com/track-application?id=${trackingId}" style="display: inline-block; background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); letter-spacing: 0.3px;">
+                                            📍 View Rejection Details in Track Application →
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Footer -->
+                            <tr>
+                                <td align="center" style="background-color: #0f172a; padding: 25px 20px; color: #94a3b8; font-size: 12px;">
+                                    <div style="color: #ffffff; font-size: 16px; font-weight: 800; margin-bottom: 6px;">RentHub Sponsor Network</div>
+                                    <p style="margin: 0 0 6px 0;">Partner Operations & Vehicle Onboarding Control Desk</p>
+                                    <p style="margin: 0; color: #64748b; font-size: 11px;">© 2026 RentHub Inc. • 24x7 Sponsor Support: +91 9040757683</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+    `;
+
+    return sendEmail({
+        to: sponsorEmail,
+        subject: `[${trackingId}] Notice: Vehicle Application Not Approved - ${vehicleName}`,
+        html: html
+    });
+}
+
 module.exports = {
     generateOTP,
     sendBookingConfirmationEmail,
@@ -1224,6 +1351,7 @@ module.exports = {
     sendVehicleApprovedEmail,
     sendNewOfferEmail,
     sendSponsorTimelineEmail,
+    sendSponsorRejectionEmail,
     getStageInfo,
     sendEmail,
     SENDER_EMAIL
