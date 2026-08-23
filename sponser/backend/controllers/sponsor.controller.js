@@ -912,6 +912,8 @@ exports.lookupTracking = async (req, res) => {
             counter_offer_price: isTermsAgreed ? null : (details.counter_offer_price || details.sponsor_requested_price || null),
             sponsor_requested_price: isTermsAgreed ? null : (details.counter_offer_price || details.sponsor_requested_price || null),
             sponsor_price_remarks: isTermsAgreed ? null : (details.sponsor_price_remarks || null),
+            previous_proposed_price: details.pricing_terms?.previous_price || details.previous_proposed_price || null,
+            previous_counter_price: details.pricing_terms?.previous_counter_price || details.previous_counter_price || null,
             terms_accepted: isTermsAgreed,
             terms_declined: isTermsAgreed ? false : (details.terms_declined || false),
             terms_accepted_at: details.terms_accepted_at || details.agreement_accepted_at || null,

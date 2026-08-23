@@ -2895,12 +2895,20 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                         </div>
                         <form onSubmit={(e) => {
                             e.preventDefault();
+                            const prevProposed = modal.data?.pricing_terms?.proposed_price || modal.data?.price || null;
+                            const prevCounter = modal.data?.counter_offer_price || modal.data?.sponsor_requested_price || modal.data?.vehicle_details?.counter_offer_price || null;
+
                             handleAdvanceStage(stageFormData.requestId, stageFormData.mark_accepted ? 6 : 5, {
                                 pricing_terms: {
                                     proposed_price: parseFloat(stageFormData.proposed_price || 65),
+                                    previous_price: prevProposed,
+                                    previous_counter_price: prevCounter,
                                     sponsor_percentage: parseFloat(stageFormData.sponsor_percentage || 70),
-                                    platform_percentage: 100 - parseFloat(stageFormData.sponsor_percentage || 70)
+                                    platform_percentage: 100 - parseFloat(stageFormData.sponsor_percentage || 70),
+                                    is_revised: !!(prevProposed && prevProposed !== parseFloat(stageFormData.proposed_price || 65))
                                 },
+                                previous_proposed_price: prevProposed,
+                                previous_counter_price: prevCounter,
                                 terms_accepted: !!stageFormData.mark_accepted,
                                 terms_declined: false,
                                 counter_offer_price: null,
@@ -2908,7 +2916,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 agreement_accepted_at: stageFormData.mark_accepted ? new Date().toISOString() : null,
                                 notes: stageFormData.mark_accepted
                                     ? `Agreed pricing at ₹${stageFormData.proposed_price}/hr with ${stageFormData.sponsor_percentage}% sponsor share. Unlocked for contract activation.`
-                                    : `Proposed pricing ₹${stageFormData.proposed_price}/hr with ${stageFormData.sponsor_percentage}% sponsor revenue share`
+                                    : `Admin revised pricing to ₹${stageFormData.proposed_price}/hr (Previous: ₹${prevProposed || 'N/A'}/hr, Sponsor Asked: ₹${prevCounter || 'N/A'}/hr)`
                             });
                         }}>
                             <div className="modal-body" style={{ padding: '24px', maxHeight: '75vh', overflowY: 'auto' }}>

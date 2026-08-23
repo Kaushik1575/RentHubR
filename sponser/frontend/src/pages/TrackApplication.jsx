@@ -844,6 +844,35 @@ const TrackApplication = () => {
                                                             ) : (
                                                                 /* After Admin sends price */
                                                                 <>
+                                                                    {/* Revision Notice Banner if admin revised price after sponsor counter */}
+                                                                    {((trackingData.previous_proposed_price && trackingData.previous_proposed_price !== hourlyRate) || trackingData.previous_counter_price) && !trackingData.terms_accepted && (
+                                                                        <div className="p-2.5 rounded-xl bg-indigo-50/90 border border-indigo-200 text-indigo-950 space-y-1.5">
+                                                                            <div className="flex items-center justify-between">
+                                                                                <span className="text-[11px] font-black text-indigo-950 uppercase tracking-wide flex items-center gap-1">
+                                                                                    🔄 Revised Admin Proposal
+                                                                                </span>
+                                                                                <span className="px-2 py-0.5 rounded-full bg-indigo-200 text-indigo-900 font-extrabold text-[10px]">
+                                                                                    Price Updated
+                                                                                </span>
+                                                                            </div>
+                                                                            <div className="flex flex-wrap items-center gap-2 text-[11px]">
+                                                                                {trackingData.previous_proposed_price && trackingData.previous_proposed_price !== hourlyRate && (
+                                                                                    <span className="bg-white px-2 py-1 rounded-lg border border-indigo-100 text-slate-500 font-medium">
+                                                                                        Initial: <span className="line-through text-slate-400">₹{trackingData.previous_proposed_price}/hr</span>
+                                                                                    </span>
+                                                                                )}
+                                                                                {trackingData.previous_counter_price && (
+                                                                                    <span className="bg-white px-2 py-1 rounded-lg border border-indigo-100 text-purple-700 font-medium">
+                                                                                        Your Counter: <strong>₹{trackingData.previous_counter_price}/hr</strong>
+                                                                                    </span>
+                                                                                )}
+                                                                                <span className="bg-indigo-600 text-white px-2.5 py-1 rounded-lg font-black">
+                                                                                    New Rate: ₹{hourlyRate}/hr (70%: ₹{sponsorHourlyShare.toFixed(1)}/hr)
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+                                                                    )}
+
                                                                     {/* Pricing Comparison Grid */}
                                                                     <div className={`grid gap-2 text-xs ${(!trackingData.terms_accepted && !trackingData.agreement_accepted_at && (trackingData.current_stage < 6) && trackingData.counter_offer_price) ? 'grid-cols-2 sm:grid-cols-4' : 'grid-cols-2'}`}>
                                                                         <div className="bg-white p-2.5 rounded-xl border border-amber-100 shadow-sm">
