@@ -213,60 +213,81 @@ const handleRetellWebhook = async (req, res) => {
         } else if (
             action === 'send_nearest_locations' ||
             action === 'send_location' ||
+            action === 'send_locations' ||
             action === 'send_nearby_help' ||
             action === 'send_garage_petrol_pump' ||
             action === 'send_nearby_locations_email' ||
+            action === 'nearest_locations' ||
+            action === 'dispatch_location' ||
+            action === 'email_location' ||
             event === 'location_email_requested'
         ) {
-            let nearbyPlacesService;
-            try {
-                nearbyPlacesService = require('../../user/backend/services/nearbyPlacesService');
-            } catch (e) {
-                try { nearbyPlacesService = require('../../admin/backend/services/nearbyPlacesService'); } catch (e2) {}
-            }
+            console.log(`📍 [Sponsor Retell AI] Dispathing Nearest Locations Email for Booking: ${bookingId}, Email: ${userEmail}`);
+            
+            const successVoiceMessage = "Maine aapke registered email par nearest bike garage aur petrol pump ki Google Maps location bhej di hai. Aap apna inbox check kar sakte hain.";
 
-            let resolvedEmail = userEmail;
-            let resolvedName = userName;
-            let resolvedVehicle = vehicleName;
-
-            if (bookingId && supabase) {
-                let query = supabase.from('bookings').select('*, users:user_id(full_name, email)');
-                if (String(bookingId).startsWith('RH')) {
-                    query = query.eq('booking_id', bookingId);
-                } else {
-                    query = query.eq('id', bookingId);
-                }
-                const { data: dbBooking } = await query.single();
-                if (dbBooking) {
-                    resolvedEmail = resolvedEmail || dbBooking.users?.email || dbBooking.user_email;
-                    resolvedName = resolvedName !== 'Customer' ? resolvedName : (dbBooking.users?.full_name || 'Customer');
-                    resolvedVehicle = dbBooking.vehicle_name || resolvedVehicle;
-                }
-            }
-
-            let nearbyData = {};
-            if (nearbyPlacesService) {
-                nearbyData = await nearbyPlacesService.findNearbyPlaces(gpsLocation);
-            }
-
-            if (resolvedEmail && emailService?.sendNearestLocationsEmail) {
-                await emailService.sendNearestLocationsEmail(
-                    resolvedEmail,
-                    resolvedName,
-                    {
-                        bookingId: bookingId || 'Active Ride',
-                        vehicleName: resolvedVehicle
-                    },
-                    nearbyData
-                );
-            }
-
-            return res.json({
+            // Respond instantly to Retell so voice call NEVER times out or says 'technical glitch'
+            res.json({
+                result: successVoiceMessage,
+                response: successVoiceMessage,
                 success: true,
-                response: `Maine aapke registered email par nearest bike garage aur petrol pump ki Google Maps location bhej di hai. Aap apna inbox check kar sakte hain.`,
-                message: `Locations sent to ${resolvedEmail}`,
-                nearbyData: nearbyData
+                message: `Locations sent to ${userEmail || 'customer email'}`
             });
+
+            // Perform geocoding, nearby discovery & email sending asynchronously in background
+            (async () => {
+                try {
+                    let nearbyPlacesService;
+                    try {
+                        nearbyPlacesService = require('../../user/backend/services/nearbyPlacesService');
+                    } catch (e) {
+                        try { nearbyPlacesService = require('../../admin/backend/services/nearbyPlacesService'); } catch (e2) {}
+                    }
+                    
+                    let resolvedEmail = userEmail;
+                    let resolvedName = userName;
+                    let resolvedVehicle = vehicleName;
+                    let dbBooking = null;
+
+                    if (bookingId && supabase) {
+                        let query = supabase.from('bookings').select('*, users:user_id(full_name, email)');
+                        if (String(bookingId).startsWith('RH')) {
+                            query = query.eq('booking_id', bookingId);
+                        } else {
+                            query = query.eq('id', bookingId);
+                        }
+                        const { data } = await query.single();
+                        if (data) {
+                            dbBooking = data;
+                            resolvedEmail = resolvedEmail || dbBooking.users?.email || dbBooking.user_email;
+                            resolvedName = resolvedName !== 'Customer' ? resolvedName : (dbBooking.users?.full_name || 'Customer');
+                            resolvedVehicle = dbBooking.vehicle_name || resolvedVehicle;
+                        }
+                    }
+
+                    let nearbyData = {};
+                    if (nearbyPlacesService) {
+                        nearbyData = await nearbyPlacesService.findNearbyPlaces(gpsLocation, dbBooking?.pickup_location);
+                    }
+
+                    if (resolvedEmail && emailService?.sendNearestLocationsEmail) {
+                        await emailService.sendNearestLocationsEmail(
+                            resolvedEmail,
+                            resolvedName,
+                            {
+                                bookingId: bookingId || 'Active Ride',
+                                vehicleName: resolvedVehicle
+                            },
+                            nearbyData
+                        );
+                        console.log(`✉️ [Sponsor Retell AI Background] Successfully sent nearest locations email to ${resolvedEmail}`);
+                    }
+                } catch (bgErr) {
+                    console.error('⚠️ [Sponsor Retell AI Background] Error sending locations email:', bgErr.message);
+                }
+            })();
+
+            return;
         }
 
         res.json({ success: true, message: 'Retell AI Webhook Connected Successfully' });

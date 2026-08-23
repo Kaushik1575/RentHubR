@@ -238,53 +238,74 @@ const handleRetellWebhook = async (req, res) => {
         } else if (
             action === 'send_nearest_locations' ||
             action === 'send_location' ||
+            action === 'send_locations' ||
             action === 'send_nearby_help' ||
             action === 'send_garage_petrol_pump' ||
             action === 'send_nearby_locations_email' ||
+            action === 'nearest_locations' ||
+            action === 'dispatch_location' ||
+            action === 'email_location' ||
             event === 'location_email_requested'
         ) {
             console.log(`📍 [Admin Retell AI] Dispathing Nearest Locations Email for Booking: ${bookingId}, Email: ${userEmail}`);
 
-            let resolvedEmail = userEmail;
-            let resolvedName = userName;
-            let resolvedVehicle = vehicleName;
+            const successVoiceMessage = "Maine aapke registered email par nearest bike garage aur petrol pump ki Google Maps location bhej di hai. Aap apna inbox check kar sakte hain.";
 
-            if (bookingId) {
-                let query = supabase.from('bookings').select('*, users:user_id(full_name, email)');
-                if (String(bookingId).startsWith('RH')) {
-                    query = query.eq('booking_id', bookingId);
-                } else {
-                    query = query.eq('id', bookingId);
-                }
-                const { data: dbBooking } = await query.single();
-                if (dbBooking) {
-                    resolvedEmail = resolvedEmail || dbBooking.users?.email || dbBooking.user_email;
-                    resolvedName = resolvedName !== 'Customer' ? resolvedName : (dbBooking.users?.full_name || 'Customer');
-                    resolvedVehicle = dbBooking.vehicle_name || resolvedVehicle;
-                }
-            }
-
-            const nearbyData = await findNearbyPlaces(gpsLocation, dbBooking?.pickup_location);
-
-            if (resolvedEmail) {
-                await sendNearestLocationsEmail(
-                    resolvedEmail,
-                    resolvedName,
-                    {
-                        bookingId: bookingId || 'Active Ride',
-                        vehicleName: resolvedVehicle
-                    },
-                    nearbyData
-                );
-                console.log(`✉️ [Admin Retell AI] Successfully sent nearest locations email to ${resolvedEmail}`);
-            }
-
-            return res.json({
+            // Respond instantly to Retell so voice call NEVER times out or says 'technical glitch'
+            res.json({
+                result: successVoiceMessage,
+                response: successVoiceMessage,
                 success: true,
-                response: `Maine aapke registered email par nearest bike garage aur petrol pump ki Google Maps location bhej di hai. Aap apna inbox check kar sakte hain.`,
-                message: `Locations sent to ${resolvedEmail}`,
-                nearbyData: nearbyData
+                message: `Locations sent to ${userEmail || 'customer email'}`
             });
+
+            // Perform geocoding, nearby discovery & email sending asynchronously in background
+            (async () => {
+                try {
+                    let resolvedEmail = userEmail;
+                    let resolvedName = userName;
+                    let resolvedVehicle = vehicleName;
+                    let dbBooking = null;
+
+                    if (bookingId) {
+                        let query = supabase.from('bookings').select('*, users:user_id(full_name, email)');
+                        if (String(bookingId).startsWith('RH')) {
+                            query = query.eq('booking_id', bookingId);
+                        } else {
+                            query = query.eq('id', bookingId);
+                        }
+                        const { data } = await query.single();
+                        if (data) {
+                            dbBooking = data;
+                            resolvedEmail = resolvedEmail || dbBooking.users?.email || dbBooking.user_email;
+                            resolvedName = resolvedName !== 'Customer' ? resolvedName : (dbBooking.users?.full_name || 'Customer');
+                            resolvedVehicle = dbBooking.vehicle_name || resolvedVehicle;
+                        }
+                    }
+
+                    const nearbyData = await findNearbyPlaces(gpsLocation, dbBooking?.pickup_location);
+
+                    if (resolvedEmail) {
+                        await sendNearestLocationsEmail(
+                            resolvedEmail,
+                            resolvedName,
+                            {
+                                bookingId: bookingId || 'Active Ride',
+                                vehicleName: resolvedVehicle
+                            },
+                            nearbyData
+                        );
+                        console.log(`✉️ [Admin Retell AI Background] Successfully sent nearest locations email to ${resolvedEmail}`);
+                    } else {
+                        console.warn('⚠️ [Admin Retell AI Background] No recipient email found for nearest locations.');
+                    }
+                } catch (bgErr) {
+                    console.error('⚠️ [Admin Retell AI Background] Error sending locations email:', bgErr.message);
+                }
+            })();
+
+            return;
+
 
         // 5. Escalate to Roadside Mechanic
         } else if (action === 'escalate_sos_mechanic' || action === 'sos_unresolved' || action === 'request_mechanic' || event === 'mechanic_requested') {
