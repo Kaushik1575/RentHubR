@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom';
-import { Home, PlusCircle, Bike, CalendarDays, DollarSign, User, X, Banknote, ShieldCheck } from 'lucide-react';
+import { Home, PlusCircle, Bike, CalendarDays, DollarSign, User, X, Banknote, ShieldCheck, Activity } from 'lucide-react';
 
 const Sidebar = ({ onClose = () => { } }) => {
     const location = useLocation();
@@ -7,6 +7,7 @@ const Sidebar = ({ onClose = () => { } }) => {
     const menuItems = [
         { path: '/dashboard', label: 'Dashboard', icon: Home },
         { path: '/add-bike', label: 'Add Bike', icon: PlusCircle },
+        { path: '/track-application', label: 'Track Application', icon: Activity, badge: 'Live' },
         { path: '/my-bikes', label: 'My Bikes', icon: Bike },
         { path: '/bookings', label: 'Bookings', icon: CalendarDays },
         { path: '/revenue', label: 'Revenue', icon: DollarSign },
@@ -30,19 +31,26 @@ const Sidebar = ({ onClose = () => { } }) => {
 
             <nav className="flex-1 p-4 space-y-2 overflow-y-auto">
                 {menuItems.map((item) => {
-                    const isActive = location.pathname === item.path;
+                    const isActive = location.pathname === item.path || (item.path === '/track-application' && location.pathname === '/track');
                     return (
                         <Link
                             key={item.path}
                             to={item.path}
                             onClick={onClose} // Auto-close on mobile selection
-                            className={`flex items-center gap-3 px-4 py-3 rounded-lg transition-all duration-200 group ${isActive
+                            className={`flex items-center justify-between px-4 py-3 rounded-lg transition-all duration-200 group ${isActive
                                 ? 'bg-brand-50 text-brand-600 font-medium shadow-sm'
                                 : 'text-gray-600 hover:bg-gray-50 hover:text-brand-500'
                                 }`}
                         >
-                            <item.icon className={`w-5 h-5 ${isActive ? 'text-brand-600' : 'text-gray-400 group-hover:text-brand-500'}`} />
-                            <span>{item.label}</span>
+                            <div className="flex items-center gap-3">
+                                <item.icon className={`w-5 h-5 ${isActive ? 'text-brand-600' : 'text-gray-400 group-hover:text-brand-500'}`} />
+                                <span>{item.label}</span>
+                            </div>
+                            {item.badge && (
+                                <span className="px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide bg-gradient-to-r from-indigo-500 to-brand-500 text-white rounded-full shadow-sm animate-pulse">
+                                    {item.badge}
+                                </span>
+                            )}
                         </Link>
                     );
                 })}

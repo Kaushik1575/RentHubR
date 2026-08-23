@@ -507,7 +507,7 @@ const AddBike = () => {
                                     Go to My Fleet
                                 </button>
                                 <button
-                                    onClick={() => navigate(`/my-bikes?track=${submissionSuccess.trackingId}`)}
+                                    onClick={() => navigate(`/track-application?id=${submissionSuccess.trackingId}`)}
                                     className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-sm shadow-lg shadow-indigo-200 transition-all hover:scale-105"
                                 >
                                     📍 Track Live Timeline →

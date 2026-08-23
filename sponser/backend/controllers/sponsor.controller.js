@@ -748,4 +748,90 @@ exports.getTimeline = async (req, res) => {
     }
 };
 
+exports.lookupTracking = async (req, res) => {
+    try {
+        const identifier = (req.params.identifier || '').trim();
+        if (!identifier) {
+            return res.status(400).json({ error: 'Tracking ID or Request ID is required' });
+        }
+
+        let request = null;
+
+        // 1. If numeric
+        if (/^\d+$/.test(identifier)) {
+            const { data } = await supabase
+                .from('sponsor_vehicle_requests')
+                .select('*, sponsors(full_name, email, phone_number)')
+                .eq('id', parseInt(identifier))
+                .maybeSingle();
+            request = data;
+        }
+
+        // 2. Try registration number match
+        if (!request) {
+            const { data: regData } = await supabase
+                .from('sponsor_vehicle_requests')
+                .select('*, sponsors(full_name, email, phone_number)')
+                .ilike('registration_number', identifier)
+                .maybeSingle();
+            request = regData;
+        }
+
+        // 3. Search tracking_id or partial ID across recent requests
+        if (!request) {
+            const { data: allReqs } = await supabase
+                .from('sponsor_vehicle_requests')
+                .select('*, sponsors(full_name, email, phone_number)')
+                .order('created_at', { ascending: false })
+                .limit(100);
+
+            if (allReqs && allReqs.length > 0) {
+                request = allReqs.find(r => {
+                    const tid = r.vehicle_details?.tracking_id || `RH-REQ-${r.id}`;
+                    return tid.toLowerCase() === identifier.toLowerCase() ||
+                           String(r.id) === identifier ||
+                           (r.registration_number && r.registration_number.toLowerCase() === identifier.toLowerCase());
+                });
+            }
+        }
+
+        if (!request) {
+            return res.status(404).json({ error: `No vehicle application found matching "${identifier}". Please check your Tracking ID.` });
+        }
+
+        const details = request.vehicle_details || {};
+        const trackingId = details.tracking_id || `RH-REQ-${request.id}`;
+        const currentStage = details.current_stage || (request.status === 'approved' ? 9 : 1);
+
+        res.json({
+            id: request.id,
+            tracking_id: trackingId,
+            name: request.name || details.name,
+            model: request.model || details.model,
+            vehicle_type: request.vehicle_type || 'bike',
+            year: request.year || details.year,
+            price: request.price || details.price,
+            registration_number: request.registration_number || details.registration_number,
+            current_stage: currentStage,
+            stage_name: details.stage_name || null,
+            status: request.status,
+            created_at: request.created_at,
+            image_url: request.image_url,
+            rc_url: request.rc_url,
+            insurance_url: request.insurance_url,
+            puc_url: request.puc_url,
+            stage_history: details.stage_history || [],
+            survey_report: details.survey_report || null,
+            pricing_terms: details.pricing_terms || null,
+            gps_tracking: details.gps_tracking || null,
+            survey_scheduled_date: details.survey_scheduled_date || null,
+            agreement_accepted_at: details.agreement_accepted_at || null,
+            sponsor: request.sponsors
+        });
+    } catch (error) {
+        console.error('Error in lookupTracking:', error);
+        res.status(500).json({ error: 'Failed to look up tracking details' });
+    }
+};
+
 

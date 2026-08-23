@@ -11,6 +11,7 @@ import Revenue from './pages/Revenue';
 import Profile from './pages/Profile';
 import Withdrawal from './pages/Withdrawal';
 import TermsConditions from './pages/TermsConditions';
+import TrackApplication from './pages/TrackApplication';
 import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import ErrorBoundary from './components/ErrorBoundary';
@@ -81,6 +82,8 @@ function App() {
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/add-bike" element={<AddBike />} />
               <Route path="/my-bikes" element={<MyBikes />} />
+              <Route path="/track-application" element={<TrackApplication />} />
+              <Route path="/track" element={<TrackApplication />} />
               <Route path="/bookings" element={<Bookings />} />
               <Route path="/revenue" element={<Revenue />} />
               <Route path="/withdrawal" element={<Withdrawal />} />
