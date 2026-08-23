@@ -1223,59 +1223,95 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                                     </button>
                                                                 )}
 
-                                                                {/* Sponsor Counter-Offer Notice for Admin */}
-                                                                {(r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.sponsor_requested_price || r.vehicle_details?.sponsor_requested_price) && (
-                                                                    <div style={{ background: '#f5f3ff', border: '1.5px solid #c4b5fd', borderRadius: '10px', padding: '10px 12px', marginBottom: '8px' }}>
-                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                                                            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#4c1d95', textTransform: 'uppercase' }}>
+                                                                {/* Sponsor Counter-Offer Notification & Direct Action Buttons */}
+                                                                {(r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.sponsor_requested_price || r.vehicle_details?.sponsor_requested_price) ? (
+                                                                    <div style={{ background: '#f5f3ff', border: '1.5px solid #c4b5fd', borderRadius: '12px', padding: '12px', marginBottom: '8px' }}>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                                                            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#4c1d95', textTransform: 'uppercase' }}>
                                                                                 💬 Sponsor Counter-Offer
                                                                             </span>
-                                                                            <span style={{ background: '#6366f1', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>
+                                                                            <span style={{ background: '#6366f1', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontSize: '0.78rem', fontWeight: 800 }}>
                                                                                 ₹{r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.sponsor_requested_price || r.vehicle_details?.sponsor_requested_price}/hr Requested
                                                                             </span>
                                                                         </div>
                                                                         {(r.sponsor_price_remarks || r.vehicle_details?.sponsor_price_remarks) && (
-                                                                            <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#5b21b6', fontStyle: 'italic' }}>
+                                                                            <p style={{ margin: '2px 0 10px', fontSize: '0.76rem', color: '#5b21b6', fontStyle: 'italic' }}>
                                                                                 "{r.sponsor_price_remarks || r.vehicle_details?.sponsor_price_remarks}"
                                                                             </p>
                                                                         )}
-                                                                    </div>
-                                                                )}
+                                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                            {/* Action 1: 1-Click Accept Sponsor Counter-Offer */}
+                                                                            <button
+                                                                                type="button"
+                                                                                style={{ width: '100%', padding: '10px 14px', background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.85rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                                                                onClick={() => {
+                                                                                    const askedRate = parseFloat(r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.price || 65);
+                                                                                    handleAdvanceStage(r.id, 6, {
+                                                                                        pricing_terms: {
+                                                                                            proposed_price: askedRate,
+                                                                                            sponsor_percentage: 70,
+                                                                                            platform_percentage: 30
+                                                                                        },
+                                                                                        terms_accepted: true,
+                                                                                        terms_declined: false,
+                                                                                        counter_offer_price: null,
+                                                                                        sponsor_requested_price: null,
+                                                                                        agreement_accepted_at: new Date().toISOString(),
+                                                                                        notes: `Admin accepted sponsor requested rate of ₹${askedRate}/hr with 70% revenue share.`
+                                                                                    });
+                                                                                }}
+                                                                            >
+                                                                                <i className="fas fa-check-circle"></i> ✓ Accept Sponsor's ₹{r.counter_offer_price || r.vehicle_details?.counter_offer_price}/hr & Unlock Step 7
+                                                                            </button>
 
-                                                                {/* Step 4 -> Step 5 or Step 5 Revision */}
-                                                                {(currentStage === 4 || ((currentStage === 5 || currentStage === 6) && (r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.terms_declined || r.vehicle_details?.terms_declined))) && (
+                                                                            {/* Action 2: Propose Different Price */}
+                                                                            <button
+                                                                                type="button"
+                                                                                style={{ width: '100%', padding: '8px 12px', background: '#fff', color: '#6d28d9', border: '1.5px solid #c4b5fd', borderRadius: '8px', fontWeight: '700', fontSize: '0.8rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}
+                                                                                onClick={() => {
+                                                                                    const askedRate = r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.price || 65;
+                                                                                    setStageFormData({
+                                                                                        requestId: r.id,
+                                                                                        proposed_price: askedRate,
+                                                                                        sponsor_percentage: 70,
+                                                                                        mark_accepted: false,
+                                                                                        notes: `Revised pricing proposal`
+                                                                                    });
+                                                                                    setModal({ type: 'stagePricingDecision', data: r });
+                                                                                }}
+                                                                            >
+                                                                                <i className="fas fa-edit"></i> Propose Different Counter-Price
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+                                                                ) : currentStage === 4 ? (
+                                                                    /* Initial Step 4 -> Step 5 */
                                                                     <button
-                                                                        style={{ width: '100%', padding: '12px', background: (r.counter_offer_price || r.vehicle_details?.counter_offer_price) ? 'linear-gradient(135deg, #7c3aed, #6366f1)' : 'linear-gradient(135deg, #d97706, #b45309)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}
+                                                                        style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #d97706, #b45309)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}
                                                                         onClick={() => {
-                                                                            const askedRate = r.counter_offer_price || r.vehicle_details?.counter_offer_price || r.price || 65;
-                                                                            setStageFormData({
-                                                                                requestId: r.id,
-                                                                                proposed_price: askedRate,
-                                                                                sponsor_percentage: 70,
-                                                                                notes: (r.counter_offer_price || r.vehicle_details?.counter_offer_price) ? `Revised pricing to ₹${askedRate}/hr per sponsor request` : 'Revenue terms proposed'
-                                                                            });
+                                                                            setStageFormData({ requestId: r.id, proposed_price: r.price || 65, sponsor_percentage: 70, mark_accepted: false, notes: 'Revenue terms proposed' });
                                                                             setModal({ type: 'stagePricingDecision', data: r });
                                                                         }}
                                                                     >
-                                                                        <i className="fas fa-hand-holding-usd"></i> {(r.counter_offer_price || r.vehicle_details?.counter_offer_price) ? `Review & Re-Propose (Asked ₹${r.counter_offer_price || r.vehicle_details?.counter_offer_price}/hr)` : 'Step 5: Propose Price & 70% Split'}
+                                                                        <i className="fas fa-hand-holding-usd"></i> Step 5: Propose Price & 70% Split
                                                                     </button>
-                                                                )}
+                                                                ) : null}
 
                                                                 {/* Step 5 / 6 Waiting / Agreement Signed */}
                                                                 {(currentStage === 5 || currentStage === 6) && (
                                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
                                                                         <div style={{
-                                                                            background: (r.terms_declined || r.counter_offer_price) ? '#fef2f2' : (r.agreement_accepted_at || r.terms_accepted) ? '#ecfdf5' : '#fffbeb',
-                                                                            border: `1px solid ${(r.terms_declined || r.counter_offer_price) ? '#fca5a5' : (r.agreement_accepted_at || r.terms_accepted) ? '#a7f3d0' : '#fde68a'}`,
-                                                                            color: (r.terms_declined || r.counter_offer_price) ? '#991b1b' : (r.agreement_accepted_at || r.terms_accepted) ? '#065f46' : '#b45309',
+                                                                            background: (r.terms_declined || r.counter_offer_price || r.vehicle_details?.counter_offer_price) ? '#fef2f2' : (r.agreement_accepted_at || r.terms_accepted) ? '#ecfdf5' : '#fffbeb',
+                                                                            border: `1px solid ${(r.terms_declined || r.counter_offer_price || r.vehicle_details?.counter_offer_price) ? '#fca5a5' : (r.agreement_accepted_at || r.terms_accepted) ? '#a7f3d0' : '#fde68a'}`,
+                                                                            color: (r.terms_declined || r.counter_offer_price || r.vehicle_details?.counter_offer_price) ? '#991b1b' : (r.agreement_accepted_at || r.terms_accepted) ? '#065f46' : '#b45309',
                                                                             padding: '10px 12px',
                                                                             borderRadius: '8px',
                                                                             textAlign: 'center',
                                                                             fontSize: '0.85rem',
                                                                             fontWeight: 'bold'
                                                                         }}>
-                                                                            {(r.counter_offer_price)
-                                                                                ? `💬 Sponsor Counter-Offer: Asked ₹${r.counter_offer_price}/hr (Action Required: Re-propose Price)`
+                                                                            {(r.counter_offer_price || r.vehicle_details?.counter_offer_price)
+                                                                                ? `💬 Sponsor Counter-Offer: Asked ₹${r.counter_offer_price || r.vehicle_details?.counter_offer_price}/hr (Action: Accept or Re-propose)`
                                                                                 : r.terms_declined
                                                                                 ? '✕ Sponsor Declined Pricing Terms'
                                                                                 : (r.agreement_accepted_at || r.terms_accepted)
@@ -1284,7 +1320,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                                         </div>
 
                                                                         {/* Step 7 Button: STRICTLY LOCKED until Sponsor Agrees to Terms */}
-                                                                        {(r.terms_accepted || r.agreement_accepted_at) && !r.terms_declined && !r.counter_offer_price ? (
+                                                                        {(r.terms_accepted || r.agreement_accepted_at) && !r.terms_declined && !r.counter_offer_price && !r.vehicle_details?.counter_offer_price ? (
                                                                             <button
                                                                                 style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
                                                                                 onClick={() => handleAdvanceStage(r.id, 7, { notes: 'Contract officially activated by Admin' })}
@@ -2859,13 +2895,20 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                         </div>
                         <form onSubmit={(e) => {
                             e.preventDefault();
-                            handleAdvanceStage(stageFormData.requestId, 5, {
+                            handleAdvanceStage(stageFormData.requestId, stageFormData.mark_accepted ? 6 : 5, {
                                 pricing_terms: {
                                     proposed_price: parseFloat(stageFormData.proposed_price || 65),
                                     sponsor_percentage: parseFloat(stageFormData.sponsor_percentage || 70),
                                     platform_percentage: 100 - parseFloat(stageFormData.sponsor_percentage || 70)
                                 },
-                                notes: `Proposed pricing ₹${stageFormData.proposed_price}/hr with ${stageFormData.sponsor_percentage}% sponsor revenue share`
+                                terms_accepted: !!stageFormData.mark_accepted,
+                                terms_declined: false,
+                                counter_offer_price: null,
+                                sponsor_requested_price: null,
+                                agreement_accepted_at: stageFormData.mark_accepted ? new Date().toISOString() : null,
+                                notes: stageFormData.mark_accepted
+                                    ? `Agreed pricing at ₹${stageFormData.proposed_price}/hr with ${stageFormData.sponsor_percentage}% sponsor share. Unlocked for contract activation.`
+                                    : `Proposed pricing ₹${stageFormData.proposed_price}/hr with ${stageFormData.sponsor_percentage}% sponsor revenue share`
                             });
                         }}>
                             <div className="modal-body" style={{ padding: '24px', maxHeight: '75vh', overflowY: 'auto' }}>
@@ -2922,6 +2965,20 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                         RentHub platform management fee: {100 - (parseFloat(stageFormData.sponsor_percentage) || 70)}%
                                     </small>
                                 </div>
+                                <label style={{ display: 'flex', alignItems: 'center', gap: '10px', cursor: 'pointer', background: '#ecfdf5', border: '1.5px solid #a7f3d0', padding: '12px 14px', borderRadius: '12px', fontSize: '0.84rem', fontWeight: 'bold', color: '#065f46', marginTop: '14px' }}>
+                                    <input
+                                        type="checkbox"
+                                        checked={stageFormData.mark_accepted || false}
+                                        onChange={(e) => setStageFormData({ ...stageFormData, mark_accepted: e.target.checked })}
+                                        style={{ width: '18px', height: '18px', accentColor: '#059669', cursor: 'pointer' }}
+                                    />
+                                    <div>
+                                        <span>✓ Auto-Agree with Sponsor & Unlock Step 7</span>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.74rem', color: '#047857', fontWeight: 500 }}>
+                                            Check this if this price is mutually agreed so you can immediately activate contract in Step 7.
+                                        </p>
+                                    </div>
+                                </label>
                             </div>
                             <div style={{ padding: '16px 24px', background: '#f8fafc', borderTop: '1px solid #e2e8f0', display: 'flex', justifyContent: 'flex-end', gap: '12px' }}>
                                 <button
@@ -2938,14 +2995,14 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                         padding: '10px 22px',
                                         borderRadius: '10px',
                                         border: 'none',
-                                        background: 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
+                                        background: stageFormData.mark_accepted ? 'linear-gradient(135deg, #059669 0%, #047857 100%)' : 'linear-gradient(135deg, #d97706 0%, #b45309 100%)',
                                         color: '#fff',
                                         fontWeight: 700,
                                         cursor: isSubmitting ? 'not-allowed' : 'pointer',
-                                        boxShadow: '0 4px 12px rgba(217, 119, 6, 0.3)'
+                                        boxShadow: stageFormData.mark_accepted ? '0 4px 12px rgba(5, 150, 105, 0.3)' : '0 4px 12px rgba(217, 119, 6, 0.3)'
                                     }}
                                 >
-                                    {isSubmitting ? 'Sending...' : 'Send Agreement to Sponsor 🤝'}
+                                    {isSubmitting ? 'Processing...' : stageFormData.mark_accepted ? 'Confirm Agreement & Unlock Step 7' : 'Publish & Send Pricing Proposal'}
                                 </button>
                             </div>
                         </form>

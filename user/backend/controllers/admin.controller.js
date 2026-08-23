@@ -1288,7 +1288,19 @@ const getVehicleRequests = async (req, res) => {
 const updateVehicleRequestStage = async (req, res) => {
     try {
         const requestId = req.params.id;
-        const { stage, notes, survey_report, survey_scheduled_date, pricing_terms, gps_tracking } = req.body;
+        const {
+            stage,
+            notes,
+            survey_report,
+            survey_scheduled_date,
+            pricing_terms,
+            gps_tracking,
+            terms_accepted,
+            terms_declined,
+            counter_offer_price,
+            sponsor_requested_price,
+            agreement_accepted_at
+        } = req.body;
 
         if (!stage || stage < 1 || stage > 9) {
             return res.status(400).json({ error: 'Invalid stage number (must be 1-9)' });
@@ -1311,7 +1323,12 @@ const updateVehicleRequestStage = async (req, res) => {
 
         // Gate stages 7 and above: Sponsor MUST have agreed to pricing terms
         if (targetStage >= 7) {
-            const hasAgreed = (details.terms_accepted || !!details.agreement_accepted_at) && !details.terms_declined && !details.counter_offer_price;
+            const hasAgreed = (terms_accepted || details.terms_accepted || !!details.agreement_accepted_at) &&
+                              !terms_declined &&
+                              !details.terms_declined &&
+                              !counter_offer_price &&
+                              !details.counter_offer_price;
+
             if (!hasAgreed) {
                 return res.status(400).json({
                     error: 'Cannot advance to Contract Activation (Stage 7). The sponsor has not yet agreed to the pricing terms.'
@@ -1325,7 +1342,12 @@ const updateVehicleRequestStage = async (req, res) => {
             survey_report,
             survey_scheduled_date,
             pricing_terms,
-            gps_tracking
+            gps_tracking,
+            terms_accepted: terms_accepted !== undefined ? terms_accepted : details.terms_accepted,
+            terms_declined: terms_declined !== undefined ? terms_declined : (terms_accepted ? false : details.terms_declined),
+            counter_offer_price: counter_offer_price !== undefined ? counter_offer_price : (terms_accepted ? null : details.counter_offer_price),
+            sponsor_requested_price: sponsor_requested_price !== undefined ? sponsor_requested_price : (terms_accepted ? null : details.sponsor_requested_price),
+            agreement_accepted_at: agreement_accepted_at !== undefined ? agreement_accepted_at : (terms_accepted ? new Date().toISOString() : details.agreement_accepted_at)
         });
 
         res.json({
