@@ -320,8 +320,9 @@ const sendNearestLocations = async (req, res) => {
             return res.status(400).json({ error: 'Recipient email not found for this booking' });
         }
 
-        // Discover nearest places
-        const nearbyData = await findNearbyPlaces(gpsLocation || booking?.pickup_location);
+        // Discover nearest places using Live GPS, Booking Pickup Location, or Client IP
+        const clientIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+        const nearbyData = await findNearbyPlaces(gpsLocation, booking?.pickup_location, clientIp);
 
         // Send Email
         const emailResult = await sendNearestLocationsEmail(

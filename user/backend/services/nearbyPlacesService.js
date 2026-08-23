@@ -1,6 +1,6 @@
-// RentHub - Nearby Places Service
+// RentHub - Real-Time Nearby Places Service
 // Discovers closest Bike Garages / Repair Workshops and Petrol Pumps / Fuel Stations
-// using GPS coordinates, Haversine distance, and OpenStreetMap Overpass with dynamic GPS-based fallbacks.
+// using Live GPS, OpenStreetMap Nominatim Geocoding, and Overpass Multi-Mirror queries.
 
 const path = require('path');
 require('dotenv').config({ path: path.resolve(__dirname, '../.env') });
@@ -25,29 +25,55 @@ function calculateDistance(lat1, lon1, lat2, lon2) {
 }
 
 /**
- * Robustly parses latitude & longitude from various input formats
- * (e.g. Object, GPS string, Google Maps URL, or default location)
+ * Geocodes textual address / city / landmark into coordinates via OpenStreetMap Nominatim
  */
-function parseCoordinates(input) {
-    // Default: Bhubaneswar area if no location is available
-    const defaultCoords = { latitude: 20.2185, longitude: 85.7358 };
+async function geocodeAddress(addressText) {
+    if (!addressText || typeof addressText !== 'string' || addressText.trim().length < 3) return null;
+    try {
+        const clean = encodeURIComponent(addressText.trim());
+        const url = `https://nominatim.openstreetmap.org/search?q=${clean}&format=json&limit=1`;
+        const res = await fetch(url, {
+            headers: {
+                'User-Agent': 'RentHub-Emergency-Geocoding/1.0 (contact@renthub.app)'
+            }
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data && data.length > 0) {
+                const lat = parseFloat(data[0].lat);
+                const lon = parseFloat(data[0].lon);
+                if (!isNaN(lat) && !isNaN(lon)) {
+                    return { latitude: lat, longitude: lon, displayName: data[0].display_name };
+                }
+            }
+        }
+    } catch (e) {
+        console.warn('⚠️ Nominatim Geocoding warning:', e.message);
+    }
+    return null;
+}
 
-    if (!input) return defaultCoords;
-
-    if (typeof input === 'object') {
+/**
+ * Resolves GPS coordinates dynamically from multiple possible input sources
+ * (Device GPS object, string with lat/lon, Maps URL, text address, or IP lookup)
+ */
+async function resolveCoordinates(input, fallbackAddress = null, userIp = null) {
+    // 1. Direct Object with numeric coordinates
+    if (input && typeof input === 'object') {
         const lat = parseFloat(input.latitude || input.lat);
         const lng = parseFloat(input.longitude || input.lng || input.lon);
-        if (!isNaN(lat) && !isNaN(lng)) {
-            return { latitude: lat, longitude: lng };
+        if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
+            return { latitude: lat, longitude: lng, source: 'gps_device' };
         }
     }
 
-    if (typeof input === 'string') {
+    // 2. String numeric or URL extraction
+    if (typeof input === 'string' && input.trim()) {
         const urlMatch = input.match(/(?:q|center|destination|ll)=([-+]?\d+\.?\d*),([-+]?\d+\.?\d*)/i);
         if (urlMatch) {
             const lat = parseFloat(urlMatch[1]);
             const lng = parseFloat(urlMatch[2]);
-            if (!isNaN(lat) && !isNaN(lng)) return { latitude: lat, longitude: lng };
+            if (!isNaN(lat) && !isNaN(lng)) return { latitude: lat, longitude: lng, source: 'maps_url' };
         }
 
         const latMatch = input.match(/Lat(?:itude)?[:=\s]+([-+]?\d+\.?\d*)/i);
@@ -55,9 +81,61 @@ function parseCoordinates(input) {
         if (latMatch && lngMatch) {
             const lat = parseFloat(latMatch[1]);
             const lng = parseFloat(lngMatch[1]);
-            if (!isNaN(lat) && !isNaN(lng)) return { latitude: lat, longitude: lng };
+            if (!isNaN(lat) && !isNaN(lng)) return { latitude: lat, longitude: lng, source: 'gps_string' };
         }
 
+        const plainMatch = input.match(/([-+]?\d+\.\d+)[,\s]+([-+]?\d+\.\d+)/);
+        if (plainMatch) {
+            const lat = parseFloat(plainMatch[1]);
+            const lng = parseFloat(plainMatch[2]);
+            if (!isNaN(lat) && !isNaN(lng)) return { latitude: lat, longitude: lng, source: 'coords_string' };
+        }
+
+        // 3. If input is a textual place/address, geocode it!
+        const geocoded = await geocodeAddress(input);
+        if (geocoded) {
+            return { latitude: geocoded.latitude, longitude: geocoded.longitude, source: 'geocoded_input', displayName: geocoded.displayName };
+        }
+    }
+
+    // 4. Geocode fallbackAddress if provided
+    if (fallbackAddress && typeof fallbackAddress === 'string') {
+        const geocodedFallback = await geocodeAddress(fallbackAddress);
+        if (geocodedFallback) {
+            return { latitude: geocodedFallback.latitude, longitude: geocodedFallback.longitude, source: 'geocoded_fallback', displayName: geocodedFallback.displayName };
+        }
+    }
+
+    // 5. IP Geolocation Lookup
+    if (userIp && userIp !== '127.0.0.1' && userIp !== '::1') {
+        try {
+            const ipRes = await fetch(`http://ip-api.com/json/${userIp}?fields=status,lat,lon,city`);
+            if (ipRes.ok) {
+                const ipData = await ipRes.json();
+                if (ipData.status === 'success' && ipData.lat && ipData.lon) {
+                    return { latitude: ipData.lat, longitude: ipData.lon, source: 'ip_lookup', city: ipData.city };
+                }
+            }
+        } catch (e) {
+            console.warn('⚠️ IP lookup warning:', e.message);
+        }
+    }
+
+    // Default: Bhubaneswar center
+    return { latitude: 20.2961, longitude: 85.8245, source: 'default_location' };
+}
+
+/**
+ * Synchronous parser for backwards compatibility
+ */
+function parseCoordinates(input) {
+    if (!input) return { latitude: 20.2961, longitude: 85.8245 };
+    if (typeof input === 'object') {
+        const lat = parseFloat(input.latitude || input.lat);
+        const lng = parseFloat(input.longitude || input.lng || input.lon);
+        if (!isNaN(lat) && !isNaN(lng)) return { latitude: lat, longitude: lng };
+    }
+    if (typeof input === 'string') {
         const plainMatch = input.match(/([-+]?\d+\.\d+)[,\s]+([-+]?\d+\.\d+)/);
         if (plainMatch) {
             const lat = parseFloat(plainMatch[1]);
@@ -65,17 +143,21 @@ function parseCoordinates(input) {
             if (!isNaN(lat) && !isNaN(lng)) return { latitude: lat, longitude: lng };
         }
     }
-
-    return defaultCoords;
+    return { latitude: 20.2961, longitude: 85.8245 };
 }
 
 /**
  * Discovers nearest bike repair shops and petrol pumps around the user's GPS coordinates
- * @param {object|string} userLocation - GPS coords or string
- * @returns {Promise<object>} - Categorized places with distances and navigation links
+ * @param {object|string} userLocation - GPS coords, address or object
+ * @param {string} [fallbackAddress] - Optional booking address if GPS is unavailable
+ * @param {string} [clientIp] - Optional client IP
+ * @returns {Promise<object>} - Categorized places with distances and live navigation links
  */
-async function findNearbyPlaces(userLocation) {
-    const { latitude, longitude } = parseCoordinates(userLocation);
+async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp = null) {
+    const coordsInfo = await resolveCoordinates(userLocation, fallbackAddress, clientIp);
+    const { latitude, longitude } = coordsInfo;
+
+    console.log(`📍 Finding real-time places near: Lat ${latitude}, Lng ${longitude} (Source: ${coordsInfo.source || 'resolved'})`);
 
     const query = `[out:json][timeout:8];
 (
@@ -159,7 +241,6 @@ out center 25;`;
         }
     }
 
-
     let garages = places.filter(p => p.type === 'garage');
     let petrolPumps = places.filter(p => p.type === 'petrol_pump');
 
@@ -215,6 +296,7 @@ out center 25;`;
 
     return {
         userCoordinates: { latitude, longitude },
+        locationSource: coordsInfo.source || 'resolved',
         garages: garages.slice(0, 4),
         petrolPumps: petrolPumps.slice(0, 4),
         mapSearchLinks: {
@@ -227,7 +309,8 @@ out center 25;`;
 
 module.exports = {
     findNearbyPlaces,
+    resolveCoordinates,
+    geocodeAddress,
     parseCoordinates,
     calculateDistance
 };
-

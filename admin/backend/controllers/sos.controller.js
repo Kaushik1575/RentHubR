@@ -7,12 +7,10 @@ const activateSOS = async (req, res) => {
     try {
         const { token, bookingId, gpsLocation } = req.body;
 
-        // Basic validation
         if (!bookingId) {
             return res.status(400).json({ error: 'Booking ID is required' });
         }
 
-        // Fetch booking details with user info
         let query = supabase.from('bookings').select(`
                 *,
                 users:user_id (
@@ -35,16 +33,11 @@ const activateSOS = async (req, res) => {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
-        // Get vehicle details
         let vehicleName = 'Unknown Vehicle';
 
-        console.log(`SOS Processing - ID: ${booking.id}, RH-ID: ${booking.booking_id}, Type: ${booking.vehicle_type}, VehicleID: ${booking.vehicle_id}`);
-
-        // First, try to get vehicle name directly from booking if it exists
         if (booking.vehicle_name) {
             vehicleName = booking.vehicle_name;
         } else if (booking.vehicle_type && booking.vehicle_id) {
-            // Determine correct table name
             let tableName;
             const typeLower = (booking.vehicle_type || '').toLowerCase().trim();
 
@@ -65,7 +58,6 @@ const activateSOS = async (req, res) => {
                 .single();
 
             if (vehicleError) {
-                // Try alternative table name if first attempt fails
                 if (tableName === 'scooty') {
                     const { data: altVehicle } = await supabase
                         .from('scooties')
@@ -81,7 +73,6 @@ const activateSOS = async (req, res) => {
             }
         }
 
-        // Prepare SOS data
         let gpsString = 'Not Provided';
         let googleMapsLink = null;
 
@@ -107,13 +98,11 @@ const activateSOS = async (req, res) => {
             googleMapsLink: googleMapsLink
         };
 
-        // Fetch all admins from database
         const { data: admins, error: adminError } = await supabase
             .from('users')
             .select('email')
             .eq('is_admin', true);
 
-        // Always include the fallback admin email so the developer always receives it
         const allAdminEmails = new Set(ADMIN_EMAILS);
 
         if (adminError) {
@@ -122,11 +111,8 @@ const activateSOS = async (req, res) => {
             admins.forEach(admin => {
                 if (admin.email) allAdminEmails.add(admin.email);
             });
-        } else {
-            console.warn('No admins found in database. Using fallback.');
         }
 
-        // Send one email to all admins at once to avoid Resend 2-emails-per-second rate limit
         const allAdminEmailsArray = Array.from(allAdminEmails);
         await sendSOSAlertEmail(allAdminEmailsArray, sosData);
 
@@ -150,9 +136,6 @@ const activateSOS = async (req, res) => {
     }
 };
 
-/**
- * Handle feedback from User / Retell AI when an SOS option is selected
- */
 const handleSOSFeedback = async (req, res) => {
     try {
         const { bookingId, status, issueType, details, gpsLocation } = req.body;
@@ -176,9 +159,9 @@ const handleSOSFeedback = async (req, res) => {
         const userPhone = booking?.users?.phone_number || 'N/A';
         const vehicleName = booking?.vehicle_name || 'Vehicle';
 
-        // 1. Send Nearest Locations to Email (Option 3 / Nearby Request)
         if (status === 'send_nearby_locations' || status === 'send_location' || status === 'send_nearest_locations') {
-            const nearbyData = await findNearbyPlaces(gpsLocation || booking?.pickup_location);
+            const clientIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+            const nearbyData = await findNearbyPlaces(gpsLocation, booking?.pickup_location, clientIp);
 
             if (userEmail) {
                 await sendNearestLocationsEmail(
@@ -202,7 +185,6 @@ const handleSOSFeedback = async (req, res) => {
             });
         }
 
-        // 2. Escalate to Roadside Mechanic
         if (status === 'escalate_mechanic' || status === 'unresolved') {
             const alertHtml = `
                 <div style="font-family: Arial, sans-serif; padding: 20px; background: #fff5f5; border: 2px solid #e53e3e; border-radius: 8px;">
@@ -225,7 +207,6 @@ const handleSOSFeedback = async (req, res) => {
                     subject: `🚨 [URGENT DISPATCH] Roadside Mechanic Needed - Booking ${bookingId}`,
                     html: alertHtml
                 });
-                console.log(`✉️ Emergency Mechanic Dispatch alert sent to admins for booking ${bookingId}`);
             } catch (emailErr) {
                 console.error('Error sending mechanic alert email:', emailErr.message);
             }
@@ -249,9 +230,6 @@ const handleSOSFeedback = async (req, res) => {
     }
 };
 
-/**
- * Controller to find and email nearest bike garages and petrol pumps
- */
 const sendNearestLocations = async (req, res) => {
     try {
         const { bookingId, gpsLocation, userEmail, userName } = req.body;
@@ -296,7 +274,8 @@ const sendNearestLocations = async (req, res) => {
             return res.status(400).json({ error: 'Recipient email not found for this booking' });
         }
 
-        const nearbyData = await findNearbyPlaces(gpsLocation || booking?.pickup_location);
+        const clientIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+        const nearbyData = await findNearbyPlaces(gpsLocation, booking?.pickup_location, clientIp);
 
         const emailResult = await sendNearestLocationsEmail(
             recipientEmail,

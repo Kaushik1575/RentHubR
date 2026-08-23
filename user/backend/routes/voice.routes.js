@@ -270,7 +270,7 @@ const handleRetellWebhook = async (req, res) => {
                 }
             }
 
-            const nearbyData = await findNearbyPlaces(gpsLocation);
+            const nearbyData = await findNearbyPlaces(gpsLocation, dbBooking?.pickup_location);
 
             if (resolvedEmail) {
                 await sendNearestLocationsEmail(

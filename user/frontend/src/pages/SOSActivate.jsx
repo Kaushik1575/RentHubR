@@ -201,13 +201,37 @@ const SOSActivate = () => {
     const handleSendNearestLocations = async () => {
         setNearbyLoading(true);
         setNearbySuccessMessage('');
+
+        let liveGps = gpsData;
+
+        // Proactively fetch high-accuracy device location if not yet acquired
+        if (!liveGps && navigator.geolocation) {
+            try {
+                const pos = await new Promise((resolve, reject) => {
+                    navigator.geolocation.getCurrentPosition(
+                        (p) => resolve(p),
+                        (err) => reject(err),
+                        { enableHighAccuracy: true, timeout: 6000, maximumAge: 0 }
+                    );
+                });
+                liveGps = {
+                    latitude: pos.coords.latitude,
+                    longitude: pos.coords.longitude,
+                    accuracy: pos.coords.accuracy
+                };
+                setGpsData(liveGps);
+            } catch (gpsErr) {
+                console.warn("Real-time GPS acquisition skipped/denied:", gpsErr.message);
+            }
+        }
+
         try {
             const res = await fetch(getApiUrl('/api/sos-send-nearby'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     bookingId: bookingId,
-                    gpsLocation: gpsData,
+                    gpsLocation: liveGps,
                     userEmail: sosDataInfo?.userEmail,
                     userName: sosDataInfo?.userName
                 })
@@ -226,6 +250,7 @@ const SOSActivate = () => {
             setNearbyLoading(false);
         }
     };
+
 
     // Option 1: Problem Solved
     const handleResolve = async () => {
