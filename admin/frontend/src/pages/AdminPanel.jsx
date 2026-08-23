@@ -2580,9 +2580,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                     overall_status: 'PASSED'
                                                 });
                                             }}
-                                            style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', fontSize: '0.72rem', fontWeight: 700, padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}
+                                            style={{ background: '#ecfdf5', border: '1px solid #a7f3d0', color: '#047857', fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}
                                         >
-                                            🌟 All Excellent
+                                            All Excellent
                                         </button>
                                         <button
                                             type="button"
@@ -2597,9 +2597,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                     overall_status: 'PASSED'
                                                 });
                                             }}
-                                            style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', fontSize: '0.72rem', fontWeight: 700, padding: '4px 8px', borderRadius: '6px', cursor: 'pointer' }}
+                                            style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', color: '#15803d', fontSize: '0.72rem', fontWeight: 700, padding: '4px 10px', borderRadius: '6px', cursor: 'pointer' }}
                                         >
-                                            🟢 All Good
+                                            All Good
                                         </button>
                                     </div>
                                 </div>
@@ -2607,20 +2607,20 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 {/* Diagnostic Category Cards */}
                                 <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginBottom: '20px' }}>
                                     {[
-                                        { key: 'tyres', label: '🛞 Tyres & Tread Condition', detail: 'Tread depth, sidewalls & tyre pressure' },
-                                        { key: 'brakes', label: '🛑 Brakes & Suspension', detail: 'Front/rear pads, discs, forks & shock absorbers' },
-                                        { key: 'engine', label: '⚙️ Engine & Transmission', detail: 'Idle smoothness, oil level, clutch & exhaust' },
-                                        { key: 'lights', label: '💡 Lights & Electricals', detail: 'Headlight, tail lamp, indicators, horn & battery' },
-                                        { key: 'chassis', label: '🛡️ Chassis & Bodywork', detail: 'Frame alignment, body panels & paint condition' }
+                                        { key: 'tyres', label: 'Tyres & Tread Condition', detail: 'Tread depth, sidewalls & tyre pressure' },
+                                        { key: 'brakes', label: 'Brakes & Suspension', detail: 'Front/rear pads, discs, forks & shock absorbers' },
+                                        { key: 'engine', label: 'Engine & Transmission', detail: 'Idle smoothness, oil level, clutch & exhaust' },
+                                        { key: 'lights', label: 'Lights & Electricals', detail: 'Headlight, tail lamp, indicators, horn & battery' },
+                                        { key: 'chassis', label: 'Chassis & Bodywork', detail: 'Frame alignment, body panels & paint condition' }
                                     ].map((cat) => {
                                         const currentVal = stageFormData[cat.key] || 'Good';
 
                                         const TIERS = [
-                                            { value: 'Excellent', label: '🌟 Excellent', activeBg: '#10b981', activeColor: '#fff', border: '#059669' },
-                                            { value: 'Good', label: '🟢 Good', activeBg: '#22c55e', activeColor: '#fff', border: '#16a34a' },
-                                            { value: 'Fair', label: '🟡 Fair', activeBg: '#eab308', activeColor: '#1e293b', border: '#ca8a04' },
-                                            { value: 'Needs Repair', label: '🟠 Needs Repair', activeBg: '#f97316', activeColor: '#fff', border: '#ea580c' },
-                                            { value: 'Critical', label: '🔴 Critical', activeBg: '#ef4444', activeColor: '#fff', border: '#dc2626' }
+                                            { value: 'Excellent', label: 'Excellent', activeBg: '#10b981', activeColor: '#fff', border: '#059669' },
+                                            { value: 'Good', label: 'Good', activeBg: '#22c55e', activeColor: '#fff', border: '#16a34a' },
+                                            { value: 'Fair', label: 'Fair', activeBg: '#eab308', activeColor: '#1e293b', border: '#ca8a04' },
+                                            { value: 'Needs Repair', label: 'Needs Repair', activeBg: '#f97316', activeColor: '#fff', border: '#ea580c' },
+                                            { value: 'Critical', label: 'Critical', activeBg: '#ef4444', activeColor: '#fff', border: '#dc2626' }
                                         ];
 
                                         return (
@@ -2678,7 +2678,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 {/* Overall Inspection Verdict (PASSED vs FAILED) */}
                                 <div style={{ background: '#ffffff', border: '1.5px solid #cbd5e1', borderRadius: '16px', padding: '16px', marginBottom: '16px' }}>
                                     <label style={{ display: 'block', fontWeight: 800, fontSize: '0.82rem', color: '#1e293b', marginBottom: '10px', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
-                                        🏆 Final Inspection Verdict:
+                                        Final Inspection Verdict:
                                     </label>
                                     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px' }}>
                                         <button
@@ -2695,9 +2695,8 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                 color: stageFormData.overall_status !== 'FAILED' ? '#065f46' : '#64748b'
                                             }}
                                         >
-                                            <span style={{ fontSize: '1.2rem', display: 'block', marginBottom: '2px' }}>✅</span>
-                                            <strong style={{ fontSize: '0.9rem', display: 'block' }}>PASSED</strong>
-                                            <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>Roadworthy & Approved</span>
+                                            <strong style={{ fontSize: '0.95rem', display: 'block', marginBottom: '2px' }}>PASSED</strong>
+                                            <span style={{ fontSize: '0.74rem', opacity: 0.85 }}>Roadworthy & Approved</span>
                                         </button>
 
                                         <button
@@ -2714,9 +2713,8 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                 color: stageFormData.overall_status === 'FAILED' ? '#991b1b' : '#64748b'
                                             }}
                                         >
-                                            <span style={{ fontSize: '1.2rem', display: 'block', marginBottom: '2px' }}>❌</span>
-                                            <strong style={{ fontSize: '0.9rem', display: 'block' }}>FAILED</strong>
-                                            <span style={{ fontSize: '0.72rem', opacity: 0.8 }}>Reject for Safety/Defects</span>
+                                            <strong style={{ fontSize: '0.95rem', display: 'block', marginBottom: '2px' }}>FAILED</strong>
+                                            <span style={{ fontSize: '0.74rem', opacity: 0.85 }}>Reject for Safety/Defects</span>
                                         </button>
                                     </div>
                                 </div>
@@ -2763,8 +2761,8 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     {isSubmitting
                                         ? 'Processing...'
                                         : stageFormData.overall_status === 'FAILED'
-                                        ? '🛑 Reject Application & Send Report'
-                                        : 'Publish & Approve Survey Report 📋'
+                                        ? 'Reject Application & Send Report'
+                                        : 'Publish & Approve Survey Report'
                                     }
                                 </button>
                             </div>

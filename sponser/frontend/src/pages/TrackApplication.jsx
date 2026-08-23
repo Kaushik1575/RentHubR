@@ -727,33 +727,33 @@ const TrackApplication = () => {
                                                                         ? 'bg-rose-100 text-rose-800 border border-rose-300'
                                                                         : 'bg-emerald-200 text-emerald-900 border border-emerald-300'
                                                                 }`}>
-                                                                    {trackingData.survey_report.overall_status === 'FAILED' ? '❌ FAILED' : '✓ PASSED'} • {trackingData.survey_report.overall_rating || 'Grade A'}
+                                                                    {trackingData.survey_report.overall_status === 'FAILED' ? 'FAILED' : 'PASSED'} • {trackingData.survey_report.overall_rating || 'Grade A'}
                                                                 </span>
                                                             </div>
                                                             <div className="grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
                                                                 {[
-                                                                    { label: '🛞 Tyres', val: trackingData.survey_report.tyres || 'Good' },
-                                                                    { label: '🛑 Brakes', val: trackingData.survey_report.brakes || 'Good' },
-                                                                    { label: '⚙️ Engine', val: trackingData.survey_report.engine || 'Good' },
-                                                                    { label: '💡 Lights', val: trackingData.survey_report.lights || 'Good' },
-                                                                    { label: '🛡️ Chassis', val: trackingData.survey_report.chassis || 'Good' }
+                                                                    { label: 'Tyres', val: String(trackingData.survey_report.tyres || 'Good').replace(/[^\w\s\+\(\)\-]/g, '').trim() },
+                                                                    { label: 'Brakes', val: String(trackingData.survey_report.brakes || 'Good').replace(/[^\w\s\+\(\)\-]/g, '').trim() },
+                                                                    { label: 'Engine', val: String(trackingData.survey_report.engine || 'Good').replace(/[^\w\s\+\(\)\-]/g, '').trim() },
+                                                                    { label: 'Lights', val: String(trackingData.survey_report.lights || 'Good').replace(/[^\w\s\+\(\)\-]/g, '').trim() },
+                                                                    { label: 'Chassis', val: String(trackingData.survey_report.chassis || 'Good').replace(/[^\w\s\+\(\)\-]/g, '').trim() }
                                                                 ].map((item, idx) => {
-                                                                    const isEx = item.val.includes('Excellent') || item.val === 'Excellent';
-                                                                    const isGood = item.val.includes('Good') || item.val === 'Good';
-                                                                    const isFair = item.val.includes('Fair') || item.val === 'Fair';
-                                                                    const isRepair = item.val.includes('Repair') || item.val === 'Needs Repair';
+                                                                    const isEx = item.val.includes('Excellent');
+                                                                    const isGood = item.val.includes('Good');
+                                                                    const isFair = item.val.includes('Fair');
+                                                                    const isRepair = item.val.includes('Repair');
 
                                                                     return (
                                                                         <div key={idx} className="bg-white p-2.5 rounded-xl border border-emerald-100 flex flex-col justify-between">
-                                                                            <span className="text-[10px] text-slate-400 block font-bold mb-1">{item.label}</span>
-                                                                            <span className={`font-extrabold text-[11px] px-1.5 py-0.5 rounded w-fit ${
+                                                                            <span className="text-[10px] text-slate-400 block font-bold mb-1 uppercase tracking-wider">{item.label}</span>
+                                                                            <span className={`font-extrabold text-[11px] px-2 py-0.5 rounded w-fit ${
                                                                                 isEx ? 'bg-emerald-100 text-emerald-800' :
                                                                                 isGood ? 'bg-green-100 text-green-800' :
                                                                                 isFair ? 'bg-amber-100 text-amber-900' :
                                                                                 isRepair ? 'bg-orange-100 text-orange-800' :
                                                                                 'bg-rose-100 text-rose-800'
                                                                             }`}>
-                                                                                {item.val}
+                                                                                {item.val || 'Good'}
                                                                             </span>
                                                                         </div>
                                                                     );
