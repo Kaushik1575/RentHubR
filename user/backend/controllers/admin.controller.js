@@ -1269,6 +1269,11 @@ const getVehicleRequests = async (req, res) => {
                 gps_tracking: details.gps_tracking || null,
                 survey_scheduled_date: details.survey_scheduled_date || null,
                 agreement_accepted_at: details.agreement_accepted_at || null,
+                counter_offer_price: details.counter_offer_price || details.sponsor_requested_price || null,
+                sponsor_requested_price: details.counter_offer_price || details.sponsor_requested_price || null,
+                sponsor_price_remarks: details.sponsor_price_remarks || details.notes || null,
+                terms_accepted: details.terms_accepted || !!details.agreement_accepted_at,
+                terms_declined: details.terms_declined || false,
                 sponsors: r.sponsors
             };
         });

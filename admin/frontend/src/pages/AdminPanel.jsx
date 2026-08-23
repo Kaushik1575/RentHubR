@@ -1223,24 +1223,48 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                                     </button>
                                                                 )}
 
-                                                                {/* Step 4 -> Step 5 */}
-                                                                {currentStage === 4 && (
+                                                                {/* Sponsor Counter-Offer Notice for Admin */}
+                                                                {(r.counter_offer_price || r.sponsor_requested_price) && (
+                                                                    <div style={{ background: '#f5f3ff', border: '1.5px solid #c4b5fd', borderRadius: '10px', padding: '10px 12px', marginBottom: '8px' }}>
+                                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                                            <span style={{ fontSize: '0.78rem', fontWeight: 800, color: '#4c1d95', textTransform: 'uppercase' }}>
+                                                                                💬 Sponsor Counter-Offer
+                                                                            </span>
+                                                                            <span style={{ background: '#6366f1', color: '#fff', padding: '2px 8px', borderRadius: '6px', fontSize: '0.75rem', fontWeight: 800 }}>
+                                                                                ₹{r.counter_offer_price || r.sponsor_requested_price}/hr Requested
+                                                                            </span>
+                                                                        </div>
+                                                                        {(r.sponsor_price_remarks) && (
+                                                                            <p style={{ margin: '4px 0 0', fontSize: '0.75rem', color: '#5b21b6', fontStyle: 'italic' }}>
+                                                                                "{r.sponsor_price_remarks}"
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Step 4 -> Step 5 or Step 5 Revision */}
+                                                                {(currentStage === 4 || ((currentStage === 5 || currentStage === 6) && (r.counter_offer_price || r.terms_declined))) && (
                                                                     <button
-                                                                        style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #d97706, #b45309)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                                        style={{ width: '100%', padding: '12px', background: r.counter_offer_price ? 'linear-gradient(135deg, #7c3aed, #6366f1)' : 'linear-gradient(135deg, #d97706, #b45309)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', marginBottom: '6px' }}
                                                                         onClick={() => {
-                                                                            setStageFormData({ requestId: r.id, proposed_price: r.price || 65, sponsor_percentage: 70, notes: 'Revenue terms proposed' });
+                                                                            setStageFormData({
+                                                                                requestId: r.id,
+                                                                                proposed_price: r.counter_offer_price || r.price || 65,
+                                                                                sponsor_percentage: 70,
+                                                                                notes: r.counter_offer_price ? `Revised pricing to ₹${r.counter_offer_price}/hr per sponsor request` : 'Revenue terms proposed'
+                                                                            });
                                                                             setModal({ type: 'stagePricingDecision', data: r });
                                                                         }}
                                                                     >
-                                                                        <i className="fas fa-hand-holding-usd"></i> Step 5: Propose Price & 70% Split
+                                                                        <i className="fas fa-hand-holding-usd"></i> {r.counter_offer_price ? `Review & Re-Propose (Asked ₹${r.counter_offer_price}/hr)` : 'Step 5: Propose Price & 70% Split'}
                                                                     </button>
                                                                 )}
 
                                                                 {/* Step 5 / 6 Waiting / Agreement Signed */}
                                                                 {(currentStage === 5 || currentStage === 6) && (
                                                                     <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-                                                                        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#b45309', padding: '10px', borderRadius: '8px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 'bold' }}>
-                                                                            {r.agreement_accepted_at ? '🤝 Agreement Accepted by Sponsor' : '⏳ Waiting for Sponsor Agreement Acceptance'}
+                                                                        <div style={{ background: r.terms_declined ? '#fef2f2' : r.agreement_accepted_at ? '#ecfdf5' : '#fffbeb', border: `1px solid ${r.terms_declined ? '#fca5a5' : r.agreement_accepted_at ? '#a7f3d0' : '#fde68a'}`, color: r.terms_declined ? '#991b1b' : r.agreement_accepted_at ? '#065f46' : '#b45309', padding: '10px', borderRadius: '8px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                                                            {r.terms_declined ? '✕ Sponsor Requested Price Revision' : r.agreement_accepted_at ? '🤝 Agreement Accepted by Sponsor' : '⏳ Waiting for Sponsor Agreement Acceptance'}
                                                                         </div>
                                                                         <button
                                                                             style={{ width: '100%', padding: '10px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}
@@ -2816,6 +2840,26 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             });
                         }}>
                             <div className="modal-body" style={{ padding: '24px', maxHeight: '75vh', overflowY: 'auto' }}>
+                                {(modal.data?.counter_offer_price || modal.data?.sponsor_requested_price) && (
+                                    <div style={{ background: '#f5f3ff', border: '1.5px solid #c4b5fd', borderRadius: '12px', padding: '12px 16px', marginBottom: '18px' }}>
+                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                                            <span style={{ fontSize: '0.8rem', fontWeight: 800, color: '#4c1d95', textTransform: 'uppercase' }}>
+                                                💬 Sponsor Requested Counter-Offer
+                                            </span>
+                                            <span style={{ background: '#6366f1', color: '#fff', padding: '3px 10px', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 800 }}>
+                                                ₹{modal.data?.counter_offer_price || modal.data?.sponsor_requested_price}/hr
+                                            </span>
+                                        </div>
+                                        <p style={{ margin: '2px 0 0', fontSize: '0.78rem', color: '#5b21b6' }}>
+                                            Sponsor 70% Share: <strong>₹{((modal.data?.counter_offer_price || modal.data?.sponsor_requested_price) * 0.7).toFixed(1)}/hr</strong>
+                                        </p>
+                                        {(modal.data?.sponsor_price_remarks) && (
+                                            <p style={{ margin: '6px 0 0', fontSize: '0.78rem', color: '#4338ca', fontStyle: 'italic', background: '#fff', padding: '6px 10px', borderRadius: '6px', border: '1px solid #ddd6fe' }}>
+                                                "{modal.data?.sponsor_price_remarks}"
+                                            </p>
+                                        )}
+                                    </div>
+                                )}
                                 <p style={{ fontSize: '0.85rem', color: '#64748b', marginBottom: '18px' }}>
                                     Set the official customer rental price and sponsor revenue share. An agreement link will be emailed to the sponsor for digital signature.
                                 </p>

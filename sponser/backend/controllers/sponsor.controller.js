@@ -718,7 +718,7 @@ exports.acceptAgreement = async (req, res) => {
 exports.respondPricingTerms = async (req, res) => {
     try {
         const requestId = req.params.id;
-        const { agreed, decline_reason } = req.body;
+        const { agreed, counter_price, decline_reason } = req.body;
 
         const { data: request, error: reqError } = await supabase
             .from('sponsor_vehicle_requests')
@@ -737,6 +737,7 @@ exports.respondPricingTerms = async (req, res) => {
                 notes: `Pricing terms agreed by ${sponsorName}. Proceeding to agreement contract.`,
                 terms_accepted: true,
                 terms_declined: false,
+                counter_offer_price: null,
                 terms_accepted_at: new Date().toISOString(),
                 agreement_accepted_at: new Date().toISOString()
             });
@@ -752,17 +753,25 @@ exports.respondPricingTerms = async (req, res) => {
                 request: updated
             });
         } else {
+            const counterVal = parseFloat(counter_price) || null;
             const updated = await SponsorModel.updateRequestStage(requestId, 5, {
-                notes: `Sponsor declined pricing terms. Reason: ${decline_reason || 'Requested pricing discussion'}`,
+                notes: counterVal
+                    ? `Sponsor counter-offer: Requested ₹${counterVal}/hr. Remarks: ${decline_reason || 'Custom pricing requested'}`
+                    : `Sponsor declined pricing terms. Remarks: ${decline_reason || 'Requested pricing discussion'}`,
                 terms_accepted: false,
                 terms_declined: true,
+                counter_offer_price: counterVal,
+                sponsor_requested_price: counterVal,
+                sponsor_price_remarks: decline_reason || '',
                 terms_declined_at: new Date().toISOString()
             });
 
             return res.json({
                 success: true,
                 agreed: false,
-                message: 'Terms declined. Our partnership team will contact you to discuss custom pricing.',
+                message: counterVal
+                    ? `Counter offer of ₹${counterVal}/hr sent to admin for review!`
+                    : 'Terms declined. Our partnership team will contact you to discuss custom pricing.',
                 request: updated
             });
         }
@@ -803,6 +812,11 @@ exports.getTimeline = async (req, res) => {
             gps_tracking: details.gps_tracking || null,
             survey_scheduled_date: details.survey_scheduled_date || null,
             agreement_accepted_at: details.agreement_accepted_at || null,
+            counter_offer_price: details.counter_offer_price || details.sponsor_requested_price || null,
+            sponsor_requested_price: details.counter_offer_price || details.sponsor_requested_price || null,
+            sponsor_price_remarks: details.sponsor_price_remarks || details.notes || null,
+            terms_accepted: details.terms_accepted || !!details.agreement_accepted_at,
+            terms_declined: details.terms_declined || false,
             sponsor: request.sponsors
         });
     } catch (error) {
@@ -889,6 +903,9 @@ exports.lookupTracking = async (req, res) => {
             gps_tracking: details.gps_tracking || null,
             survey_scheduled_date: details.survey_scheduled_date || null,
             agreement_accepted_at: details.agreement_accepted_at || null,
+            counter_offer_price: details.counter_offer_price || details.sponsor_requested_price || null,
+            sponsor_requested_price: details.counter_offer_price || details.sponsor_requested_price || null,
+            sponsor_price_remarks: details.sponsor_price_remarks || details.notes || null,
             terms_accepted: details.terms_accepted || !!details.agreement_accepted_at,
             terms_declined: details.terms_declined || false,
             terms_accepted_at: details.terms_accepted_at || details.agreement_accepted_at || null,
