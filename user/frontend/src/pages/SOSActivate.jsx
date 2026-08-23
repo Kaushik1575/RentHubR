@@ -17,6 +17,9 @@ const SOSActivate = () => {
     const [isSpeaking, setIsSpeaking] = useState(false);
     const [feedbackLoading, setFeedbackLoading] = useState(false);
     const [sosDataInfo, setSosDataInfo] = useState(null);
+    const [nearbyLoading, setNearbyLoading] = useState(false);
+    const [nearbySuccessMessage, setNearbySuccessMessage] = useState('');
+    const [nearbyPlacesData, setNearbyPlacesData] = useState(null);
 
     const speechRef = useRef(null);
 
@@ -193,11 +196,6 @@ const SOSActivate = () => {
             speakVoicePrompt(diagnosticGuides[key].voicePrompt);
         }
     };
-
-    const [speechRef] = useState({ current: null });
-    const [nearbyLoading, setNearbyLoading] = useState(false);
-    const [nearbySuccessMessage, setNearbySuccessMessage] = useState('');
-    const [nearbyPlacesData, setNearbyPlacesData] = useState(null);
 
     // Option 3: Send Nearest Bike Garage & Petrol Pump to Email
     const handleSendNearestLocations = async () => {
