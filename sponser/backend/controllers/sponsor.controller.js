@@ -734,7 +734,7 @@ exports.respondPricingTerms = async (req, res) => {
 
         if (agreed) {
             const updated = await SponsorModel.updateRequestStage(requestId, 6, {
-                notes: `Pricing terms agreed by ${sponsorName}. Proceeding to agreement contract.`,
+                notes: `Pricing terms agreed by ${sponsorName}. Progression unlocked for contract activation.`,
                 terms_accepted: true,
                 terms_declined: false,
                 counter_offer_price: null,
@@ -744,15 +744,11 @@ exports.respondPricingTerms = async (req, res) => {
                 agreement_accepted_at: new Date().toISOString()
             });
 
-            const updatedContract = await SponsorModel.updateRequestStage(requestId, 7, {
-                notes: 'Contract activated after sponsor terms acceptance. Ready for GPS installation.'
-            });
-
             return res.json({
                 success: true,
                 agreed: true,
                 message: 'Pricing terms accepted! Progression unlocked for next step.',
-                request: updatedContract
+                request: updated
             });
         } else {
             const counterVal = parseFloat(counter_price) || null;
@@ -923,4 +919,5 @@ exports.lookupTracking = async (req, res) => {
         console.error('Error in lookupTracking:', error);
         res.status(500).json({ error: 'Failed to look up tracking details' });
     }
+};
 
