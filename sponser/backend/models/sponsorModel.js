@@ -58,12 +58,32 @@ class SponsorModel {
 
     static async addSponsorVehicle(vehicleData) {
         const { sponsor_id, type, name, registration_number, model, year, price, image_url, rc_url, insurance_url, puc_url } = vehicleData;
+        const trackingId = `RH-REQ-${Date.now().toString().slice(-4)}`;
+
+        const stageHistory = [
+            { stage: 1, title: 'Application Submitted', completed_at: new Date().toISOString(), notes: 'Bike & documents uploaded by sponsor' }
+        ];
+
+        const details = {
+            ...vehicleData,
+            tracking_id: trackingId,
+            current_stage: 1,
+            stage_name: 'SUBMITTED',
+            stage_history: stageHistory,
+            survey_report: null,
+            pricing_terms: {
+                proposed_price: price || 65,
+                sponsor_percentage: 70,
+                platform_percentage: 30
+            },
+            gps_tracking: null
+        };
 
         const { data, error } = await supabase
             .from('sponsor_vehicle_requests')
             .insert([{
                 sponsor_id: sponsor_id,
-                vehicle_type: type,
+                vehicle_type: type || 'bike',
                 name: name,
                 registration_number: registration_number,
                 model: model,
@@ -73,13 +93,30 @@ class SponsorModel {
                 rc_url: rc_url,
                 insurance_url: insurance_url,
                 puc_url: puc_url,
-                status: 'pending'
+                status: 'pending',
+                vehicle_details: details
             }])
             .select()
             .single();
 
         if (error) throw error;
-        return data;
+
+        // Automatically trigger Step 1 Email to Sponsor
+        try {
+            const { data: sponsor } = await supabase.from('sponsors').select('*').eq('id', sponsor_id).single();
+            if (sponsor && sponsor.email) {
+                const { sendSponsorTimelineEmail } = require('../config/sponsorEmailService');
+                await sendSponsorTimelineEmail(sponsor.email, sponsor.full_name, {
+                    ...data,
+                    ...details,
+                    tracking_id: trackingId
+                }, 1);
+            }
+        } catch (e) {
+            console.warn('Error sending initial timeline email:', e.message);
+        }
+
+        return { ...data, ...details, tracking_id: trackingId };
     }
 
     static async getSponsorVehicles(sponsorId) {
@@ -90,29 +127,29 @@ class SponsorModel {
             supabase.from('scooty').select('*').eq('sponsor_id', sponsorId)
         ]);
 
-        // Fetch PENDING/REJECTED requests
+        // Fetch all requests
         const { data: requests, error } = await supabase
             .from('sponsor_vehicle_requests')
             .select('*')
-            .eq('sponsor_id', sponsorId);
+            .eq('sponsor_id', sponsorId)
+            .neq('status', 'rejected')
+            .order('created_at', { ascending: false });
 
         if (error) {
             console.error("Error fetching requests:", error);
             return [];
         }
 
-        // Fetch all bookings for this sponsor's vehicles (match Revenue page logic)
+        // Fetch all bookings for this sponsor's vehicles
         const { data: allBookings } = await supabase
             .from('bookings')
             .select('*')
             .in('status', ['completed', 'ride_completed', 'ride_ended', 'payment_success']);
 
-        // Create a map of vehicle stats from bookings
         const vehicleStatsMap = {};
 
         if (allBookings && allBookings.length > 0) {
             allBookings.forEach(booking => {
-                // Normalize vehicle type (bikes -> bike, cars -> car)
                 let vType = (booking.vehicle_type || '').toLowerCase();
                 if (vType === 'bikes') vType = 'bike';
                 if (vType === 'cars') vType = 'car';
@@ -128,14 +165,13 @@ class SponsorModel {
                     };
                 }
 
-                // Calculate Duration (same logic as Revenue page)
                 let rideDuration = parseFloat(booking.duration) || 0;
                 if (booking.ride_start_time && booking.ride_end_time) {
                     const start = new Date(booking.ride_start_time);
                     const end = new Date(booking.ride_end_time);
                     const diffMs = end - start;
                     if (diffMs > 0) {
-                        rideDuration = diffMs / (1000 * 60 * 60); // Hours with decimals
+                        rideDuration = diffMs / (1000 * 60 * 60);
                     }
                 }
 
@@ -154,6 +190,7 @@ class SponsorModel {
                     type: 'bike',
                     status: 'approved',
                     approval_status: 'approved',
+                    current_stage: 9,
                     image: v.image_url,
                     bikeNumber: v.registration_number,
                     totalBookings: stats.totalBookings,
@@ -169,6 +206,7 @@ class SponsorModel {
                     type: 'car',
                     status: 'approved',
                     approval_status: 'approved',
+                    current_stage: 9,
                     image: v.image_url,
                     bikeNumber: v.registration_number,
                     totalBookings: stats.totalBookings,
@@ -184,6 +222,7 @@ class SponsorModel {
                     type: 'scooty',
                     status: 'approved',
                     approval_status: 'approved',
+                    current_stage: 9,
                     image: v.image_url,
                     bikeNumber: v.registration_number,
                     totalBookings: stats.totalBookings,
@@ -193,30 +232,148 @@ class SponsorModel {
             })
         ];
 
-        // Filter out requests that are already approved (since they are in liveVehicles)
-        // Or better yet, just show pending/rejected ones from requests table
-        const pendingOrRejected = (requests || []).filter(r => r.status !== 'approved').map(r => ({
-            id: r.id,
-            _id: r.id,
-            name: r.name,
-            model: r.model,
-            price: r.price,
-            year: r.year,
-            image: r.image_url,
-            image_url: r.image_url,
-            bikeNumber: r.registration_number,
-            registration_number: r.registration_number,
-            status: r.status,
-            approval_status: r.status, // pending or rejected
-            vehicleType: r.vehicle_type,
-            is_available: false,
-            totalBookings: 0,
-            totalRideHours: 0,
-            totalRevenue: 0
-        }));
-
+        const pendingOrRejected = (requests || []).filter(r => r.status !== 'approved').map(r => {
+            const details = r.vehicle_details || {};
+            const trackingId = details.tracking_id || `RH-REQ-${r.id}`;
+            const currentStage = details.current_stage || 1;
+            return {
+                ...details,
+                id: r.id,
+                _id: r.id,
+                name: r.name || details.name,
+                model: r.model || details.model,
+                price: details.pricing_terms?.proposed_price || r.price || details.price,
+                year: r.year || details.year,
+                image: r.image_url || details.image_url,
+                image_url: r.image_url || details.image_url,
+                bikeNumber: r.registration_number || details.registration_number,
+                registration_number: r.registration_number || details.registration_number,
+                status: r.status,
+                approval_status: r.status,
+                vehicleType: r.vehicle_type || details.type || 'bike',
+                type: r.vehicle_type || details.type || 'bike',
+                is_available: false,
+                tracking_id: trackingId,
+                current_stage: currentStage,
+                stage_history: details.stage_history || [],
+                survey_report: details.survey_report || null,
+                pricing_terms: details.pricing_terms || null,
+                gps_tracking: details.gps_tracking || null,
+                totalBookings: 0,
+                totalRideHours: 0,
+                totalRevenue: 0
+            };
+        });
 
         return [...liveVehicles, ...pendingOrRejected];
+    }
+
+    static async updateRequestStage(requestId, stageNumber, stagePayload = {}) {
+        const { data: request, error: reqError } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*, sponsors(*)')
+            .eq('id', requestId)
+            .single();
+
+        if (reqError || !request) throw new Error('Request not found');
+
+        const details = request.vehicle_details || {};
+        const history = details.stage_history || [];
+        const trackingId = details.tracking_id || `RH-REQ-${request.id}`;
+
+        const stageNames = {
+            1: 'SUBMITTED',
+            2: 'DOC_REVIEW',
+            3: 'PHYSICAL_SURVEY',
+            4: 'SURVEY_REPORT',
+            5: 'PRICE_DECISION',
+            6: 'SPONSOR_AGREEMENT',
+            7: 'CONTRACT_ACTIVATED',
+            8: 'GPS_INSTALLATION',
+            9: 'BIKE_LIVE'
+        };
+
+        const stageTitle = stageNames[stageNumber] || `STAGE_${stageNumber}`;
+        history.push({
+            stage: stageNumber,
+            title: stageTitle,
+            completed_at: new Date().toISOString(),
+            notes: stagePayload.notes || `Advanced to Stage ${stageNumber}`
+        });
+
+        const updatedDetails = {
+            ...details,
+            tracking_id: trackingId,
+            current_stage: stageNumber,
+            stage_name: stageTitle,
+            stage_history: history,
+            survey_scheduled_date: stagePayload.survey_scheduled_date || details.survey_scheduled_date,
+            survey_report: stagePayload.survey_report || details.survey_report,
+            pricing_terms: stagePayload.pricing_terms || details.pricing_terms,
+            gps_tracking: stagePayload.gps_tracking || details.gps_tracking,
+            agreement_accepted_at: stagePayload.agreement_accepted_at || details.agreement_accepted_at
+        };
+
+        let newStatus = request.status;
+        if (stageNumber === 9) {
+            newStatus = 'approved';
+        } else if (stagePayload.status) {
+            newStatus = stagePayload.status;
+        }
+
+        const { data: updatedReq, error: updateError } = await supabase
+            .from('sponsor_vehicle_requests')
+            .update({
+                status: newStatus,
+                vehicle_details: updatedDetails
+            })
+            .eq('id', requestId)
+            .select()
+            .single();
+
+        if (updateError) throw updateError;
+
+        // If Stage 9 (Bike Goes LIVE), push vehicle to the main table (bikes/cars/scooty)
+        if (stageNumber === 9) {
+            // Determine table
+            const vehicleData = {
+                name: request.name || details.name,
+                registration_number: request.registration_number || details.registration_number,
+                model: request.model || details.model,
+                year: request.year || details.year,
+                price: details.pricing_terms?.proposed_price || request.price || details.price || 65,
+                image_url: request.image_url || details.image_url,
+                rc_url: request.rc_url || details.rc_url,
+                insurance_url: request.insurance_url || details.insurance_url,
+                puc_url: request.puc_url || details.puc_url,
+                sponsor_id: request.sponsor_id,
+                is_approved: true,
+                is_available: true,
+                type: request.vehicle_type || details.type || 'bike'
+            };
+
+            let tableName = 'bikes';
+            if (request.vehicle_type === 'car') tableName = 'cars';
+            if (request.vehicle_type === 'scooty') tableName = 'scooty';
+
+            await supabase.from(tableName).insert([vehicleData]);
+        }
+
+        // Trigger Automated Email to Sponsor
+        try {
+            const sponsor = request.sponsors;
+            if (sponsor && sponsor.email) {
+                const { sendSponsorTimelineEmail } = require('../config/sponsorEmailService');
+                await sendSponsorTimelineEmail(sponsor.email, sponsor.full_name, {
+                    ...request,
+                    ...updatedDetails
+                }, stageNumber);
+            }
+        } catch (e) {
+            console.warn(`Error sending stage ${stageNumber} email:`, e.message);
+        }
+
+        return updatedReq;
     }
 
     static async toggleVehicleAvailability(id, type, isAvailable) {

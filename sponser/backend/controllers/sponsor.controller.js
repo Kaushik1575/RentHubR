@@ -671,3 +671,81 @@ exports.checkDateAvailability = async (req, res) => {
     }
 };
 
+exports.acceptAgreement = async (req, res) => {
+    try {
+        const requestId = req.params.id;
+        const userId = req.user.id;
+
+        // Fetch request and verify sponsor ownership
+        const { data: request, error: reqError } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*, sponsors(*)')
+            .eq('id', requestId)
+            .eq('sponsor_id', userId)
+            .single();
+
+        if (reqError || !request) {
+            return res.status(404).json({ error: 'Vehicle request not found or unauthorized' });
+        }
+
+        // Advance to Stage 6 (Sponsor Agreement Accepted)
+        await SponsorModel.updateRequestStage(requestId, 6, {
+            notes: `Agreement accepted digitally by ${request.sponsors?.full_name || 'Sponsor'}`,
+            agreement_accepted_at: new Date().toISOString()
+        });
+
+        // Also advance to Stage 7 (Contract Activated)
+        const updated = await SponsorModel.updateRequestStage(requestId, 7, {
+            notes: 'Onboarding contract activated. Ready for GPS tracker fitment.'
+        });
+
+        res.json({
+            message: 'Agreement signed and contract activated successfully!',
+            request: updated
+        });
+    } catch (error) {
+        console.error('Error accepting agreement:', error);
+        res.status(500).json({ error: error.message || 'Failed to accept agreement' });
+    }
+};
+
+exports.getTimeline = async (req, res) => {
+    try {
+        const requestId = req.params.id;
+        const { data: request, error } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*, sponsors(full_name, email, phone_number)')
+            .eq('id', requestId)
+            .single();
+
+        if (error || !request) {
+            return res.status(404).json({ error: 'Request not found' });
+        }
+
+        const details = request.vehicle_details || {};
+        const trackingId = details.tracking_id || `RH-REQ-${request.id}`;
+        const currentStage = details.current_stage || (request.status === 'approved' ? 9 : 1);
+
+        res.json({
+            id: request.id,
+            tracking_id: trackingId,
+            name: request.name || details.name,
+            model: request.model || details.model,
+            registration_number: request.registration_number || details.registration_number,
+            current_stage: currentStage,
+            status: request.status,
+            stage_history: details.stage_history || [],
+            survey_report: details.survey_report || null,
+            pricing_terms: details.pricing_terms || null,
+            gps_tracking: details.gps_tracking || null,
+            survey_scheduled_date: details.survey_scheduled_date || null,
+            agreement_accepted_at: details.agreement_accepted_at || null,
+            sponsor: request.sponsors
+        });
+    } catch (error) {
+        console.error('Error fetching timeline:', error);
+        res.status(500).json({ error: 'Failed to fetch timeline' });
+    }
+};
+
+

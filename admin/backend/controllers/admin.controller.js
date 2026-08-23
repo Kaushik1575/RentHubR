@@ -1235,32 +1235,73 @@ const getVehicleRequests = async (req, res) => {
     try {
         const { data, error } = await supabase
             .from('sponsor_vehicle_requests')
-            .select('*, sponsors(full_name, phone_number)')
+            .select('*, sponsors(full_name, phone_number, email)')
             .order('created_at', { ascending: false });
 
         if (error) throw error;
 
-        const formattedData = data.map(r => ({
-            id: r.id, // Request ID
-            sponsor_id: r.sponsor_id,
-            vehicleType: r.vehicle_type,
-            name: r.name,
-            registration_number: r.registration_number,
-            model: r.model,
-            year: r.year,
-            price: r.price,
-            image_url: r.image_url,
-            rc_url: r.rc_url,
-            insurance_url: r.insurance_url,
-            puc_url: r.puc_url,
-            status: r.status,
-            sponsors: r.sponsors
-        }));
+        const formattedData = data.map(r => {
+            const details = r.vehicle_details || {};
+            const trackingId = details.tracking_id || `RH-REQ-${r.id}`;
+            const currentStage = details.current_stage || (r.status === 'approved' ? 9 : 1);
+            return {
+                id: r.id, // Request ID
+                sponsor_id: r.sponsor_id,
+                vehicleType: r.vehicle_type,
+                name: r.name || details.name,
+                registration_number: r.registration_number || details.registration_number,
+                model: r.model || details.model,
+                year: r.year || details.year,
+                price: details.pricing_terms?.proposed_price || r.price || details.price,
+                image_url: r.image_url || details.image_url,
+                rc_url: r.rc_url || details.rc_url,
+                insurance_url: r.insurance_url || details.insurance_url,
+                puc_url: r.puc_url || details.puc_url,
+                status: r.status,
+                tracking_id: trackingId,
+                current_stage: currentStage,
+                stage_history: details.stage_history || [],
+                survey_report: details.survey_report || null,
+                pricing_terms: details.pricing_terms || null,
+                gps_tracking: details.gps_tracking || null,
+                survey_scheduled_date: details.survey_scheduled_date || null,
+                agreement_accepted_at: details.agreement_accepted_at || null,
+                sponsors: r.sponsors
+            };
+        });
 
         res.json(formattedData);
     } catch (error) {
         console.error('Error fetching vehicle requests:', error);
         res.status(500).json({ error: 'Failed to fetch requests' });
+    }
+};
+
+const updateVehicleRequestStage = async (req, res) => {
+    try {
+        const requestId = req.params.id;
+        const { stage, notes, survey_report, survey_scheduled_date, pricing_terms, gps_tracking } = req.body;
+
+        if (!stage || stage < 1 || stage > 9) {
+            return res.status(400).json({ error: 'Invalid stage number (must be 1-9)' });
+        }
+
+        const SponsorModel = require('../models/sponsorModel');
+        const updated = await SponsorModel.updateRequestStage(requestId, parseInt(stage), {
+            notes,
+            survey_report,
+            survey_scheduled_date,
+            pricing_terms,
+            gps_tracking
+        });
+
+        res.json({
+            message: `Stage updated to ${stage} successfully and notification email sent to sponsor`,
+            request: updated
+        });
+    } catch (error) {
+        console.error('Error updating vehicle request stage:', error);
+        res.status(500).json({ error: error.message || 'Failed to update vehicle stage' });
     }
 };
 
@@ -2205,6 +2246,7 @@ module.exports = {
     deleteVehicle,
     addVehicle,
     getVehicleRequests,
+    updateVehicleRequestStage,
     approveVehicle,
     rejectVehicle,
     getPolicies,

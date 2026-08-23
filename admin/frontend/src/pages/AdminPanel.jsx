@@ -48,6 +48,7 @@ const AdminPanel = () => {
     const [editBookingData, setEditBookingData] = useState({});
     const [editUserData, setEditUserData] = useState({});
     const [vehicleFormData, setVehicleFormData] = useState({});
+    const [stageFormData, setStageFormData] = useState({});
 
     const [scanInput, setScanInput] = useState('');
     const [popup, setPopup] = useState({
@@ -477,6 +478,48 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
     const handleDeleteRequest = (id) => {
         setModal({ type: 'confirmDeleteRequest', data: { id } });
+    };
+
+    const handleAdvanceStage = async (requestId, targetStage, payload = {}) => {
+        setIsSubmitting(true);
+        try {
+            const res = await fetch(`/api/admin/vehicle-requests/${requestId}/stage`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${token}`
+                },
+                body: JSON.stringify({
+                    stage: targetStage,
+                    ...payload
+                })
+            });
+
+            const data = await res.json();
+            if (res.ok) {
+                setPopup({
+                    isOpen: true,
+                    type: 'success',
+                    title: `Stage ${targetStage} Activated`,
+                    message: data.message || `Stage ${targetStage} successfully updated and notification email sent to sponsor!`
+                });
+                setModal({ type: null });
+                loadRequests();
+                loadVehicles();
+            } else {
+                setPopup({
+                    isOpen: true,
+                    type: 'error',
+                    title: 'Update Failed',
+                    message: data.error || 'Failed to update vehicle stage'
+                });
+            }
+        } catch (e) {
+            console.error(e);
+            setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error updating vehicle stage' });
+        } finally {
+            setIsSubmitting(false);
+        }
     };
 
     // --- Filtering ---
@@ -970,102 +1013,271 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {/* REQUESTS */}
                     {activeTab === 'requests' && (
                         <div id="requests" className="content-section active">
-                            <h2>Vehicle Requests</h2>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                <div>
+                                    <h2>Vehicle Onboarding Pipeline</h2>
+                                    <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
+                                        Manage multi-stage vehicle inspections, revenue agreements, GPS fitment, and fleet activations.
+                                    </p>
+                                </div>
+                                <button className="action-btn" onClick={loadRequests} title="Refresh Requests" style={{ background: '#4f46e5', color: '#fff', padding: '8px 16px', borderRadius: '8px', border: 'none', cursor: 'pointer', fontWeight: 'bold', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                    <i className="fas fa-sync-alt"></i> Refresh Pipeline
+                                </button>
+                            </div>
+
                             <div className="requests-container">
                                 {requests.length === 0 ? (
                                     <div className="no-data-card">
                                         <i className="fas fa-clipboard-list"></i>
-                                        <p>No pending vehicle requests found.</p>
+                                        <p>No pending vehicle requests found in onboarding pipeline.</p>
                                     </div>
                                 ) : (
                                     <div className="requests-grid">
-                                        {requests.map(r => (
-                                            <div key={r.id} className="request-card">
-                                                <div className="req-header">
-                                                    <div className="req-title">
-                                                        <h4>{r.name}</h4>
-                                                        <span className="req-model">{r.model} • {r.year}</span>
-                                                    </div>
-                                                    <div className="req-badges">
-                                                        <span className={`status-badge status-${(r.vehicleType || 'bike').toLowerCase()}`}>{r.vehicleType}</span>
-                                                        <span className="price-badge">₹{r.price}<small>/hr</small></span>
-                                                    </div>
-                                                </div>
+                                        {requests.map(r => {
+                                            const isApproved = r.status === 'approved';
+                                            const isRejected = r.status === 'rejected';
+                                            const currentStage = r.current_stage || (isApproved ? 9 : 1);
+                                            const progressPercent = Math.round((currentStage / 9) * 100);
+                                            const trackingId = r.tracking_id || `RH-REQ-${r.id}`;
 
-                                                <div className="req-body">
-                                                    <div className="req-info-row">
-                                                        <div className="req-info-item">
-                                                            <label>Sponsor</label>
-                                                            <p><i className="fas fa-user-tie"></i> {r.sponsors?.full_name || 'N/A'}</p>
-                                                        </div>
-                                                        <div className="req-info-item">
-                                                            <label>Contact</label>
-                                                            <p><i className="fas fa-phone-alt"></i> {r.phone_number || r.sponsors?.phone_number || 'N/A'}</p>
-                                                        </div>
-                                                    </div>
-
-                                                    <div className="req-docs-section">
-                                                        <label>Documents Provided:</label>
-                                                        <div className="req-docs-list">
-                                                            {r.image_url ? (
-                                                                <a href={r.image_url} target="_blank" rel="noreferrer" className="doc-chip photo">
-                                                                    <i className="fas fa-camera"></i> Photo
-                                                                </a>
-                                                            ) : <span className="doc-chip missing">Missing Photo</span>}
-
-                                                            {r.rc_url ? (
-                                                                <a href={r.rc_url} target="_blank" rel="noreferrer" className="doc-chip rc">
-                                                                    <i className="fas fa-file-invoice"></i> RC Book
-                                                                </a>
-                                                            ) : <span className="doc-chip missing">Missing RC</span>}
-
-                                                            {r.insurance_url ? (
-                                                                <a href={r.insurance_url} target="_blank" rel="noreferrer" className="doc-chip insurance">
-                                                                    <i className="fas fa-shield-alt"></i> Insurance
-                                                                </a>
-                                                            ) : <span className="doc-chip missing">Missing Insr.</span>}
-
-                                                            {r.puc_url ? (
-                                                                <a href={r.puc_url} target="_blank" rel="noreferrer" className="doc-chip puc">
-                                                                    <i className="fas fa-smog"></i> PUC
-                                                                </a>
-                                                            ) : <span className="doc-chip missing">Missing PUC</span>}
-                                                        </div>
-                                                    </div>
-                                                </div>
-
-                                                <div className="req-footer" style={{ borderTop: '1px solid #eee', marginTop: '15px', paddingTop: '15px' }}>
-                                                    {r.status === 'approved' ? (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                            <div style={{ width: '100%', textAlign: 'center', color: '#28a745', fontWeight: 'bold', fontSize: '1.1rem', padding: '8px', background: '#e6fffa', borderRadius: '6px' }}>
-                                                                <i className="fas fa-check-circle"></i> Approved
+                                            return (
+                                                <div key={r.id} className="request-card" style={{ border: isApproved ? '2px solid #10b981' : currentStage === 6 ? '2px solid #f59e0b' : '1px solid #e2e8f0', borderRadius: '14px', overflow: 'hidden', boxShadow: '0 4px 15px rgba(0,0,0,0.05)' }}>
+                                                    <div className="req-header" style={{ padding: '16px 18px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                                                        <div className="req-title">
+                                                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px', marginBottom: '4px' }}>
+                                                                <span style={{ background: '#1e1b4b', color: '#fef08a', fontSize: '0.72rem', fontWeight: '800', fontFamily: 'monospace', padding: '2px 8px', borderRadius: '6px', letterSpacing: '0.5px' }}>
+                                                                    {trackingId}
+                                                                </span>
+                                                                <span className={`status-badge status-${(r.vehicleType || 'bike').toLowerCase()}`}>{r.vehicleType || 'bike'}</span>
                                                             </div>
-                                                            <button className="req-btn reject" style={{ width: '100%', background: '#dc3545', color: '#fff', border: 'none' }} onClick={() => handleDeleteRequest(r.id)}>
-                                                                <i className="fas fa-trash"></i> Delete Request
-                                                            </button>
+                                                            <h4 style={{ margin: '4px 0 2px 0', fontSize: '1.1rem', fontWeight: '800', color: '#1e293b' }}>{r.name}</h4>
+                                                            <span className="req-model" style={{ color: '#64748b', fontSize: '0.85rem' }}>{r.model} • {r.year} ({r.registration_number || 'In Reg'})</span>
                                                         </div>
-                                                    ) : r.status === 'rejected' ? (
-                                                        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                                                            <div style={{ width: '100%', textAlign: 'center', color: '#e53e3e', fontWeight: 'bold', fontSize: '1.1rem', padding: '8px', background: '#fff5f5', borderRadius: '6px' }}>
-                                                                <i className="fas fa-times-circle"></i> Rejected
+                                                        <div className="req-badges">
+                                                            <span className="price-badge" style={{ background: '#eef2ff', color: '#4338ca', fontWeight: '800', padding: '4px 10px', borderRadius: '8px' }}>
+                                                                ₹{r.price}<small>/hr</small>
+                                                            </span>
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Progress Bar Header */}
+                                                    <div style={{ padding: '12px 18px', background: '#f1f5f9', borderBottom: '1px solid #e2e8f0' }}>
+                                                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px', fontSize: '0.78rem' }}>
+                                                            <span style={{ fontWeight: '800', color: isApproved ? '#059669' : '#4338ca', textTransform: 'uppercase' }}>
+                                                                {isApproved ? '🟢 Stage 9/9: Live & Active in Fleet' : `Stage ${currentStage} of 9: ${r.stage_name || 'In Progress'}`}
+                                                            </span>
+                                                            <strong style={{ color: '#0f172a' }}>{progressPercent}%</strong>
+                                                        </div>
+                                                        <div style={{ width: '100%', height: '8px', background: '#e2e8f0', borderRadius: '10px', overflow: 'hidden' }}>
+                                                            <div style={{
+                                                                width: `${progressPercent}%`,
+                                                                height: '100%',
+                                                                background: isApproved ? '#10b981' : 'linear-gradient(90deg, #4f46e5, #8b5cf6)',
+                                                                borderRadius: '10px',
+                                                                transition: 'width 0.4s ease'
+                                                            }}></div>
+                                                        </div>
+                                                    </div>
+
+                                                    <div className="req-body" style={{ padding: '16px 18px' }}>
+                                                        {/* Sponsor Contact Details */}
+                                                        <div style={{ background: '#f8fafc', padding: '10px 14px', borderRadius: '10px', marginBottom: '14px', border: '1px solid #e2e8f0' }}>
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                                                                <span style={{ color: '#64748b' }}>Sponsor:</span>
+                                                                <strong style={{ color: '#0f172a' }}><i className="fas fa-user-tie" style={{ color: '#4f46e5', marginRight: '4px' }}></i> {r.sponsors?.full_name || 'N/A'}</strong>
                                                             </div>
-                                                            <button className="req-btn reject" style={{ width: '100%', background: '#dc3545', color: '#fff', border: 'none' }} onClick={() => handleDeleteRequest(r.id)}>
-                                                                <i className="fas fa-trash"></i> Delete Request
+                                                            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.85rem', marginBottom: '4px' }}>
+                                                                <span style={{ color: '#64748b' }}>Phone:</span>
+                                                                <span style={{ color: '#334155', fontFamily: 'monospace' }}><i className="fas fa-phone-alt" style={{ color: '#10b981', marginRight: '4px' }}></i> {r.sponsors?.phone_number || r.phone_number || 'N/A'}</span>
+                                                            </div>
+                                                            {r.sponsors?.email && (
+                                                                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.82rem' }}>
+                                                                    <span style={{ color: '#64748b' }}>Email:</span>
+                                                                    <span style={{ color: '#4f46e5' }}>{r.sponsors.email}</span>
+                                                                </div>
+                                                            )}
+                                                        </div>
+
+                                                        {/* Documents Provided */}
+                                                        <div className="req-docs-section" style={{ marginBottom: '14px' }}>
+                                                            <label style={{ fontSize: '0.78rem', fontWeight: '700', color: '#64748b', textTransform: 'uppercase', display: 'block', marginBottom: '6px' }}>Uploaded Documents:</label>
+                                                            <div className="req-docs-list" style={{ display: 'flex', flexWrap: 'wrap', gap: '6px' }}>
+                                                                {r.image_url ? (
+                                                                    <a href={r.image_url} target="_blank" rel="noreferrer" className="doc-chip photo">
+                                                                        <i className="fas fa-camera"></i> Photo
+                                                                    </a>
+                                                                ) : <span className="doc-chip missing">Missing Photo</span>}
+
+                                                                {r.rc_url ? (
+                                                                    <a href={r.rc_url} target="_blank" rel="noreferrer" className="doc-chip rc">
+                                                                        <i className="fas fa-file-invoice"></i> RC Book
+                                                                    </a>
+                                                                ) : <span className="doc-chip missing">Missing RC</span>}
+
+                                                                {r.insurance_url ? (
+                                                                    <a href={r.insurance_url} target="_blank" rel="noreferrer" className="doc-chip insurance">
+                                                                        <i className="fas fa-shield-alt"></i> Insurance
+                                                                    </a>
+                                                                ) : <span className="doc-chip missing">Missing Insr.</span>}
+
+                                                                {r.puc_url ? (
+                                                                    <a href={r.puc_url} target="_blank" rel="noreferrer" className="doc-chip puc">
+                                                                        <i className="fas fa-smog"></i> PUC
+                                                                    </a>
+                                                                ) : <span className="doc-chip missing">Missing PUC</span>}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Stage Specific Highlights */}
+                                                        {r.survey_report && (
+                                                            <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '10px 12px', fontSize: '0.8rem', color: '#166534', marginBottom: '12px' }}>
+                                                                <strong>📋 Survey Scorecard:</strong> Tyres ({r.survey_report.tyres || 'Good'}) • Brakes ({r.survey_report.brakes || 'Tested'}) • Engine ({r.survey_report.engine || 'Smooth'})
+                                                            </div>
+                                                        )}
+
+                                                        {r.pricing_terms && (
+                                                            <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '8px', padding: '10px 12px', fontSize: '0.8rem', color: '#92400e', marginBottom: '12px', display: 'flex', justifyContent: 'space-between' }}>
+                                                                <span><strong>Rate:</strong> ₹{r.pricing_terms.proposed_price || r.price}/hr</span>
+                                                                <span><strong>Sponsor Split:</strong> {r.pricing_terms.sponsor_percentage || 70}%</span>
+                                                            </div>
+                                                        )}
+
+                                                        {r.gps_tracking && (
+                                                            <div style={{ background: '#eef2ff', border: '1px solid #c7d2fe', borderRadius: '8px', padding: '10px 12px', fontSize: '0.8rem', color: '#3730a3', marginBottom: '12px' }}>
+                                                                <strong>📍 GPS IMEI:</strong> {r.gps_tracking.device_imei || 'Paired'}
+                                                            </div>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Stage Action Controls */}
+                                                    <div className="req-footer" style={{ borderTop: '1px solid #e2e8f0', padding: '16px 18px', background: '#f8fafc', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+                                                        {isApproved ? (
+                                                            <div style={{ width: '100%', textAlign: 'center', color: '#16a34a', fontWeight: 'bold', fontSize: '0.95rem', padding: '10px', background: '#dcfce7', borderRadius: '8px', border: '1px solid #86efac' }}>
+                                                                <i className="fas fa-check-circle"></i> Vehicle Live & Generating Revenue
+                                                            </div>
+                                                        ) : isRejected ? (
+                                                            <div style={{ width: '100%', textAlign: 'center', color: '#dc2626', fontWeight: 'bold', fontSize: '0.95rem', padding: '10px', background: '#fee2e2', borderRadius: '8px' }}>
+                                                                <i className="fas fa-times-circle"></i> Application Rejected
+                                                            </div>
+                                                        ) : (
+                                                            <>
+                                                                {/* Step 1 -> Step 2 */}
+                                                                {currentStage === 1 && (
+                                                                    <button
+                                                                        style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #4f46e5, #4338ca)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 10px rgba(79, 70, 229, 0.3)' }}
+                                                                        onClick={() => handleAdvanceStage(r.id, 2, { notes: 'Documents verified by Admin' })}
+                                                                    >
+                                                                        <i className="fas fa-file-check"></i> Step 2: Verify Documents & Clear
+                                                                    </button>
+                                                                )}
+
+                                                                {/* Step 2 -> Step 3 */}
+                                                                {currentStage === 2 && (
+                                                                    <button
+                                                                        style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #0284c7, #0369a1)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                                        onClick={() => {
+                                                                            setStageFormData({ requestId: r.id, survey_scheduled_date: new Date(Date.now() + 86400000).toISOString().split('T')[0], notes: 'Field team scheduled for inspection' });
+                                                                            setModal({ type: 'stageScheduleSurvey', data: r });
+                                                                        }}
+                                                                    >
+                                                                        <i className="fas fa-calendar-alt"></i> Step 3: Schedule Physical Survey
+                                                                    </button>
+                                                                )}
+
+                                                                {/* Step 3 -> Step 4 */}
+                                                                {currentStage === 3 && (
+                                                                    <button
+                                                                        style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                                        onClick={() => {
+                                                                            setStageFormData({ requestId: r.id, tyres: 'Good (85%)', brakes: 'Tested & Working', engine: 'Smooth Performance', lights: 'Fully Functional', notes: 'Vehicle passed physical survey' });
+                                                                            setModal({ type: 'stageSurveyReport', data: r });
+                                                                        }}
+                                                                    >
+                                                                        <i className="fas fa-clipboard-check"></i> Step 4: Submit Inspection Report
+                                                                    </button>
+                                                                )}
+
+                                                                {/* Step 4 -> Step 5 */}
+                                                                {currentStage === 4 && (
+                                                                    <button
+                                                                        style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #d97706, #b45309)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                                        onClick={() => {
+                                                                            setStageFormData({ requestId: r.id, proposed_price: r.price || 65, sponsor_percentage: 70, notes: 'Revenue terms proposed' });
+                                                                            setModal({ type: 'stagePricingDecision', data: r });
+                                                                        }}
+                                                                    >
+                                                                        <i className="fas fa-hand-holding-usd"></i> Step 5: Propose Price & 70% Split
+                                                                    </button>
+                                                                )}
+
+                                                                {/* Step 5 / 6 Waiting / Agreement Signed */}
+                                                                {(currentStage === 5 || currentStage === 6) && (
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
+                                                                        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', color: '#b45309', padding: '10px', borderRadius: '8px', textAlign: 'center', fontSize: '0.85rem', fontWeight: 'bold' }}>
+                                                                            {r.agreement_accepted_at ? '🤝 Agreement Accepted by Sponsor' : '⏳ Waiting for Sponsor Agreement Acceptance'}
+                                                                        </div>
+                                                                        <button
+                                                                            style={{ width: '100%', padding: '10px', background: '#059669', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '700', fontSize: '0.85rem', cursor: 'pointer' }}
+                                                                            onClick={() => handleAdvanceStage(r.id, 7, { notes: 'Contract officially activated by Admin' })}
+                                                                        >
+                                                                            <i className="fas fa-file-signature"></i> Step 7: Activate Contract
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+
+                                                                {/* Step 7 -> Step 8 */}
+                                                                {currentStage === 7 && (
+                                                                    <button
+                                                                        style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                                        onClick={() => {
+                                                                            setStageFormData({ requestId: r.id, device_imei: `86420904${Date.now().toString().slice(-7)}`, notes: 'GPS tracker installed and paired' });
+                                                                            setModal({ type: 'stageGPSInstallation', data: r });
+                                                                        }}
+                                                                    >
+                                                                        <i className="fas fa-map-marker-alt"></i> Step 8: Install & Pair GPS Tracker
+                                                                    </button>
+                                                                )}
+
+                                                                {/* Step 8 -> Step 9 */}
+                                                                {currentStage === 8 && (
+                                                                    <button
+                                                                        style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)' }}
+                                                                        onClick={() => handleAdvanceStage(r.id, 9, { notes: 'Vehicle published live to fleet' })}
+                                                                    >
+                                                                        <i className="fas fa-rocket"></i> Step 9: Launch & Push Vehicle LIVE! 🟢
+                                                                    </button>
+                                                                )}
+                                                            </>
+                                                        )}
+
+                                                        {/* Common Utility Buttons */}
+                                                        <div style={{ display: 'flex', gap: '8px', marginTop: '4px' }}>
+                                                            <button
+                                                                style={{ flex: 1, padding: '8px', background: '#e2e8f0', color: '#334155', border: 'none', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                                                onClick={() => setModal({ type: 'viewRequestTimeline', data: r })}
+                                                            >
+                                                                <i className="fas fa-history"></i> Log
+                                                            </button>
+                                                            {!isApproved && (
+                                                                <button
+                                                                    style={{ padding: '8px 12px', background: '#fee2e2', color: '#dc2626', border: 'none', borderRadius: '6px', fontSize: '0.8rem', fontWeight: 'bold', cursor: 'pointer' }}
+                                                                    onClick={() => handleRejectRequest(r.id)}
+                                                                >
+                                                                    <i className="fas fa-times"></i> Reject
+                                                                </button>
+                                                            )}
+                                                            <button
+                                                                style={{ padding: '8px 12px', background: '#f1f5f9', color: '#64748b', border: 'none', borderRadius: '6px', fontSize: '0.8rem', cursor: 'pointer' }}
+                                                                onClick={() => handleDeleteRequest(r.id)}
+                                                                title="Delete Request"
+                                                            >
+                                                                <i className="fas fa-trash"></i>
                                                             </button>
                                                         </div>
-                                                    ) : (
-                                                        <>
-                                                            <button className="req-btn approve" onClick={() => handleApproveRequest(r)}>
-                                                                <i className="fas fa-check-circle"></i> Approve Request
-                                                            </button>
-                                                            <button className="req-btn reject" onClick={() => handleRejectRequest(r.id)}>
-                                                                <i className="fas fa-times-circle"></i> Reject
-                                                            </button>
-                                                        </>
-                                                    )}
+                                                    </div>
                                                 </div>
-                                            </div>
-                                        ))}
+                                            );
+                                        })}
                                     </div>
                                 )}
                             </div>
@@ -2132,6 +2344,352 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 <span style={{ color: '#64748b', display: 'block', fontSize: '0.78rem' }}>Status</span>
                                 <span className={`status-pill ${modal.data.status === 'Available' ? 'available' : 'busy'}`}>{modal.data.status || 'Active'}</span>
                             </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+            {/* STAGE MODAL 1: Schedule Physical Survey (Stage 3) */}
+            {modal.type === 'stageScheduleSurvey' && (
+                <div className="modal active">
+                    <div className="modal-content" style={{ maxWidth: '500px' }}>
+                        <div className="modal-header">
+                            <h3><i className="fas fa-calendar-check" style={{ color: '#0284c7', marginRight: '8px' }}></i> Schedule Physical Survey</h3>
+                            <button className="close-btn" onClick={() => setModal({ type: null })}>&times;</button>
+                        </div>
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            handleAdvanceStage(stageFormData.requestId, 3, {
+                                survey_scheduled_date: stageFormData.survey_scheduled_date,
+                                notes: stageFormData.notes
+                            });
+                        }}>
+                            <div className="modal-body" style={{ padding: '20px' }}>
+                                <p style={{ fontSize: '0.9rem', color: '#64748b', marginBottom: '16px' }}>
+                                    Assign an inspection date for RentHub field engineers to visit the sponsor's location and physically review <strong>{modal.data?.name}</strong>.
+                                </p>
+                                <div className="form-group" style={{ marginBottom: '14px' }}>
+                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Inspection Visit Date</label>
+                                    <input
+                                        type="date"
+                                        className="form-control"
+                                        value={stageFormData.survey_scheduled_date || ''}
+                                        onChange={(e) => setStageFormData({ ...stageFormData, survey_scheduled_date: e.target.value })}
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group">
+                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Inspector / Field Notes</label>
+                                    <textarea
+                                        className="form-control"
+                                        rows="3"
+                                        placeholder="e.g. Field Engineer Rahul assigned. Sponsor contacted for time slot 11 AM."
+                                        value={stageFormData.notes || ''}
+                                        onChange={(e) => setStageFormData({ ...stageFormData, notes: e.target.value })}
+                                    ></textarea>
+                                </div>
+                            </div>
+                            <div className="modal-footer" style={{ padding: '15px 20px', display: 'flex', gap: '10px' }}>
+                                <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: null })}>Cancel</button>
+                                <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ background: '#0284c7' }}>
+                                    {isSubmitting ? 'Scheduling...' : 'Confirm & Notify Sponsor 📩'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* STAGE MODAL 2: Physical Survey Inspection Report (Stage 4) */}
+            {modal.type === 'stageSurveyReport' && (
+                <div className="modal active">
+                    <div className="modal-content" style={{ maxWidth: '550px' }}>
+                        <div className="modal-header">
+                            <h3><i className="fas fa-clipboard-check" style={{ color: '#059669', marginRight: '8px' }}></i> Submit Survey Inspection Report</h3>
+                            <button className="close-btn" onClick={() => setModal({ type: null })}>&times;</button>
+                        </div>
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            handleAdvanceStage(stageFormData.requestId, 4, {
+                                survey_report: {
+                                    tyres: stageFormData.tyres || 'Good (85%)',
+                                    brakes: stageFormData.brakes || 'Tested & Passed',
+                                    engine: stageFormData.engine || 'Smooth Performance',
+                                    lights: stageFormData.lights || 'Fully Functional',
+                                    overall_rating: stageFormData.overall_rating || 'Grade A'
+                                },
+                                notes: stageFormData.notes || 'Physical inspection completed with Grade A rating'
+                            });
+                        }}>
+                            <div className="modal-body" style={{ padding: '20px' }}>
+                                <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '16px' }}>
+                                    Record the field inspection findings for <strong>{modal.data?.name}</strong>. A digital condition scorecard will be emailed to the sponsor.
+                                </p>
+                                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '12px', marginBottom: '14px' }}>
+                                    <div className="form-group">
+                                        <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '4px' }}>Tyre Condition</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={stageFormData.tyres || ''}
+                                            onChange={(e) => setStageFormData({ ...stageFormData, tyres: e.target.value })}
+                                            placeholder="e.g. Good (85% tread)"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '4px' }}>Brakes & Suspension</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={stageFormData.brakes || ''}
+                                            onChange={(e) => setStageFormData({ ...stageFormData, brakes: e.target.value })}
+                                            placeholder="e.g. Tested & Working"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '4px' }}>Engine Performance</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={stageFormData.engine || ''}
+                                            onChange={(e) => setStageFormData({ ...stageFormData, engine: e.target.value })}
+                                            placeholder="e.g. Smooth, No Noise"
+                                            required
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '4px' }}>Lights & Electricals</label>
+                                        <input
+                                            type="text"
+                                            className="form-control"
+                                            value={stageFormData.lights || ''}
+                                            onChange={(e) => setStageFormData({ ...stageFormData, lights: e.target.value })}
+                                            placeholder="e.g. Fully Functional"
+                                            required
+                                        />
+                                    </div>
+                                </div>
+                                <div className="form-group">
+                                    <label style={{ display: 'block', fontWeight: 'bold', fontSize: '0.85rem', marginBottom: '4px' }}>Inspector Overall Summary</label>
+                                    <textarea
+                                        className="form-control"
+                                        rows="2"
+                                        value={stageFormData.notes || ''}
+                                        onChange={(e) => setStageFormData({ ...stageFormData, notes: e.target.value })}
+                                        placeholder="e.g. Vehicle in pristine roadworthy condition. Recommended for onboarding."
+                                    ></textarea>
+                                </div>
+                            </div>
+                            <div className="modal-footer" style={{ padding: '15px 20px', display: 'flex', gap: '10px' }}>
+                                <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: null })}>Cancel</button>
+                                <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ background: '#059669' }}>
+                                    {isSubmitting ? 'Generating Report...' : 'Publish Inspection Report 📋'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* STAGE MODAL 3: Proposed Rental Price & Revenue Split (Stage 5) */}
+            {modal.type === 'stagePricingDecision' && (
+                <div className="modal active">
+                    <div className="modal-content" style={{ maxWidth: '500px' }}>
+                        <div className="modal-header">
+                            <h3><i className="fas fa-hand-holding-usd" style={{ color: '#d97706', marginRight: '8px' }}></i> Set Pricing & Revenue Share</h3>
+                            <button className="close-btn" onClick={() => setModal({ type: null })}>&times;</button>
+                        </div>
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            handleAdvanceStage(stageFormData.requestId, 5, {
+                                pricing_terms: {
+                                    proposed_price: parseFloat(stageFormData.proposed_price || 65),
+                                    sponsor_percentage: parseFloat(stageFormData.sponsor_percentage || 70),
+                                    platform_percentage: 100 - parseFloat(stageFormData.sponsor_percentage || 70)
+                                },
+                                notes: `Proposed pricing ₹${stageFormData.proposed_price}/hr with ${stageFormData.sponsor_percentage}% sponsor revenue share`
+                            });
+                        }}>
+                            <div className="modal-body" style={{ padding: '20px' }}>
+                                <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '16px' }}>
+                                    Set the official customer rental price and sponsor revenue share. An agreement link will be emailed to the sponsor for digital acceptance.
+                                </p>
+                                <div className="form-group" style={{ marginBottom: '14px' }}>
+                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Hourly Rental Price (₹/hr)</label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        value={stageFormData.proposed_price || ''}
+                                        onChange={(e) => setStageFormData({ ...stageFormData, proposed_price: e.target.value })}
+                                        min="10"
+                                        required
+                                    />
+                                </div>
+                                <div className="form-group" style={{ marginBottom: '14px' }}>
+                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>Sponsor Revenue Share (%)</label>
+                                    <input
+                                        type="number"
+                                        className="form-control"
+                                        value={stageFormData.sponsor_percentage || 70}
+                                        onChange={(e) => setStageFormData({ ...stageFormData, sponsor_percentage: e.target.value })}
+                                        min="50"
+                                        max="90"
+                                        required
+                                    />
+                                    <small style={{ color: '#64748b', display: 'block', marginTop: '4px' }}>
+                                        RentHub platform commission: {100 - (parseFloat(stageFormData.sponsor_percentage) || 70)}%
+                                    </small>
+                                </div>
+                            </div>
+                            <div className="modal-footer" style={{ padding: '15px 20px', display: 'flex', gap: '10px' }}>
+                                <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: null })}>Cancel</button>
+                                <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ background: '#d97706' }}>
+                                    {isSubmitting ? 'Submitting...' : 'Send Agreement to Sponsor 🤝'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* STAGE MODAL 4: Install & Pair GPS Tracker (Stage 8) */}
+            {modal.type === 'stageGPSInstallation' && (
+                <div className="modal active">
+                    <div className="modal-content" style={{ maxWidth: '500px' }}>
+                        <div className="modal-header">
+                            <h3><i className="fas fa-map-marker-alt" style={{ color: '#4f46e5', marginRight: '8px' }}></i> Install Anti-Theft GPS Tracker</h3>
+                            <button className="close-btn" onClick={() => setModal({ type: null })}>&times;</button>
+                        </div>
+                        <form onSubmit={(e) => {
+                            e.preventDefault();
+                            handleAdvanceStage(stageFormData.requestId, 8, {
+                                gps_tracking: {
+                                    device_imei: stageFormData.device_imei,
+                                    device_model: 'RentHub SafeTrack 4G GPS',
+                                    paired_at: new Date().toISOString()
+                                },
+                                notes: `GPS tracker (IMEI: ${stageFormData.device_imei}) fitted and paired with live telemetry`
+                            });
+                        }}>
+                            <div className="modal-body" style={{ padding: '20px' }}>
+                                <p style={{ fontSize: '0.88rem', color: '#64748b', marginBottom: '16px' }}>
+                                    Fit and pair the anti-theft GPS hardware device to <strong>{modal.data?.name}</strong> before approving the vehicle to go LIVE.
+                                </p>
+                                <div className="form-group" style={{ marginBottom: '14px' }}>
+                                    <label style={{ display: 'block', fontWeight: 'bold', marginBottom: '6px' }}>GPS Device IMEI Number (15 Digits)</label>
+                                    <input
+                                        type="text"
+                                        className="form-control"
+                                        value={stageFormData.device_imei || ''}
+                                        onChange={(e) => setStageFormData({ ...stageFormData, device_imei: e.target.value })}
+                                        placeholder="e.g. 864209048123456"
+                                        required
+                                    />
+                                </div>
+                            </div>
+                            <div className="modal-footer" style={{ padding: '15px 20px', display: 'flex', gap: '10px' }}>
+                                <button type="button" className="btn btn-secondary" onClick={() => setModal({ type: null })}>Cancel</button>
+                                <button type="submit" disabled={isSubmitting} className="btn btn-primary" style={{ background: '#4f46e5' }}>
+                                    {isSubmitting ? 'Pairing...' : 'Pair GPS & Complete Stage 8 📍'}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
+            {/* STAGE MODAL 5: View Request Full 9-Stage Timeline */}
+            {modal.type === 'viewRequestTimeline' && modal.data && (
+                <div className="modal active">
+                    <div className="modal-content" style={{ maxWidth: '650px' }}>
+                        <div className="modal-header">
+                            <div>
+                                <h3><i className="fas fa-history" style={{ color: '#4f46e5', marginRight: '8px' }}></i> Onboarding Timeline Log</h3>
+                                <p style={{ margin: 0, fontSize: '0.85rem', color: '#64748b' }}>
+                                    {modal.data.name} ({modal.data.tracking_id || `RH-REQ-${modal.data.id}`})
+                                </p>
+                            </div>
+                            <button className="close-btn" onClick={() => setModal({ type: null })}>&times;</button>
+                        </div>
+                        <div className="modal-body" style={{ padding: '20px', maxHeight: '70vh', overflowY: 'auto' }}>
+                            <div style={{ display: 'flex', flexDirection: 'column', gap: '14px' }}>
+                                {[
+                                    { number: 1, title: '1. Bike & Documents Submitted', icon: '📝' },
+                                    { number: 2, title: '2. Document & Vehicle Review', icon: '🔍' },
+                                    { number: 3, title: '3. Physical Survey Visit', icon: '🏠' },
+                                    { number: 4, title: '4. Survey Inspection Report', icon: '📋' },
+                                    { number: 5, title: '5. Price & Revenue Share Decision', icon: '💰' },
+                                    { number: 6, title: '6. Sponsor Agreement', icon: '🤝' },
+                                    { number: 7, title: '7. Contract Activated', icon: '✅' },
+                                    { number: 8, title: '8. GPS Tracker Installation', icon: '📍' },
+                                    { number: 9, title: '9. Bike Goes LIVE', icon: '🟢' }
+                                ].map((s) => {
+                                    const currentStage = modal.data.current_stage || (modal.data.status === 'approved' ? 9 : 1);
+                                    const isDone = currentStage >= s.number;
+                                    const isCurrent = currentStage === s.number;
+
+                                    return (
+                                        <div key={s.number} style={{
+                                            display: 'flex',
+                                            alignItems: 'flex-start',
+                                            gap: '12px',
+                                            padding: '12px 14px',
+                                            borderRadius: '10px',
+                                            background: isCurrent ? '#eef2ff' : isDone ? '#f8fafc' : '#ffffff',
+                                            border: isCurrent ? '1.5px solid #6366f1' : isDone ? '1px solid #e2e8f0' : '1px dashed #cbd5e1',
+                                            opacity: isDone ? 1 : 0.6
+                                        }}>
+                                            <div style={{
+                                                width: '28px',
+                                                height: '28px',
+                                                borderRadius: '50%',
+                                                background: isDone ? '#10b981' : '#e2e8f0',
+                                                color: isDone ? '#fff' : '#64748b',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                fontWeight: 'bold',
+                                                fontSize: '0.8rem',
+                                                flexShrink: 0
+                                            }}>
+                                                {isDone ? '✓' : s.number}
+                                            </div>
+                                            <div style={{ flex: 1 }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                    <strong style={{ fontSize: '0.9rem', color: isDone ? '#0f172a' : '#64748b' }}>
+                                                        {s.icon} {s.title}
+                                                    </strong>
+                                                    {isCurrent && (
+                                                        <span style={{ background: '#4f46e5', color: '#fff', fontSize: '0.68rem', fontWeight: 'bold', padding: '2px 6px', borderRadius: '4px' }}>
+                                                            CURRENT
+                                                        </span>
+                                                    )}
+                                                </div>
+                                                {s.number === 4 && modal.data.survey_report && (
+                                                    <div style={{ fontSize: '0.78rem', color: '#166534', marginTop: '4px' }}>
+                                                        Tyres: {modal.data.survey_report.tyres} • Brakes: {modal.data.survey_report.brakes} • Engine: {modal.data.survey_report.engine}
+                                                    </div>
+                                                )}
+                                                {s.number === 5 && modal.data.pricing_terms && (
+                                                    <div style={{ fontSize: '0.78rem', color: '#92400e', marginTop: '4px' }}>
+                                                        Rate: ₹{modal.data.pricing_terms.proposed_price}/hr • Sponsor Share: {modal.data.pricing_terms.sponsor_percentage}%
+                                                    </div>
+                                                )}
+                                                {s.number === 8 && modal.data.gps_tracking && (
+                                                    <div style={{ fontSize: '0.78rem', color: '#3730a3', marginTop: '4px' }}>
+                                                        GPS IMEI: {modal.data.gps_tracking.device_imei}
+                                                    </div>
+                                                )}
+                                            </div>
+                                        </div>
+                                    );
+                                })}
+                            </div>
+                        </div>
+                        <div className="modal-footer" style={{ padding: '12px 20px' }}>
+                            <button className="btn btn-secondary" onClick={() => setModal({ type: null })}>Close</button>
                         </div>
                     </div>
                 </div>

@@ -86,6 +86,8 @@ const AddBike = () => {
         }
     };
 
+    const [submissionSuccess, setSubmissionSuccess] = useState(null);
+
     const handleSubmit = async (e) => {
         e.preventDefault();
         setLoading(true);
@@ -97,11 +99,16 @@ const AddBike = () => {
         });
 
         try {
-            await api.post('/sponsor/add-bike', data, {
+            const res = await api.post('/sponsor/add-bike', data, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            toast.success('Vehicle added successfully! Waiting for approval.');
-            navigate('/my-bikes');
+            const trackingId = res.data?.request?.tracking_id || `RH-REQ-${Date.now().toString().slice(-4)}`;
+            toast.success('Vehicle application submitted successfully!');
+            setSubmissionSuccess({
+                trackingId,
+                name: formData.name,
+                bikeNumber: formData.bikeNumber
+            });
         } catch (error) {
             console.error(error);
             toast.error(error.response?.data?.message || 'Failed to add vehicle.');
@@ -459,6 +466,56 @@ const AddBike = () => {
                     onClose={() => setShowTerms(false)}
                     onAccept={() => setAgreed(true)}
                 />
+
+                {/* Application Submitted Success Modal */}
+                {submissionSuccess && (
+                    <div className="fixed inset-0 bg-slate-900/80 backdrop-blur-md flex items-center justify-center z-50 p-4 animate-fade-in">
+                        <div className="bg-white rounded-3xl max-w-lg w-full p-8 text-center shadow-2xl border border-indigo-100 relative overflow-hidden">
+                            <div className="absolute -top-24 -right-24 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none"></div>
+                            
+                            <div className="w-20 h-20 bg-emerald-100 text-emerald-600 rounded-3xl flex items-center justify-center mx-auto mb-6 shadow-inner animate-bounce">
+                                <CheckCircle className="w-10 h-10" />
+                            </div>
+
+                            <span className="inline-block px-3 py-1 bg-indigo-50 text-indigo-700 text-xs font-bold rounded-full mb-3 uppercase tracking-wider">
+                                Milestone 1/9 Initialized
+                            </span>
+
+                            <h2 className="text-2xl font-black text-slate-800 mb-2">Application Submitted!</h2>
+                            <p className="text-slate-600 text-sm mb-6 leading-relaxed">
+                                Your vehicle <strong className="text-indigo-600 font-bold">{submissionSuccess.name}</strong> ({submissionSuccess.bikeNumber}) has entered our 9-stage onboarding timeline.
+                            </p>
+
+                            <div className="bg-slate-50 border border-slate-200/80 rounded-2xl p-4 mb-6 text-left space-y-2">
+                                <div className="flex justify-between items-center text-xs text-slate-500 font-semibold uppercase">
+                                    <span>Application Tracking ID</span>
+                                    <span className="text-emerald-600">Active Pipeline</span>
+                                </div>
+                                <div className="text-xl font-mono font-black text-indigo-700 tracking-wider">
+                                    {submissionSuccess.trackingId}
+                                </div>
+                                <p className="text-xs text-slate-500">
+                                    📩 A confirmation email with live tracking details has been sent to your registered email address.
+                                </p>
+                            </div>
+
+                            <div className="flex flex-col sm:flex-row gap-3">
+                                <button
+                                    onClick={() => navigate('/my-bikes')}
+                                    className="flex-1 px-5 py-3 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-sm transition-all"
+                                >
+                                    Go to My Fleet
+                                </button>
+                                <button
+                                    onClick={() => navigate(`/my-bikes?track=${submissionSuccess.trackingId}`)}
+                                    className="flex-1 px-5 py-3 rounded-xl bg-gradient-to-r from-indigo-600 to-violet-600 hover:from-indigo-700 hover:to-violet-700 text-white font-bold text-sm shadow-lg shadow-indigo-200 transition-all hover:scale-105"
+                                >
+                                    📍 Track Live Timeline →
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                )}
             </div >
         </div >
     );

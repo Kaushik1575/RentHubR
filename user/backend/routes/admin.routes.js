@@ -33,6 +33,7 @@ router.patch('/users/:id/block', verifyAdminToken, adminController.blockUser);
 
 // Vehicles
 router.get('/vehicle-requests', verifyAdminToken, adminController.getVehicleRequests);
+router.put('/vehicle-requests/:id/stage', verifyAdminToken, adminController.updateVehicleRequestStage);
 router.post('/vehicle-requests/:id/approve', verifyAdminToken, adminController.approveVehicle);
 router.post('/vehicle-requests/:id/reject', verifyAdminToken, adminController.rejectVehicle);
 router.delete('/vehicle-requests/:id', verifyAdminToken, adminController.deleteVehicleRequest);

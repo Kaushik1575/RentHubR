@@ -29,6 +29,8 @@ router.put('/sponsor/update-bank-details', verifyToken, authController.updateBan
 router.get('/sponsor/dashboard', verifyToken, sponsorController.getDashboard);
 router.post('/sponsor/add-bike', verifyToken, uploadFiles, sponsorController.addBike);
 router.get('/sponsor/my-bikes', verifyToken, sponsorController.getMyBikes);
+router.get('/sponsor/vehicle-requests/:id/timeline', verifyToken, sponsorController.getTimeline);
+router.post('/sponsor/vehicle-requests/:id/accept-agreement', verifyToken, sponsorController.acceptAgreement);
 router.patch('/sponsor/bikes/:id/availability', verifyToken, sponsorController.toggleAvailability);
 router.patch('/sponsor/bikes/:id', verifyToken, sponsorController.updateVehicle);
 router.delete('/sponsor/bikes/:id', verifyToken, sponsorController.deleteVehicle);

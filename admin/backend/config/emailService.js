@@ -944,6 +944,272 @@ async function sendNearestLocationsEmail(userEmail, userName, bookingDetails = {
     });
 }
 
+function getStageInfo(stageNumber, requestData = {}) {
+    const trackingId = requestData.tracking_id || `RH-REQ-${requestData.id || '1001'}`;
+    const sponsorUrl = process.env.SPONSOR_FRONTEND_URL || 'https://renthub-sponsor.onrender.com';
+    const timelineUrl = `${sponsorUrl}/my-bikes?track=${trackingId}`;
+
+    switch (stageNumber) {
+        case 1:
+            return {
+                stageNumber: 1,
+                stageName: "Submitted & Received",
+                stageTitle: "✅ Application Successfully Submitted",
+                stageDescription: "We have received your bike listing application and all uploaded documents (RC, Insurance, PUC). Our verification team has started reviewing your submission.",
+                actionButtonText: "📍 Track Application Timeline",
+                actionButtonUrl: timelineUrl
+            };
+        case 2:
+            return {
+                stageNumber: 2,
+                stageName: "Document & Vehicle Review",
+                stageTitle: "🔍 Document Verification Completed",
+                stageDescription: "Our verification team has successfully verified your RC, Insurance, PUC, and photos. Your vehicle is cleared for physical survey.",
+                actionButtonText: "📍 View Timeline Status",
+                actionButtonUrl: timelineUrl
+            };
+        case 3:
+            return {
+                stageNumber: 3,
+                stageName: "Physical Survey Scheduled",
+                stageTitle: "🏠 Physical Survey Scheduled",
+                stageDescription: `RentHub team has scheduled a physical inspection visit for your bike at your registered location. Inspection date: ${requestData.survey_scheduled_date || 'Upcoming (Team will contact you)'}.`,
+                actionButtonText: "📍 View Survey Details",
+                actionButtonUrl: timelineUrl
+            };
+        case 4:
+            return {
+                stageNumber: 4,
+                stageName: "Survey Inspection Report",
+                stageTitle: "📋 Physical Survey Report Generated",
+                stageDescription: "The physical survey for your bike is complete. Overall condition rating: Grade A.",
+                detailsHtml: requestData.survey_report ? `
+                    <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 14px 18px; margin-bottom: 20px;">
+                        <h4 style="margin: 0 0 8px 0; color: #166534; font-size: 14px;">Inspection Scorecard:</h4>
+                        <div style="font-size: 13px; color: #15803d; line-height: 1.6;">
+                            • <strong>Tyres:</strong> ${requestData.survey_report.tyres || 'Good (85%)'}<br/>
+                            • <strong>Brakes:</strong> ${requestData.survey_report.brakes || 'Tested & Working'}<br/>
+                            • <strong>Engine:</strong> ${requestData.survey_report.engine || 'Smooth Performance'}<br/>
+                            • <strong>Lights & Electricals:</strong> ${requestData.survey_report.lights || 'Fully Functional'}
+                        </div>
+                    </div>
+                ` : '',
+                actionButtonText: "📍 View Full Inspection Report",
+                actionButtonUrl: timelineUrl
+            };
+        case 5:
+            return {
+                stageNumber: 5,
+                stageName: "Price & Revenue Decision",
+                stageTitle: "💰 Proposed Rental Price & Revenue Split Ready",
+                stageDescription: `RentHub team has evaluated your bike and proposed a rental pricing plan. Proposed Rental: ₹${requestData.pricing_terms?.proposed_price || requestData.price || 65}/hr with a ${requestData.pricing_terms?.sponsor_percentage || 70}% sponsor revenue payout.`,
+                detailsHtml: `
+                    <div style="background: #fffbeb; border: 1px solid #fde68a; border-radius: 8px; padding: 16px 18px; margin-bottom: 20px; text-align: center;">
+                        <h4 style="margin: 0 0 8px 0; color: #92400e; font-size: 15px;">Proposed Revenue Terms:</h4>
+                        <div style="display: flex; justify-content: space-around; margin: 10px 0;">
+                            <div>
+                                <span style="font-size: 12px; color: #78350f; display: block;">Hourly Rental</span>
+                                <strong style="font-size: 18px; color: #b45309;">₹${requestData.pricing_terms?.proposed_price || requestData.price || 65}/hr</strong>
+                            </div>
+                            <div>
+                                <span style="font-size: 12px; color: #78350f; display: block;">Your Revenue Share</span>
+                                <strong style="font-size: 18px; color: #16a34a;">${requestData.pricing_terms?.sponsor_percentage || 70}%</strong>
+                            </div>
+                        </div>
+                        <p style="margin: 8px 0 0 0; font-size: 13px; color: #92400e;">Please review and digitally accept the agreement in your Sponsor Portal.</p>
+                    </div>
+                `,
+                actionButtonText: "🤝 Review & Accept Agreement →",
+                actionButtonUrl: timelineUrl
+            };
+        case 6:
+            return {
+                stageNumber: 6,
+                stageName: "Sponsor Agreement Accepted",
+                stageTitle: "🤝 Sponsor Agreement Digitally Signed",
+                stageDescription: "You have successfully accepted the pricing and commission terms. The digital onboarding agreement is now active.",
+                actionButtonText: "📍 View Active Contract",
+                actionButtonUrl: timelineUrl
+            };
+        case 7:
+            return {
+                stageNumber: 7,
+                stageName: "Contract Activated",
+                stageTitle: "✅ Vehicle Onboarding Contract Activated",
+                stageDescription: "Your vehicle onboarding contract has been officially activated. GPS hardware tracker fitment is the final step before launch.",
+                actionButtonText: "📍 View Timeline Status",
+                actionButtonUrl: timelineUrl
+            };
+        case 8:
+            return {
+                stageNumber: 8,
+                stageName: "GPS Installation",
+                stageTitle: "📍 GPS Tracker Hardware Installed & Paired",
+                stageDescription: `RentHub high-precision anti-theft GPS tracker has been successfully installed and paired with live tracking systems. Device IMEI: ${requestData.gps_tracking?.device_imei || '864209048123456'}.`,
+                actionButtonText: "📍 View Live GPS Status",
+                actionButtonUrl: timelineUrl
+            };
+        case 9:
+            return {
+                stageNumber: 9,
+                stageName: "Bike Goes LIVE",
+                stageTitle: "🟢 Your Bike is LIVE & Ready for Bookings!",
+                stageDescription: "Congratulations! Your bike is now officially published to the RentHub customer fleet and is actively generating rental revenue for you.",
+                detailsHtml: `
+                    <div style="background: #f0fdf4; border: 1px solid #86efac; border-radius: 8px; padding: 18px; text-align: center; margin-bottom: 20px;">
+                        <h3 style="margin: 0 0 6px 0; color: #15803d; font-size: 18px;">🎉 Earning Started!</h3>
+                        <p style="margin: 0; color: #166534; font-size: 14px;">Customers can now book your bike in real time. Track all live rides and payout balances directly in your revenue dashboard.</p>
+                    </div>
+                `,
+                actionButtonText: "🚀 Open Sponsor Fleet Dashboard →",
+                actionButtonUrl: timelineUrl
+            };
+        default:
+            return {
+                stageNumber: 1,
+                stageName: "In Review",
+                stageTitle: "Application Status Update",
+                stageDescription: "Your application is being processed by the RentHub team.",
+                actionButtonText: "📍 View Timeline",
+                actionButtonUrl: timelineUrl
+            };
+    }
+}
+
+async function sendSponsorTimelineEmail(sponsorEmail, sponsorName, vehicleData, stageNumberOrInfo) {
+    if (!sponsorEmail) return { success: false, error: 'No sponsor email provided' };
+
+    const stageInfo = typeof stageNumberOrInfo === 'number' 
+        ? getStageInfo(stageNumberOrInfo, vehicleData) 
+        : stageNumberOrInfo;
+
+    const {
+        stageNumber,
+        stageName,
+        stageTitle,
+        stageDescription,
+        actionButtonText,
+        actionButtonUrl,
+        detailsHtml
+    } = stageInfo;
+
+    const progressPercentage = Math.round((stageNumber / 9) * 100);
+    const trackingId = vehicleData.tracking_id || `RH-REQ-${vehicleData.id || '1001'}`;
+    const vehicleName = vehicleData.name || 'Your Vehicle';
+    const regNumber = vehicleData.registration_number || vehicleData.bikeNumber || 'In Verification';
+
+    const html = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1.0">
+            <title>Vehicle Onboarding Status Update</title>
+        </head>
+        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; color: #1e293b;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                <tr>
+                    <td style="padding: 30px 10px;">
+                        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
+                            <!-- Top Hero Banner -->
+                            <tr>
+                                <td style="background: linear-gradient(135deg, #1e1b4b 0%, #312e81 50%, #4338ca 100%); padding: 35px 30px; text-align: center; color: #ffffff;">
+                                    <div style="display: inline-block; background: rgba(255,255,255,0.15); border: 1px solid rgba(255,255,255,0.25); border-radius: 50px; padding: 6px 16px; font-size: 13px; font-weight: 700; letter-spacing: 0.5px; margin-bottom: 12px;">
+                                        🏍️ SPONSOR ONBOARDING PIPELINE
+                                    </div>
+                                    <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 800; color: #ffffff;">Application Update</h1>
+                                    <p style="margin: 0; font-size: 15px; color: #c7d2fe; font-weight: 500;">
+                                        Tracking ID: <strong style="color: #fbbf24; letter-spacing: 1px;">${trackingId}</strong>
+                                    </p>
+                                </td>
+                            </tr>
+
+                            <!-- Progress Bar Card -->
+                            <tr>
+                                <td style="padding: 25px 30px 15px 30px; background-color: #f8fafc; border-bottom: 1px solid #e2e8f0;">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <span style="font-size: 13px; font-weight: 700; color: #4338ca; text-transform: uppercase;">
+                                            Stage ${stageNumber} of 9: ${stageName}
+                                        </span>
+                                        <span style="font-size: 14px; font-weight: 800; color: #0f172a;">${progressPercentage}% Complete</span>
+                                    </div>
+                                    <div style="background-color: #e2e8f0; height: 10px; border-radius: 10px; overflow: hidden;">
+                                        <div style="background: linear-gradient(90deg, #4f46e5, #10b981); height: 100%; width: ${progressPercentage}%; border-radius: 10px;"></div>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Main Body Content -->
+                            <tr>
+                                <td style="padding: 30px;">
+                                    <p style="font-size: 16px; margin: 0 0 15px 0;">Hello <strong>${sponsorName || 'Valued Sponsor'}</strong>,</p>
+                                    <p style="font-size: 15px; color: #475569; line-height: 1.6; margin: 0 0 20px 0;">
+                                        Your bike onboarding application for <strong>${vehicleName}</strong> (${regNumber}) has progressed to the next milestone:
+                                    </p>
+
+                                    <!-- Current Stage Highlight Box -->
+                                    <div style="background: #eef2ff; border-left: 5px solid #4f46e5; border-radius: 8px; padding: 18px 20px; margin-bottom: 25px;">
+                                        <h3 style="margin: 0 0 6px 0; font-size: 18px; color: #1e1b4b;">
+                                            ${stageTitle}
+                                        </h3>
+                                        <p style="margin: 0; font-size: 14px; color: #3730a3; line-height: 1.5;">
+                                            ${stageDescription}
+                                        </p>
+                                    </div>
+
+                                    ${detailsHtml || ''}
+
+                                    <!-- Vehicle Snapshot Table -->
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px 20px; margin-bottom: 25px;">
+                                        <h4 style="margin: 0 0 10px 0; font-size: 13px; text-transform: uppercase; color: #64748b; letter-spacing: 0.5px;">Vehicle Application Details</h4>
+                                        <table width="100%" style="font-size: 14px; border-collapse: collapse;">
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #64748b;">Vehicle Name:</td>
+                                                <td style="padding: 4px 0; font-weight: 700; text-align: right; color: #0f172a;">${vehicleName}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #64748b;">Registration No:</td>
+                                                <td style="padding: 4px 0; font-weight: 700; text-align: right; color: #0f172a;">${regNumber}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 4px 0; color: #64748b;">Tracking ID:</td>
+                                                <td style="padding: 4px 0; font-weight: 700; text-align: right; color: #4f46e5;">${trackingId}</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- CTA Button -->
+                                    <div style="text-align: center; margin: 30px 0 10px 0;">
+                                        <a href="${actionButtonUrl || 'https://renthub-sponsor.onrender.com/my-bikes'}" style="display: inline-block; background: linear-gradient(135deg, #4f46e5 0%, #4338ca 100%); color: #ffffff; padding: 14px 32px; text-decoration: none; border-radius: 50px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 12px rgba(79, 70, 229, 0.35); letter-spacing: 0.3px;">
+                                            ${actionButtonText || '📍 View Live Onboarding Timeline →'}
+                                        </a>
+                                    </div>
+                                </td>
+                            </tr>
+
+                            <!-- Footer -->
+                            <tr>
+                                <td align="center" style="background-color: #0f172a; padding: 25px 20px; color: #94a3b8; font-size: 12px;">
+                                    <div style="color: #ffffff; font-size: 16px; font-weight: 800; margin-bottom: 6px;">RentHub Sponsor Network</div>
+                                    <p style="margin: 0 0 6px 0;">Partner Operations & Vehicle Onboarding Control Desk</p>
+                                    <p style="margin: 0; color: #64748b; font-size: 11px;">© 2026 RentHub Inc. • 24x7 Sponsor Support: +91 9040757683</p>
+                                </td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr>
+            </table>
+        </body>
+        </html>
+    `;
+
+    return sendEmail({
+        to: sponsorEmail,
+        subject: `[${trackingId}] ${stageTitle} - ${vehicleName}`,
+        html: html
+    });
+}
+
 module.exports = {
     generateOTP,
     sendBookingConfirmationEmail,
@@ -957,6 +1223,8 @@ module.exports = {
     sendRideCompletedEmail,
     sendVehicleApprovedEmail,
     sendNewOfferEmail,
+    sendSponsorTimelineEmail,
+    getStageInfo,
     sendEmail,
     SENDER_EMAIL
 };
