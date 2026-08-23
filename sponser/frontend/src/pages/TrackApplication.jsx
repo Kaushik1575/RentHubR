@@ -175,8 +175,8 @@ const TrackApplication = () => {
     const [copied, setCopied] = useState(false);
     const [agreementAgreed, setAgreementAgreed] = useState(false);
     const [acceptingAgreement, setAcceptingAgreement] = useState(false);
+    const [respondingTerms, setRespondingTerms] = useState(false);
     const [stageFilter, setStageFilter] = useState('all'); // 'all', 'completed', 'active', 'upcoming'
-    const [calcHours, setCalcHours] = useState(6);
 
     // Load sponsor's own vehicles for quick chips
     useEffect(() => {
@@ -230,6 +230,28 @@ const TrackApplication = () => {
         setTimeout(() => setCopied(false), 2000);
     };
 
+    const handleRespondTerms = async (agreed) => {
+        if (!trackingData?.id) return;
+        setRespondingTerms(true);
+        try {
+            const res = await api.post(`/sponsor/vehicle-requests/${trackingData.id}/respond-terms`, {
+                agreed,
+                decline_reason: agreed ? null : 'Sponsor requested pricing terms re-evaluation'
+            });
+            if (agreed) {
+                toast.success(res.data.message || 'Pricing terms accepted! Unlocked progression to next step.');
+            } else {
+                toast.error(res.data.message || 'Pricing terms declined. Partnership team will contact you.');
+            }
+            performLookup(trackingData.tracking_id || trackingData.id);
+        } catch (err) {
+            console.error(err);
+            toast.error(err.response?.data?.error || 'Failed to submit pricing decision');
+        } finally {
+            setRespondingTerms(false);
+        }
+    };
+
     const handleAcceptAgreement = async () => {
         if (!agreementAgreed) {
             toast.error('Please check the agreement box before accepting.');
@@ -264,7 +286,6 @@ const TrackApplication = () => {
 
     const hourlyRate = trackingData?.pricing_terms?.proposed_price || trackingData?.price || 65;
     const sponsorHourlyShare = (hourlyRate * 0.70);
-    const projectedMonthly = (sponsorHourlyShare * calcHours * 30).toLocaleString('en-IN', { maximumFractionDigits: 0 });
 
     return (
         <div className="min-h-screen bg-gradient-to-br from-slate-50 via-indigo-50/30 to-blue-50/40 text-slate-800 p-4 md:p-8 space-y-8 max-w-7xl mx-auto pb-28 font-sans">
@@ -762,7 +783,7 @@ const TrackApplication = () => {
                                                         </div>
                                                     )}
 
-                                                    {/* Stage 5: Live Pricing Terms & Earnings Slider */}
+                                                    {/* Stage 5: Live Pricing Terms (No Monthly ROI Slider) & Agree/Disagree Actions */}
                                                     {s.number === 5 && (
                                                         <div className="p-4 rounded-2xl bg-amber-50/70 border border-amber-200 space-y-3">
                                                             <div className="flex items-center justify-between border-b border-amber-100 pb-2">
@@ -781,54 +802,101 @@ const TrackApplication = () => {
                                                                     <span className="text-base font-black text-slate-900">₹{hourlyRate}<small className="text-xs text-slate-500">/hr</small></span>
                                                                 </div>
                                                                 <div className="bg-white p-2.5 rounded-xl border border-amber-100">
-                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Your Share</span>
+                                                                    <span className="text-[10px] text-slate-400 block uppercase font-bold">Your Share (70%)</span>
                                                                     <span className="text-base font-black text-emerald-700">₹{sponsorHourlyShare.toFixed(1)}<small className="text-xs text-slate-500">/hr</small></span>
                                                                 </div>
                                                             </div>
 
-                                                            <div className="bg-white p-3 rounded-xl border border-amber-100">
-                                                                <div className="flex justify-between items-center text-xs mb-1">
-                                                                    <span className="text-[10px] font-bold text-amber-800 uppercase">Estimated Monthly ROI</span>
-                                                                    <span className="font-extrabold text-slate-700">{calcHours} hrs/day</span>
+                                                            {/* Sponsor Agreement Decision Block */}
+                                                            {(trackingData.terms_accepted || trackingData.agreement_accepted_at) ? (
+                                                                <div className="p-3 rounded-xl bg-emerald-50 border border-emerald-300 text-emerald-900 flex items-center justify-between gap-2">
+                                                                    <div>
+                                                                        <span className="text-[10px] uppercase font-bold text-emerald-600 block">Sponsor Decision</span>
+                                                                        <strong className="text-xs font-black">✓ Pricing Terms Accepted</strong>
+                                                                        <span className="text-[11px] text-emerald-700 block">Ready for Next Step: Digital Contract & GPS Fitment</span>
+                                                                    </div>
+                                                                    <span className="px-2.5 py-1 rounded-full bg-emerald-200 text-emerald-900 font-extrabold text-[10px] shrink-0">
+                                                                        Accepted
+                                                                    </span>
                                                                 </div>
-                                                                <span className="text-xl font-black text-amber-700">₹{projectedMonthly}</span>
-                                                                <input
-                                                                    type="range"
-                                                                    min="2"
-                                                                    max="14"
-                                                                    value={calcHours}
-                                                                    onChange={(e) => setCalcHours(parseInt(e.target.value))}
-                                                                    className="w-full h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-amber-500 mt-2"
-                                                                />
-                                                            </div>
+                                                            ) : trackingData.terms_declined ? (
+                                                                <div className="p-3 rounded-xl bg-rose-50 border border-rose-300 text-rose-900 space-y-2">
+                                                                    <div className="flex items-center justify-between gap-2">
+                                                                        <div>
+                                                                            <span className="text-[10px] uppercase font-bold text-rose-600 block">Sponsor Decision</span>
+                                                                            <strong className="text-xs font-black">✕ Terms Declined</strong>
+                                                                            <span className="text-[11px] text-rose-700 block">Pricing revision requested. Support team will contact you.</span>
+                                                                        </div>
+                                                                        <span className="px-2.5 py-1 rounded-full bg-rose-200 text-rose-900 font-extrabold text-[10px] shrink-0">
+                                                                            Declined
+                                                                        </span>
+                                                                    </div>
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => handleRespondTerms(true)}
+                                                                        disabled={respondingTerms}
+                                                                        className="w-full py-2 px-3 rounded-xl bg-white hover:bg-emerald-50 text-emerald-700 border border-emerald-300 font-bold text-xs transition-all cursor-pointer"
+                                                                    >
+                                                                        {respondingTerms ? 'Updating...' : `Re-evaluate & Accept Terms (₹${hourlyRate}/hr)`}
+                                                                    </button>
+                                                                </div>
+                                                            ) : (
+                                                                <div className="pt-2 border-t border-amber-200/80 space-y-2.5">
+                                                                    <div className="flex items-center justify-between">
+                                                                        <span className="text-xs font-extrabold text-slate-800">
+                                                                            Sponsor Terms Approval:
+                                                                        </span>
+                                                                        <span className="text-[10px] text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded">Action Required</span>
+                                                                    </div>
+                                                                    <div className="grid grid-cols-2 gap-2">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleRespondTerms(true)}
+                                                                            disabled={respondingTerms}
+                                                                            className="py-2.5 px-3 rounded-xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs shadow-md shadow-emerald-200 flex items-center justify-center gap-1.5 transition-all cursor-pointer disabled:opacity-50"
+                                                                        >
+                                                                            {respondingTerms ? 'Processing...' : '✓ Agree & Accept'}
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleRespondTerms(false)}
+                                                                            disabled={respondingTerms}
+                                                                            className="py-2.5 px-3 rounded-xl bg-white hover:bg-rose-50 text-rose-700 border border-rose-300 font-bold text-xs transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                                                                        >
+                                                                            {respondingTerms ? 'Processing...' : '✕ Disagree'}
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            )}
                                                         </div>
                                                     )}
 
-                                                    {/* Stage 6: Digital Agreement Acceptance Action */}
-                                                    {s.number === 6 && (currentStageNum === 5 || currentStageNum === 6) && !trackingData.agreement_accepted_at && (
-                                                        <div className="p-4 rounded-2xl bg-rose-50 border-2 border-rose-300 space-y-3">
-                                                            <div className="flex items-center gap-2 text-rose-800 font-extrabold text-xs">
-                                                                <FileSignature className="w-4 h-4 text-rose-600" />
-                                                                Digital Agreement E-Sign Required
+                                                    {/* Stage 6: Digital Agreement Confirmation */}
+                                                    {s.number === 6 && (
+                                                        <div className={`p-4 rounded-2xl border space-y-3 ${
+                                                            (trackingData.agreement_accepted_at || trackingData.terms_accepted)
+                                                                ? 'bg-emerald-50/70 border-emerald-200'
+                                                                : 'bg-slate-50 border-slate-200'
+                                                        }`}>
+                                                            <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
+                                                                <div className="flex items-center gap-2 text-slate-800 font-extrabold text-xs">
+                                                                    <FileSignature className="w-4 h-4 text-indigo-600" />
+                                                                    Digital Agreement Contract
+                                                                </div>
+                                                                <span className={`px-2.5 py-0.5 rounded-full font-black text-[10px] ${
+                                                                    (trackingData.agreement_accepted_at || trackingData.terms_accepted)
+                                                                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
+                                                                        : 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                                }`}>
+                                                                    {(trackingData.agreement_accepted_at || trackingData.terms_accepted) ? '✓ Contract Verified' : 'Awaiting Stage 5 Approval'}
+                                                                </span>
                                                             </div>
-                                                            <label className="flex items-start gap-2.5 text-xs text-slate-700 font-semibold cursor-pointer bg-white p-3 rounded-xl border border-rose-200">
-                                                                <input
-                                                                    type="checkbox"
-                                                                    checked={agreementAgreed}
-                                                                    onChange={(e) => setAgreementAgreed(e.target.checked)}
-                                                                    className="w-4 h-4 text-rose-600 rounded mt-0.5 cursor-pointer accent-rose-600"
-                                                                />
-                                                                <span>I accept proposed rental pricing (₹{hourlyRate}/hr), 70% payout split, and RentHub partner terms.</span>
-                                                            </label>
-
-                                                            <button
-                                                                type="button"
-                                                                onClick={handleAcceptAgreement}
-                                                                disabled={acceptingAgreement || !agreementAgreed}
-                                                                className="w-full py-2.5 px-4 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white font-black text-xs shadow-md shadow-rose-200 transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
-                                                            >
-                                                                {acceptingAgreement ? 'Signing Agreement...' : '🤝 Accept & Digitally Sign Contract'}
-                                                            </button>
+                                                            <p className="text-xs text-slate-600">
+                                                                {(trackingData.agreement_accepted_at || trackingData.terms_accepted)
+                                                                    ? 'Partner agreement digitally accepted and verified. Automatic weekly settlement enabled.'
+                                                                    : 'Terms must be agreed in Step 5 before the digital contract is activated.'
+                                                                }
+                                                            </p>
                                                         </div>
                                                     )}
 

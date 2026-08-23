@@ -32,6 +32,7 @@ router.get('/sponsor/my-bikes', verifyToken, sponsorController.getMyBikes);
 router.get('/sponsor/track/:identifier', sponsorController.lookupTracking);
 router.get('/sponsor/vehicle-requests/:id/timeline', verifyToken, sponsorController.getTimeline);
 router.post('/sponsor/vehicle-requests/:id/accept-agreement', verifyToken, sponsorController.acceptAgreement);
+router.post('/sponsor/vehicle-requests/:id/respond-terms', sponsorController.respondPricingTerms);
 router.patch('/sponsor/bikes/:id/availability', verifyToken, sponsorController.toggleAvailability);
 router.patch('/sponsor/bikes/:id', verifyToken, sponsorController.updateVehicle);
 router.delete('/sponsor/bikes/:id', verifyToken, sponsorController.deleteVehicle);

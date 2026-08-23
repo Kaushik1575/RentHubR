@@ -674,15 +674,19 @@ exports.checkDateAvailability = async (req, res) => {
 exports.acceptAgreement = async (req, res) => {
     try {
         const requestId = req.params.id;
-        const userId = req.user.id;
+        const userId = req.user?.id;
 
         // Fetch request and verify sponsor ownership
-        const { data: request, error: reqError } = await supabase
+        let query = supabase
             .from('sponsor_vehicle_requests')
             .select('*, sponsors(*)')
-            .eq('id', requestId)
-            .eq('sponsor_id', userId)
-            .single();
+            .eq('id', requestId);
+
+        if (userId) {
+            query = query.eq('sponsor_id', userId);
+        }
+
+        const { data: request, error: reqError } = await query.single();
 
         if (reqError || !request) {
             return res.status(404).json({ error: 'Vehicle request not found or unauthorized' });
@@ -691,7 +695,9 @@ exports.acceptAgreement = async (req, res) => {
         // Advance to Stage 6 (Sponsor Agreement Accepted)
         await SponsorModel.updateRequestStage(requestId, 6, {
             notes: `Agreement accepted digitally by ${request.sponsors?.full_name || 'Sponsor'}`,
-            agreement_accepted_at: new Date().toISOString()
+            agreement_accepted_at: new Date().toISOString(),
+            terms_accepted: true,
+            terms_accepted_at: new Date().toISOString()
         });
 
         // Also advance to Stage 7 (Contract Activated)
@@ -706,6 +712,63 @@ exports.acceptAgreement = async (req, res) => {
     } catch (error) {
         console.error('Error accepting agreement:', error);
         res.status(500).json({ error: error.message || 'Failed to accept agreement' });
+    }
+};
+
+exports.respondPricingTerms = async (req, res) => {
+    try {
+        const requestId = req.params.id;
+        const { agreed, decline_reason } = req.body;
+
+        const { data: request, error: reqError } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*, sponsors(*)')
+            .eq('id', requestId)
+            .single();
+
+        if (reqError || !request) {
+            return res.status(404).json({ error: 'Vehicle request not found' });
+        }
+
+        const sponsorName = request.sponsors?.full_name || 'Sponsor';
+
+        if (agreed) {
+            await SponsorModel.updateRequestStage(requestId, 6, {
+                notes: `Pricing terms agreed by ${sponsorName}. Proceeding to agreement contract.`,
+                terms_accepted: true,
+                terms_declined: false,
+                terms_accepted_at: new Date().toISOString(),
+                agreement_accepted_at: new Date().toISOString()
+            });
+
+            const updated = await SponsorModel.updateRequestStage(requestId, 7, {
+                notes: 'Contract activated after sponsor terms acceptance. Ready for GPS installation.'
+            });
+
+            return res.json({
+                success: true,
+                agreed: true,
+                message: 'Pricing terms accepted! Progression unlocked for next step.',
+                request: updated
+            });
+        } else {
+            const updated = await SponsorModel.updateRequestStage(requestId, 5, {
+                notes: `Sponsor declined pricing terms. Reason: ${decline_reason || 'Requested pricing discussion'}`,
+                terms_accepted: false,
+                terms_declined: true,
+                terms_declined_at: new Date().toISOString()
+            });
+
+            return res.json({
+                success: true,
+                agreed: false,
+                message: 'Terms declined. Our partnership team will contact you to discuss custom pricing.',
+                request: updated
+            });
+        }
+    } catch (error) {
+        console.error('Error in respondPricingTerms:', error);
+        res.status(500).json({ error: error.message || 'Failed to process pricing decision' });
     }
 };
 
@@ -826,6 +889,9 @@ exports.lookupTracking = async (req, res) => {
             gps_tracking: details.gps_tracking || null,
             survey_scheduled_date: details.survey_scheduled_date || null,
             agreement_accepted_at: details.agreement_accepted_at || null,
+            terms_accepted: details.terms_accepted || !!details.agreement_accepted_at,
+            terms_declined: details.terms_declined || false,
+            terms_accepted_at: details.terms_accepted_at || details.agreement_accepted_at || null,
             sponsor: request.sponsors
         });
     } catch (error) {
