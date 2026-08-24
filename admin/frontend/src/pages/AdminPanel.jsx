@@ -1321,12 +1321,29 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
                                                                         {/* Step 7 Button: STRICTLY LOCKED until Sponsor Agrees to Terms */}
                                                                         {(r.terms_accepted || r.agreement_accepted_at) && !r.terms_declined && !r.counter_offer_price && !r.vehicle_details?.counter_offer_price ? (
-                                                                            <button
-                                                                                style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                                                                                onClick={() => handleAdvanceStage(r.id, 7, { notes: 'Contract officially activated by Admin' })}
-                                                                            >
-                                                                                <i className="fas fa-file-signature"></i> Step 7: Activate Contract
-                                                                            </button>
+                                                                            <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                                {(r.signed_contract_url || r.vehicle_details?.signed_contract_url) && (
+                                                                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '8px 10px' }}>
+                                                                                        <span style={{ fontSize: '0.78rem', color: '#065f46', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                                            <i className="fas fa-file-check" style={{ color: '#059669' }}></i> Signed Contract Uploaded
+                                                                                        </span>
+                                                                                        <a
+                                                                                            href={r.signed_contract_url || r.vehicle_details?.signed_contract_url}
+                                                                                            target="_blank"
+                                                                                            rel="noreferrer"
+                                                                                            style={{ background: '#059669', color: '#fff', padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, textDecoration: 'none' }}
+                                                                                        >
+                                                                                            <i className="fas fa-external-link-alt"></i> View File
+                                                                                        </a>
+                                                                                    </div>
+                                                                                )}
+                                                                                <button
+                                                                                    style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #059669, #047857)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                                                    onClick={() => handleAdvanceStage(r.id, 7, { notes: 'Contract officially activated by Admin' })}
+                                                                                >
+                                                                                    <i className="fas fa-file-signature"></i> Step 7: Activate Contract
+                                                                                </button>
+                                                                            </div>
                                                                         ) : (
                                                                             <button
                                                                                 type="button"

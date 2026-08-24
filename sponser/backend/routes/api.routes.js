@@ -33,6 +33,7 @@ router.get('/sponsor/track/:identifier', sponsorController.lookupTracking);
 router.get('/sponsor/vehicle-requests/:id/timeline', verifyToken, sponsorController.getTimeline);
 router.post('/sponsor/vehicle-requests/:id/accept-agreement', verifyToken, sponsorController.acceptAgreement);
 router.post('/sponsor/vehicle-requests/:id/respond-terms', sponsorController.respondPricingTerms);
+router.post('/sponsor/vehicle-requests/:id/upload-contract', upload.single('signed_contract'), sponsorController.uploadSignedContract);
 router.patch('/sponsor/bikes/:id/availability', verifyToken, sponsorController.toggleAvailability);
 router.patch('/sponsor/bikes/:id', verifyToken, sponsorController.updateVehicle);
 router.delete('/sponsor/bikes/:id', verifyToken, sponsorController.deleteVehicle);

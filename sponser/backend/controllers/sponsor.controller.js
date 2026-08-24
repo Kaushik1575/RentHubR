@@ -779,6 +779,54 @@ exports.respondPricingTerms = async (req, res) => {
     }
 };
 
+exports.uploadSignedContract = async (req, res) => {
+    try {
+        const requestId = req.params.id;
+        const file = req.file;
+
+        if (!file) {
+            return res.status(400).json({ error: 'Please select a signed contract document to upload' });
+        }
+
+        const signedContractUrl = await uploadToSupabase(file, SUPABASE_BUCKET, 'contracts');
+
+        if (!signedContractUrl) {
+            return res.status(500).json({ error: 'Failed to upload contract document to storage' });
+        }
+
+        const { data: request, error: reqError } = await supabase
+            .from('sponsor_vehicle_requests')
+            .select('*, sponsors(*)')
+            .eq('id', requestId)
+            .single();
+
+        if (reqError || !request) {
+            return res.status(404).json({ error: 'Vehicle request not found' });
+        }
+
+        const sponsorName = request.sponsors?.full_name || 'Sponsor';
+
+        // Update request stage details to Stage 7 (Contract Activated)
+        const updated = await SponsorModel.updateRequestStage(requestId, 7, {
+            notes: `Signed partnership contract uploaded by ${sponsorName}. Agreement officially activated and verified.`,
+            signed_contract_url: signedContractUrl,
+            signed_contract_uploaded_at: new Date().toISOString(),
+            terms_accepted: true,
+            agreement_accepted_at: new Date().toISOString()
+        });
+
+        res.json({
+            success: true,
+            message: 'Signed contract uploaded successfully! Agreement officially activated.',
+            signed_contract_url: signedContractUrl,
+            request: updated
+        });
+    } catch (error) {
+        console.error('Error uploading signed contract:', error);
+        res.status(500).json({ error: error.message || 'Failed to upload signed contract' });
+    }
+};
+
 exports.getTimeline = async (req, res) => {
     try {
         const requestId = req.params.id;
@@ -810,6 +858,8 @@ exports.getTimeline = async (req, res) => {
             gps_tracking: details.gps_tracking || null,
             survey_scheduled_date: details.survey_scheduled_date || null,
             agreement_accepted_at: details.agreement_accepted_at || null,
+            signed_contract_url: details.signed_contract_url || null,
+            signed_contract_uploaded_at: details.signed_contract_uploaded_at || null,
             counter_offer_price: details.counter_offer_price || details.sponsor_requested_price || null,
             sponsor_requested_price: details.counter_offer_price || details.sponsor_requested_price || null,
             sponsor_price_remarks: details.sponsor_price_remarks || details.notes || null,
@@ -905,6 +955,8 @@ exports.lookupTracking = async (req, res) => {
             gps_tracking: details.gps_tracking || null,
             survey_scheduled_date: details.survey_scheduled_date || null,
             agreement_accepted_at: details.agreement_accepted_at || null,
+            signed_contract_url: details.signed_contract_url || null,
+            signed_contract_uploaded_at: details.signed_contract_uploaded_at || null,
             counter_offer_price: isTermsAgreed ? null : (details.counter_offer_price || details.sponsor_requested_price || null),
             sponsor_requested_price: isTermsAgreed ? null : (details.counter_offer_price || details.sponsor_requested_price || null),
             sponsor_price_remarks: isTermsAgreed ? null : (details.sponsor_price_remarks || null),

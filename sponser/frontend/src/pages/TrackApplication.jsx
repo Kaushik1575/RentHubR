@@ -30,10 +30,15 @@ import {
     TrendingUp,
     ShieldCheck,
     Calendar,
-    ShieldAlert
+    ShieldAlert,
+    Download,
+    Eye,
+    UploadCloud,
+    FileCheck
 } from 'lucide-react';
 import api from '../services/api';
 import toast from 'react-hot-toast';
+import ContractDocument, { downloadContractPDF } from '../components/ContractDocument';
 
 const STAGE_CONFIG = [
     {
@@ -180,6 +185,66 @@ const TrackApplication = () => {
     const [counterPrice, setCounterPrice] = useState('');
     const [counterReason, setCounterReason] = useState('');
     const [stageFilter, setStageFilter] = useState('all'); // 'all', 'completed', 'active', 'upcoming'
+    const [showContractModal, setShowContractModal] = useState(false);
+    const [downloadingPdf, setDownloadingPdf] = useState(false);
+    const [signedContractFile, setSignedContractFile] = useState(null);
+    const [uploadingContract, setUploadingContract] = useState(false);
+    const [showUploadField, setShowUploadField] = useState(false);
+    const contractPdfRef = React.useRef(null);
+
+    // Download Contract PDF handler
+    const handleDownloadPDF = async () => {
+        if (!trackingData) return;
+        setDownloadingPdf(true);
+        try {
+            const filename = `RentHub_Contract_${trackingData.registration_number || trackingData.tracking_id || 'Agreement'}.pdf`;
+            await downloadContractPDF(contractPdfRef, filename);
+            toast.success('Official Partnership Agreement PDF downloaded!');
+        } catch (err) {
+            console.error('PDF generation error:', err);
+            toast.error('Failed to generate PDF. You can also view or print the contract.');
+        } finally {
+            setDownloadingPdf(false);
+        }
+    };
+
+    // Upload Signed Contract handler
+    const handleUploadSignedContract = async (e) => {
+        if (e) e.preventDefault();
+        if (!signedContractFile) {
+            toast.error('Please select a signed contract document (PDF or Image) first');
+            return;
+        }
+        if (!trackingData?.id) return;
+
+        setUploadingContract(true);
+        try {
+            const formData = new FormData();
+            formData.append('signed_contract', signedContractFile);
+
+            const res = await api.post(`/sponsor/vehicle-requests/${trackingData.id}/upload-contract`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+
+            toast.success(res.data.message || 'Signed contract uploaded successfully!');
+            setSignedContractFile(null);
+            setShowUploadField(false);
+            setTrackingData(prev => ({
+                ...prev,
+                signed_contract_url: res.data.signed_contract_url,
+                signed_contract_uploaded_at: new Date().toISOString(),
+                current_stage: Math.max(prev?.current_stage || 1, 7),
+                terms_accepted: true,
+                agreement_accepted_at: prev?.agreement_accepted_at || new Date().toISOString()
+            }));
+            performLookup(trackingData.tracking_id || trackingData.id);
+        } catch (err) {
+            console.error('Upload signed contract error:', err);
+            toast.error(err.response?.data?.error || 'Failed to upload signed contract');
+        } finally {
+            setUploadingContract(false);
+        }
+    };
 
     // Load sponsor's own vehicles for quick chips
     useEffect(() => {
@@ -1058,32 +1123,204 @@ const TrackApplication = () => {
                                                         </div>
                                                     )}
 
-                                                    {/* Stage 6: Digital Agreement Confirmation */}
+                                                    {/* Stage 6: 1-Page Legal Agreement Contract & Signed Document Upload */}
                                                     {s.number === 6 && (
-                                                        <div className={`p-4 rounded-2xl border space-y-3 ${
+                                                        <div className={`p-4 rounded-2xl border space-y-3.5 ${
                                                             (trackingData.agreement_accepted_at || trackingData.terms_accepted)
-                                                                ? 'bg-emerald-50/70 border-emerald-200'
+                                                                ? 'bg-rose-50/70 border-rose-200'
                                                                 : 'bg-slate-50 border-slate-200'
                                                         }`}>
-                                                            <div className="flex items-center justify-between border-b border-slate-200/80 pb-2">
-                                                                <div className="flex items-center gap-2 text-slate-800 font-extrabold text-xs">
-                                                                    <FileSignature className="w-4 h-4 text-indigo-600" />
-                                                                    Digital Agreement Contract
+                                                            <div className="flex items-center justify-between border-b border-rose-100 pb-2">
+                                                                <div className="flex items-center gap-2 text-rose-950 font-extrabold text-xs">
+                                                                    <FileSignature className="w-4 h-4 text-rose-600" />
+                                                                    1-Page Legal Agreement Contract
                                                                 </div>
                                                                 <span className={`px-2.5 py-0.5 rounded-full font-black text-[10px] ${
-                                                                    (trackingData.agreement_accepted_at || trackingData.terms_accepted)
+                                                                    trackingData.signed_contract_url
                                                                         ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                                                        : 'bg-amber-100 text-amber-800 border border-amber-300'
+                                                                        : (trackingData.agreement_accepted_at || trackingData.terms_accepted)
+                                                                            ? 'bg-amber-100 text-amber-900 border border-amber-300'
+                                                                            : 'bg-slate-200 text-slate-700'
                                                                 }`}>
-                                                                    {(trackingData.agreement_accepted_at || trackingData.terms_accepted) ? '✓ Contract Verified' : 'Awaiting Stage 5 Approval'}
+                                                                    {trackingData.signed_contract_url
+                                                                        ? '✓ Signed Contract Uploaded'
+                                                                        : (trackingData.agreement_accepted_at || trackingData.terms_accepted)
+                                                                            ? 'Signature & Upload Required'
+                                                                            : 'Awaiting Stage 5 Approval'}
                                                                 </span>
                                                             </div>
-                                                            <p className="text-xs text-slate-600">
-                                                                {(trackingData.agreement_accepted_at || trackingData.terms_accepted)
-                                                                    ? 'Partner agreement digitally accepted and verified. Automatic weekly settlement enabled.'
-                                                                    : 'Terms must be agreed in Step 5 before the digital contract is activated.'
-                                                                }
-                                                            </p>
+
+                                                            {(!trackingData.agreement_accepted_at && !trackingData.terms_accepted) ? (
+                                                                <p className="text-xs text-slate-500">
+                                                                    Please agree to the pricing terms in Stage 5 above to generate and unlock your 1-page Legal Partnership Agreement.
+                                                                </p>
+                                                            ) : (
+                                                                <>
+                                                                    {/* 1. Contract Summary & Download Action Bar */}
+                                                                    <div className="p-3 bg-white rounded-xl border border-rose-100 shadow-sm space-y-2.5">
+                                                                        <div className="flex flex-wrap items-center justify-between gap-2">
+                                                                            <div>
+                                                                                <span className="text-[10px] text-slate-400 font-bold uppercase block">Legal Document Ref</span>
+                                                                                <span className="text-xs font-black text-slate-800">RH-AGR-{trackingData.tracking_id || trackingData.id}</span>
+                                                                            </div>
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="text-[11px] bg-rose-100/80 text-rose-800 font-bold px-2 py-0.5 rounded-md">
+                                                                                    Rate: ₹{hourlyRate}/hr (70% Payout: ₹{sponsorHourlyShare.toFixed(1)}/hr)
+                                                                                </span>
+                                                                            </div>
+                                                                        </div>
+
+                                                                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => setShowContractModal(true)}
+                                                                                className="py-2 px-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm cursor-pointer"
+                                                                            >
+                                                                                <Eye className="w-3.5 h-3.5" />
+                                                                                View / Preview Contract
+                                                                            </button>
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={handleDownloadPDF}
+                                                                                disabled={downloadingPdf}
+                                                                                className="py-2 px-3 rounded-xl bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-700 hover:to-pink-700 text-white font-extrabold text-xs flex items-center justify-center gap-1.5 transition-all shadow-md shadow-rose-200 cursor-pointer disabled:opacity-50"
+                                                                            >
+                                                                                <Download className="w-3.5 h-3.5" />
+                                                                                {downloadingPdf ? 'Generating PDF...' : 'Download Contract (PDF)'}
+                                                                            </button>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* 2. Upload Signed Contract Box */}
+                                                                    <div className="p-3.5 bg-gradient-to-br from-indigo-50/80 to-purple-50/80 rounded-xl border border-indigo-200 space-y-2.5">
+                                                                        <div className="flex items-center justify-between">
+                                                                            <span className="text-xs font-black text-indigo-950 uppercase tracking-wide flex items-center gap-1.5">
+                                                                                <UploadCloud className="w-4 h-4 text-indigo-600" />
+                                                                                Upload Signed Contract Copy
+                                                                            </span>
+                                                                            {trackingData.signed_contract_url && (
+                                                                                <span className="px-2 py-0.5 rounded bg-emerald-100 text-emerald-800 text-[10px] font-black">
+                                                                                    ✓ Uploaded
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {trackingData.signed_contract_url ? (
+                                                                            <div className="bg-white p-3 rounded-xl border border-indigo-100 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2.5">
+                                                                                <div>
+                                                                                    <strong className="text-xs text-slate-900 block flex items-center gap-1">
+                                                                                        <FileCheck className="w-3.5 h-3.5 text-emerald-600" />
+                                                                                        Signed Legal Agreement File Verified
+                                                                                    </strong>
+                                                                                    <span className="text-[11px] text-slate-500 block">
+                                                                                        Uploaded: {trackingData.signed_contract_uploaded_at ? new Date(trackingData.signed_contract_uploaded_at).toLocaleString('en-IN', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : 'Ready'}
+                                                                                    </span>
+                                                                                </div>
+                                                                                <div className="flex items-center gap-2">
+                                                                                    <a
+                                                                                        href={trackingData.signed_contract_url}
+                                                                                        target="_blank"
+                                                                                        rel="noreferrer"
+                                                                                        className="px-3 py-1.5 rounded-lg bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold text-xs flex items-center gap-1 border border-indigo-200 transition-colors"
+                                                                                    >
+                                                                                        <ExternalLink className="w-3 h-3" />
+                                                                                        View Document
+                                                                                    </a>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => setShowUploadField(prev => !prev)}
+                                                                                        className="px-2.5 py-1.5 rounded-lg bg-white hover:bg-slate-100 text-slate-600 font-bold text-xs border border-slate-200 transition-colors cursor-pointer"
+                                                                                    >
+                                                                                        {showUploadField ? '✕ Cancel' : '🔄 Replace'}
+                                                                                    </button>
+                                                                                </div>
+                                                                            </div>
+                                                                        ) : (
+                                                                            <p className="text-[11px] text-slate-600 leading-relaxed">
+                                                                                <strong>Step:</strong> Download the 1-page agreement above, sign it on the Sponsor signature line, and upload the signed PDF or clear photo here.
+                                                                            </p>
+                                                                        )}
+
+                                                                        {(!trackingData.signed_contract_url || showUploadField) && (
+                                                                            <form onSubmit={handleUploadSignedContract} className="space-y-2 pt-1">
+                                                                                <div className="flex flex-col sm:flex-row gap-2">
+                                                                                    <input
+                                                                                        type="file"
+                                                                                        accept=".pdf,image/png,image/jpeg,image/jpg"
+                                                                                        onChange={(e) => setSignedContractFile(e.target.files?.[0] || null)}
+                                                                                        className="flex-1 text-xs text-slate-600 file:mr-2 file:py-1.5 file:px-3 file:rounded-lg file:border-0 file:text-xs file:font-bold file:bg-indigo-600 file:text-white hover:file:bg-indigo-700 cursor-pointer bg-white p-1 rounded-xl border border-indigo-200"
+                                                                                    />
+                                                                                    <button
+                                                                                        type="submit"
+                                                                                        disabled={!signedContractFile || uploadingContract}
+                                                                                        className="px-4 py-2 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-extrabold text-xs rounded-xl shadow-sm transition-all flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 shrink-0"
+                                                                                    >
+                                                                                        <UploadCloud className="w-3.5 h-3.5" />
+                                                                                        {uploadingContract ? 'Uploading...' : 'Upload & Save'}
+                                                                                    </button>
+                                                                                </div>
+                                                                                {signedContractFile && (
+                                                                                    <span className="text-[10px] text-emerald-700 font-bold block">
+                                                                                        Selected: {signedContractFile.name} ({(signedContractFile.size / 1024).toFixed(1)} KB)
+                                                                                    </span>
+                                                                                )}
+                                                                            </form>
+                                                                        )}
+                                                                    </div>
+                                                                </>
+                                                            )}
+                                                        </div>
+                                                    )}
+
+                                                    {/* Stage 7: Contract Officially Activated */}
+                                                    {s.number === 7 && (
+                                                        <div className={`p-4 rounded-2xl border space-y-3 ${
+                                                            currentStageNum >= 7 ? 'bg-purple-50/80 border-purple-200' : 'bg-slate-50 border-slate-200'
+                                                        }`}>
+                                                            <div className="flex items-center justify-between border-b border-purple-100 pb-2">
+                                                                <div className="flex items-center gap-2 text-purple-950 font-extrabold text-xs">
+                                                                    <Award className="w-4 h-4 text-purple-600" />
+                                                                    Legal Activation & Fleet Registration
+                                                                </div>
+                                                                <span className={`px-2.5 py-0.5 rounded-full font-black text-[10px] ${
+                                                                    currentStageNum >= 7 ? 'bg-purple-200 text-purple-900 font-extrabold' : 'bg-slate-200 text-slate-700'
+                                                                }`}>
+                                                                    {currentStageNum >= 7 ? '✓ Activated in Registry' : 'Pending Activation'}
+                                                                </span>
+                                                            </div>
+
+                                                            {currentStageNum >= 7 ? (
+                                                                <div className="space-y-2 text-xs">
+                                                                    <p className="text-slate-700 leading-relaxed">
+                                                                        🤝 Partnership agreement officially executed and bound. Your vehicle is registered under RentHub's urban mobility license with active municipal fleet allocation.
+                                                                    </p>
+                                                                    <div className="flex flex-wrap gap-2 pt-1">
+                                                                        {trackingData.signed_contract_url && (
+                                                                            <a
+                                                                                href={trackingData.signed_contract_url}
+                                                                                target="_blank"
+                                                                                rel="noreferrer"
+                                                                                className="px-3 py-1.5 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1.5 shadow-sm transition-all"
+                                                                            >
+                                                                                <FileCheck className="w-3.5 h-3.5" />
+                                                                                View Signed Contract Document
+                                                                            </a>
+                                                                        )}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => setShowContractModal(true)}
+                                                                            className="px-3 py-1.5 rounded-xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 font-bold text-xs flex items-center gap-1.5 cursor-pointer"
+                                                                        >
+                                                                            <Eye className="w-3.5 h-3.5" />
+                                                                            View Agreement Details
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            ) : (
+                                                                <p className="text-xs text-slate-500">
+                                                                    Awaiting signed contract submission and verification before official fleet activation.
+                                                                </p>
+                                                            )}
                                                         </div>
                                                     )}
 
@@ -1172,6 +1409,66 @@ const TrackApplication = () => {
                     <p className="text-slate-500 text-xs md:text-sm max-w-md mx-auto">
                         Enter your Tracking ID (`#RH-REQ-XXXX`) in the top search bar or select one of your registered fleet vehicles above.
                     </p>
+                </div>
+            )}
+
+            {/* Hidden Printable Contract for Direct PDF Generation */}
+            {trackingData && (
+                <div style={{ position: 'fixed', left: '-9999px', top: '-9999px', width: '794px' }}>
+                    <ContractDocument ref={contractPdfRef} trackingData={trackingData} />
+                </div>
+            )}
+
+            {/* Contract Preview Modal */}
+            {showContractModal && trackingData && (
+                <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto">
+                    <div className="bg-white rounded-3xl max-w-4xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-slate-200 overflow-hidden animate-in fade-in zoom-in duration-200">
+                        {/* Modal Header */}
+                        <div className="px-5 py-4 bg-slate-900 text-white flex items-center justify-between shrink-0">
+                            <div className="flex items-center gap-2.5">
+                                <div className="p-2 rounded-xl bg-rose-500/20 border border-rose-500/30 text-rose-400">
+                                    <FileSignature className="w-5 h-5" />
+                                </div>
+                                <div>
+                                    <h4 className="font-extrabold text-sm sm:text-base m-0 text-white">Legal Partnership Agreement Contract</h4>
+                                    <span className="text-[11px] text-slate-400 block">1-Page Official Vehicle Lease & Revenue Share Agreement</span>
+                                </div>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={handleDownloadPDF}
+                                    disabled={downloadingPdf}
+                                    className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 transition-all cursor-pointer disabled:opacity-50 shadow-sm"
+                                >
+                                    <Download className="w-3.5 h-3.5" />
+                                    {downloadingPdf ? 'Downloading...' : 'Download PDF'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => window.print()}
+                                    className="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-white rounded-xl font-bold text-xs flex items-center gap-1.5 border border-slate-700 transition-all cursor-pointer"
+                                >
+                                    <Printer className="w-3.5 h-3.5" />
+                                    Print
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowContractModal(false)}
+                                    className="p-1.5 rounded-xl bg-slate-800 hover:bg-rose-900/50 text-slate-300 hover:text-white font-bold text-sm transition-all cursor-pointer ml-1"
+                                >
+                                    ✕
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* Modal Body - Scrollable Contract View */}
+                        <div className="flex-1 overflow-y-auto p-4 sm:p-6 bg-slate-100 flex justify-center">
+                            <div className="bg-white shadow-xl rounded-2xl overflow-hidden border border-slate-200">
+                                <ContractDocument trackingData={trackingData} />
+                            </div>
+                        </div>
+                    </div>
                 </div>
             )}
 
