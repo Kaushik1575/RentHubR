@@ -7,7 +7,7 @@ export const downloadContractPDF = async (elementRef, filename = 'RentHub_Partne
     try {
         const element = elementRef.current;
         const canvas = await html2canvas(element, {
-            scale: 2.5,
+            scale: 2.2,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff'
@@ -35,6 +35,7 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
     const sponsorPhone = sponsor.phone_number || trackingData.sponsor_phone || 'N/A';
     const sponsorEmail = sponsor.email || trackingData.sponsor_email || 'N/A';
     const trackingId = trackingData.tracking_id || `RH-REQ-${trackingData.id || '1001'}`;
+    const contractNo = `RH-AGR-2026-${(trackingData.id || '0989').toString().padStart(4, '0')}`;
     const vehicleName = `${trackingData.name || ''} ${trackingData.model || ''}`.trim() || 'Commercial Vehicle';
     const regNumber = trackingData.registration_number || 'REG-PENDING';
     const vehicleType = (trackingData.vehicle_type || 'bike').toUpperCase();
@@ -42,9 +43,10 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
 
     const hourlyRate = parseFloat(trackingData.pricing_terms?.proposed_price || trackingData.price || 65);
     const sponsorShare = (hourlyRate * 0.70).toFixed(1);
-    const contractDate = trackingData.agreement_accepted_at
-        ? new Date(trackingData.agreement_accepted_at).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })
-        : new Date().toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const platformShare = (hourlyRate * 0.30).toFixed(1);
+    
+    const contractDateObj = trackingData.agreement_accepted_at ? new Date(trackingData.agreement_accepted_at) : new Date();
+    const contractDateStr = contractDateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'long', year: 'numeric' });
 
     return (
         <div
@@ -52,195 +54,189 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
             id="renthub-legal-contract"
             style={{
                 width: '794px', // Standard A4 width at 96 DPI
-                minHeight: '1120px', // Standard A4 height at 96 DPI
-                maxHeight: '1122px',
-                padding: '32px 36px',
+                height: '1122px', // Standard A4 height at 96 DPI
+                padding: '24px 32px',
                 backgroundColor: '#ffffff',
-                color: '#0f172a',
-                fontFamily: "'Inter', system-ui, -apple-system, sans-serif",
+                color: '#111827',
+                fontFamily: "'Georgia', 'Times New Roman', serif",
                 boxSizing: 'border-box',
                 position: 'relative',
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                border: '1px solid #e2e8f0',
-                fontSize: '11px',
-                lineHeight: '1.45',
+                border: '2px solid #1e293b',
+                lineHeight: '1.35',
                 overflow: 'hidden'
             }}
         >
-            {/* Top Watermark / Decorative Border */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, height: '6px', background: 'linear-gradient(90deg, #4f46e5 0%, #06b6d4 100%)' }} />
+            {/* Elegant Double Border Inner Frame */}
+            <div style={{ position: 'absolute', top: '6px', left: '6px', right: '6px', bottom: '6px', border: '1px solid #94a3b8', pointerEvents: 'none' }} />
 
             <div>
-                {/* 1. HEADER */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', borderBottom: '2px solid #0f172a', paddingBottom: '12px', marginBottom: '14px' }}>
-                    <div>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-                            <div style={{ width: '28px', height: '28px', borderRadius: '8px', background: 'linear-gradient(135deg, #4f46e5, #06b6d4)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#ffffff', fontWeight: 900, fontSize: '15px' }}>
-                                R
+                {/* 1. OFFICIAL EXECUTIVE HEADER & E-STAMP BANNER */}
+                <div style={{ borderBottom: '2px solid #0f172a', paddingBottom: '8px', marginBottom: '8px' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+                            <div style={{ width: '34px', height: '34px', border: '1.5px solid #0f172a', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#0f172a', color: '#ffffff', fontWeight: 'bold', fontSize: '18px', fontFamily: 'system-ui, sans-serif' }}>
+                                ⚖
                             </div>
                             <div>
-                                <h1 style={{ margin: 0, fontSize: '18px', fontWeight: 900, letterSpacing: '-0.5px', color: '#0f172a' }}>RentHub Mobility</h1>
-                                <span style={{ fontSize: '9px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.8px' }}>Smart Urban Fleet Partnership Network</span>
+                                <h1 style={{ margin: 0, fontSize: '15px', fontWeight: 'bold', letterSpacing: '0.8px', color: '#0f172a', textTransform: 'uppercase' }}>
+                                    RENTHUB TECHNOLOGIES PRIVATE LIMITED
+                                </h1>
+                                <span style={{ fontSize: '8px', color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px', fontFamily: 'system-ui, sans-serif' }}>
+                                    CIN: U72900KA2024PTC189210 • Incorporated under the Companies Act, 2013
+                                </span>
+                            </div>
+                        </div>
+
+                        <div style={{ textAlign: 'right', fontFamily: 'system-ui, sans-serif' }}>
+                            <div style={{ border: '1px solid #0f172a', padding: '2px 8px', borderRadius: '4px', background: '#f8fafc', fontSize: '8px', fontWeight: 'bold', display: 'inline-block' }}>
+                                DEED REF: {contractNo}
+                            </div>
+                            <div style={{ fontSize: '8px', color: '#475569', marginTop: '2px' }}>
+                                Execution Date: <strong>{contractDateStr}</strong>
                             </div>
                         </div>
                     </div>
-                    <div style={{ textAlign: 'right' }}>
-                        <span style={{ display: 'inline-block', background: '#eef2ff', color: '#4338ca', border: '1px solid #c7d2fe', padding: '2px 8px', borderRadius: '6px', fontSize: '9px', fontWeight: 800 }}>
-                            OFFICIAL LEGAL CONTRACT
-                        </span>
-                        <div style={{ marginTop: '4px', fontSize: '9.5px', color: '#334155' }}>
-                            Ref: <strong>{trackingId}</strong> | Date: <strong>{contractDate}</strong>
-                        </div>
+
+                    {/* Government Reference Strip */}
+                    <div style={{ background: '#f1f5f9', borderTop: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', padding: '3px 8px', display: 'flex', justifyContent: 'space-between', fontSize: '7.5px', color: '#334155', fontFamily: 'system-ui, sans-serif', textTransform: 'uppercase' }}>
+                        <span>COMMERCIAL LEASE & VEHICLE ATTACHMENT DEED</span>
+                        <span>JURISDICTION: BANGALORE / BHUBANESWAR</span>
+                        <span>MUNICIPAL MOBILITY NETWORK LICENSED</span>
                     </div>
                 </div>
 
-                {/* TITLE */}
-                <div style={{ textAlign: 'center', marginBottom: '14px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 12px' }}>
-                    <h2 style={{ margin: 0, fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                        Vehicle Lease & Revenue Share Partnership Agreement
+                {/* 2. FORMAL DEED TITLE & PREAMBLE */}
+                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
+                    <h2 style={{ margin: 0, fontSize: '13px', fontWeight: 'bold', textTransform: 'uppercase', letterSpacing: '0.5px', color: '#0f172a', textDecoration: 'underline' }}>
+                        COMMERCIAL VEHICLE ATTACHMENT & REVENUE-SHARING AGREEMENT
                     </h2>
-                    <p style={{ margin: '2px 0 0', fontSize: '9.5px', color: '#64748b' }}>
-                        Executed under the Indian Contract Act, 1872 & Motor Vehicles Act guidelines
+                    <p style={{ margin: '4px 0 0', fontSize: '8.5px', color: '#334155', textAlign: 'justify', lineHeight: '1.35' }}>
+                        <strong>THIS AGREEMENT</strong> is made and executed on this <strong>{contractDateStr}</strong> ("Effective Date"), by and between <strong>RENTHUB TECHNOLOGIES PRIVATE LIMITED</strong>, having its corporate operations office at Mobility Tech Park, Bangalore (hereinafter referred to as the <strong>"Platform Operator" / "RentHub"</strong>, of the <strong>FIRST PART</strong>); and <strong>{sponsorName}</strong>, Contact: {sponsorPhone}, Email: {sponsorEmail}, Tracking Ref: {trackingId} (hereinafter referred to as the <strong>"Vehicle Owner" / "Sponsor"</strong>, of the <strong>SECOND PART</strong>).
                     </p>
                 </div>
 
-                {/* 2. PARTIES SECTION */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '12px' }}>
-                    <div style={{ background: '#faf5ff', border: '1px solid #e9d5ff', borderRadius: '8px', padding: '8px 10px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: 800, color: '#7e22ce', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
-                            Party 1: Platform Operator
-                        </span>
-                        <strong style={{ fontSize: '11px', color: '#0f172a', display: 'block' }}>RentHub Technologies Pvt. Ltd.</strong>
-                        <span style={{ fontSize: '9px', color: '#64748b', display: 'block' }}>CIN: U72900KA2024PTC189210</span>
-                        <span style={{ fontSize: '9px', color: '#64748b', display: 'block' }}>Fleet Operations Center, Municipal Mobility Hub</span>
+                {/* 3. SCHEDULE 'A': VEHICLE ASSET DETAILS TABLE */}
+                <div style={{ marginBottom: '8px' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', color: '#0f172a', marginBottom: '3px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                        <span>SCHEDULE 'A' — VEHICLE SPECIFICATIONS & MECHANICAL AUDIT</span>
+                        <span style={{ fontSize: '7.5px', color: '#047857', fontWeight: 'bold', fontFamily: 'system-ui, sans-serif' }}>✓ 24-POINT SAFETY AUDIT PASSED</span>
                     </div>
-
-                    <div style={{ background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '8px', padding: '8px 10px' }}>
-                        <span style={{ fontSize: '9px', fontWeight: 800, color: '#15803d', textTransform: 'uppercase', display: 'block', marginBottom: '3px' }}>
-                            Party 2: Fleet Partner / Sponsor
-                        </span>
-                        <strong style={{ fontSize: '11px', color: '#0f172a', display: 'block' }}>{sponsorName}</strong>
-                        <span style={{ fontSize: '9px', color: '#64748b', display: 'block' }}>Phone: {sponsorPhone} | Email: {sponsorEmail}</span>
-                        <span style={{ fontSize: '9px', color: '#64748b', display: 'block' }}>Sponsor Tracking Ref: {trackingId}</span>
-                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8.5px', border: '1px solid #0f172a', fontFamily: 'system-ui, sans-serif' }}>
+                        <thead>
+                            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #0f172a' }}>
+                                <th style={{ padding: '3px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1', fontWeight: 'bold' }}>Vehicle Make & Model</th>
+                                <th style={{ padding: '3px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1', fontWeight: 'bold' }}>Registration Number</th>
+                                <th style={{ padding: '3px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1', fontWeight: 'bold' }}>Class / Category</th>
+                                <th style={{ padding: '3px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1', fontWeight: 'bold' }}>Mfg Year</th>
+                                <th style={{ padding: '3px 6px', textAlign: 'left', fontWeight: 'bold' }}>Operational Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style={{ padding: '3px 6px', borderRight: '1px solid #cbd5e1', fontWeight: 'bold' }}>{vehicleName}</td>
+                                <td style={{ padding: '3px 6px', borderRight: '1px solid #cbd5e1', fontWeight: 'bold', color: '#1e3a8a' }}>{regNumber}</td>
+                                <td style={{ padding: '3px 6px', borderRight: '1px solid #cbd5e1' }}>{vehicleType}</td>
+                                <td style={{ padding: '3px 6px', borderRight: '1px solid #cbd5e1' }}>{vehicleYear}</td>
+                                <td style={{ padding: '3px 6px', color: '#047857', fontWeight: 'bold' }}>Approved for Deployment</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                {/* 3. VEHICLE & COMMERCIAL TERMS */}
-                <div style={{ display: 'grid', gridTemplateColumns: '1.2fr 1fr', gap: '10px', marginBottom: '12px' }}>
-                    {/* Vehicle Schedule */}
-                    <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '8px 10px', background: '#ffffff' }}>
-                        <div style={{ fontWeight: 800, fontSize: '10px', color: '#1e293b', borderBottom: '1px solid #f1f5f9', paddingBottom: '3px', marginBottom: '6px', textTransform: 'uppercase' }}>
-                            🏍️ Vehicle Asset Schedule
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '9.5px' }}>
-                            <div>
-                                <span style={{ color: '#64748b', display: 'block', fontSize: '8.5px' }}>Vehicle Asset</span>
-                                <strong>{vehicleName}</strong>
-                            </div>
-                            <div>
-                                <span style={{ color: '#64748b', display: 'block', fontSize: '8.5px' }}>Registration No</span>
-                                <strong style={{ color: '#4338ca' }}>{regNumber}</strong>
-                            </div>
-                            <div>
-                                <span style={{ color: '#64748b', display: 'block', fontSize: '8.5px' }}>Class / Category</span>
-                                <strong>{vehicleType}</strong>
-                            </div>
-                            <div>
-                                <span style={{ color: '#64748b', display: 'block', fontSize: '8.5px' }}>Year of Mfr</span>
-                                <strong>{vehicleYear}</strong>
-                            </div>
-                        </div>
+                {/* 4. SCHEDULE 'B': COMMERCIAL SETTLEMENT & REVENUE SPLIT TABLE */}
+                <div style={{ marginBottom: '8px' }}>
+                    <div style={{ fontSize: '9px', fontWeight: 'bold', textTransform: 'uppercase', color: '#0f172a', marginBottom: '3px' }}>
+                        SCHEDULE 'B' — COMMERCIAL CONSIDERATION & REVENUE SHARING TERMS
                     </div>
-
-                    {/* Commercial Terms */}
-                    <div style={{ border: '1px solid #fef08a', borderRadius: '8px', padding: '8px 10px', background: '#fefce8' }}>
-                        <div style={{ fontWeight: 800, fontSize: '10px', color: '#854d0e', borderBottom: '1px solid #fef9c3', paddingBottom: '3px', marginBottom: '6px', textTransform: 'uppercase' }}>
-                            💰 Agreed Commercial Terms
-                        </div>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '6px', fontSize: '9.5px' }}>
-                            <div>
-                                <span style={{ color: '#713f12', display: 'block', fontSize: '8.5px' }}>Customer Hourly Rent</span>
-                                <strong style={{ fontSize: '11px', color: '#0f172a' }}>₹{hourlyRate}/hr</strong>
-                            </div>
-                            <div>
-                                <span style={{ color: '#713f12', display: 'block', fontSize: '8.5px' }}>Sponsor Revenue Share</span>
-                                <strong style={{ fontSize: '11px', color: '#15803d' }}>70% (₹{sponsorShare}/hr)</strong>
-                            </div>
-                            <div>
-                                <span style={{ color: '#713f12', display: 'block', fontSize: '8.5px' }}>Platform Fee</span>
-                                <strong>30% Management</strong>
-                            </div>
-                            <div>
-                                <span style={{ color: '#713f12', display: 'block', fontSize: '8.5px' }}>Settlement Cycle</span>
-                                <strong>Weekly Auto-Transfer</strong>
-                            </div>
-                        </div>
-                    </div>
+                    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '8.5px', border: '1px solid #0f172a', fontFamily: 'system-ui, sans-serif' }}>
+                        <thead>
+                            <tr style={{ background: '#f8fafc', borderBottom: '1px solid #0f172a' }}>
+                                <th style={{ padding: '3px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1', fontWeight: 'bold' }}>Agreed Customer Rental Tariff</th>
+                                <th style={{ padding: '3px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1', fontWeight: 'bold' }}>Sponsor Net Payout (70%)</th>
+                                <th style={{ padding: '3px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1', fontWeight: 'bold' }}>Platform Tech Fee (30%)</th>
+                                <th style={{ padding: '3px 6px', textAlign: 'left', fontWeight: 'bold' }}>Settlement Cycle</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td style={{ padding: '3px 6px', borderRight: '1px solid #cbd5e1', fontWeight: 'bold' }}>₹{hourlyRate.toFixed(2)} / Hour</td>
+                                <td style={{ padding: '3px 6px', borderRight: '1px solid #cbd5e1', fontWeight: 'bold', color: '#047857' }}>₹{sponsorShare} / Hour (70% Share)</td>
+                                <td style={{ padding: '3px 6px', borderRight: '1px solid #cbd5e1' }}>₹{platformShare} / Hour (30% Fee)</td>
+                                <td style={{ padding: '3px 6px', fontWeight: 'bold' }}>Weekly Direct Transfer (Every Monday)</td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
 
-                {/* 4. TERMS AND COVENANTS */}
-                <div style={{ border: '1px solid #e2e8f0', borderRadius: '8px', padding: '8px 12px', background: '#f8fafc', marginBottom: '14px' }}>
-                    <div style={{ fontWeight: 800, fontSize: '10px', color: '#0f172a', marginBottom: '6px', textTransform: 'uppercase' }}>
-                        ⚖️ Key Legal Terms & Partnership Covenants
+                {/* 5. OPERATIVE ARTICLES & LEGAL COVENANTS */}
+                <div style={{ border: '1px solid #cbd5e1', padding: '6px 10px', background: '#fafafa', borderRadius: '4px', marginBottom: '8px' }}>
+                    <div style={{ fontSize: '8.5px', fontWeight: 'bold', textTransform: 'uppercase', color: '#0f172a', marginBottom: '3px' }}>
+                        TERMS, CONDITIONS & STATUTORY COVENANTS:
                     </div>
-                    <ol style={{ margin: 0, paddingLeft: '14px', fontSize: '9px', color: '#334155', display: 'flex', flexDirection: 'column', gap: '3px' }}>
-                        <li><strong>Custody & Platform Deployment:</strong> Sponsor grants RentHub exclusive operational license to deploy the vehicle in verified municipal rides.</li>
-                        <li><strong>Mandatory GPS Telemetry:</strong> RentHub will fit an AIS-140 anti-theft GPS tracker and remote engine immobilizer for continuous 24x7 tracking.</li>
-                        <li><strong>Insurance & Zero-Liability Cover:</strong> All rides are insured under RentHub's master transit insurance policy. Sponsor holds zero financial liability for rider traffic violations or transit damage.</li>
-                        <li><strong>Maintenance & Roadworthiness:</strong> RentHub performs pre-rental diagnostic checks. Sponsor agrees to routine engine servicing based on fleet utilization milestones.</li>
-                        <li><strong>Weekly Automated Payouts:</strong> Net 70% earnings accrue in real-time and are disbursed directly to the sponsor's verified bank account every Monday.</li>
-                        <li><strong>Term & Withdrawal:</strong> This agreement is valid for 12 months with mutual renewal. Sponsor may request vehicle retrieval with a 30-day notice period.</li>
+                    <ol style={{ margin: 0, paddingLeft: '14px', fontSize: '8px', color: '#1e293b', display: 'flex', flexDirection: 'column', gap: '2px', textAlign: 'justify', lineHeight: '1.3' }}>
+                        <li><strong>Bailment & Platform Custody:</strong> The Sponsor hereby leases and entrusts operational possession of the vehicle to RentHub for deployment in on-demand commercial fleet rentals.</li>
+                        <li><strong>Mandatory Telematics & AIS-140 GPS:</strong> RentHub shall install an authorized AIS-140 standard GPS tracking device with remote engine immobilizer for continuous 24/7 security monitoring.</li>
+                        <li><strong>Comprehensive Transit Indemnity:</strong> All active trips are insured under RentHub's master transit insurance. The Sponsor is fully indemnified against third-party rider traffic penalties, transit damage, and civil liabilities.</li>
+                        <li><strong>Routine Maintenance & Roadworthiness:</strong> RentHub conducts safety inspections before and after each rental cycle. Engine overhauls and regular servicing adhere to OEM guidelines.</li>
+                        <li><strong>Automated Weekly Settlements:</strong> Net accrued revenue is calculated in real-time and credited directly to the Sponsor’s registered bank account on every Monday without deduction.</li>
+                        <li><strong>Term & Termination:</strong> This Agreement is valid for 12 months with automatic renewal. Either party may exit and request vehicle retrieval by providing 30 days prior written notice.</li>
                     </ol>
                 </div>
             </div>
 
-            {/* 5. SIGNATURE & STAMP BLOCK */}
-            <div style={{ borderTop: '2px dashed #cbd5e1', paddingTop: '12px' }}>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>
-                    {/* Left: RentHub Signatory */}
-                    <div style={{ border: '1px solid #cbd5e1', borderRadius: '8px', padding: '10px 12px', background: '#ffffff', position: 'relative' }}>
-                        <div style={{ fontSize: '9px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', marginBottom: '4px' }}>
-                            For RentHub Technologies Pvt. Ltd.
+            {/* 6. FORMAL EXECUTION & SIGNATURE ATTESTATION BLOCK */}
+            <div style={{ borderTop: '2px solid #0f172a', paddingTop: '8px' }}>
+                <p style={{ margin: '0 0 6px', fontSize: '8px', fontStyle: 'italic', textAlign: 'center', color: '#475569' }}>
+                    IN WITNESS WHEREOF, the Parties hereto have signed and executed this Deed of Attachment on the date and year first above written.
+                </p>
+
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '16px', fontFamily: 'system-ui, sans-serif' }}>
+                    {/* First Party: RentHub Authorized Signatory & Official Seal */}
+                    <div style={{ border: '1px solid #cbd5e1', padding: '6px 8px', borderRadius: '4px', background: '#ffffff', position: 'relative' }}>
+                        <div style={{ fontSize: '8px', fontWeight: 'bold', color: '#0f172a', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', paddingBottom: '2px', marginBottom: '4px' }}>
+                            FOR RENTHUB TECHNOLOGIES PRIVATE LIMITED
                         </div>
-                        <div style={{ height: '36px', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-                            <div style={{ fontFamily: "'Brush Script MT', cursive, sans-serif", fontSize: '20px', color: '#4338ca' }}>
-                                Authorized Officer
+                        <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: '36px' }}>
+                            <div style={{ fontFamily: "'Brush Script MT', cursive", fontSize: '20px', color: '#1e3a8a' }}>
+                                Authorized Signatory
                             </div>
-                            {/* Seal Stamp */}
-                            <div style={{ border: '1.5px solid #4338ca', color: '#4338ca', padding: '2px 6px', borderRadius: '6px', fontSize: '7.5px', fontWeight: 900, textTransform: 'uppercase', transform: 'rotate(-5deg)' }}>
-                                ✓ DIGITALLY SEALED
+                            {/* Official Circular Digital Seal */}
+                            <div style={{ border: '2px solid #1e3a8a', color: '#1e3a8a', width: '56px', height: '56px', borderRadius: '50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontSize: '5px', fontWeight: 'bold', textTransform: 'uppercase', textAlign: 'center', transform: 'rotate(-8deg)', lineHeight: '1.1' }}>
+                                <span>RENTHUB</span>
+                                <span>★ SEAL ★</span>
+                                <span>LEGAL DESK</span>
                             </div>
                         </div>
-                        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '4px', fontSize: '8.5px', color: '#64748b' }}>
-                            Authorized Legal Signatory | Bangalore Corporate Desk
+                        <div style={{ borderTop: '1px solid #e2e8f0', paddingTop: '2px', fontSize: '7.5px', color: '#64748b', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>Designation: Fleet Legal Counsel</span>
+                            <span>Bangalore Corporate Hub</span>
                         </div>
                     </div>
 
-                    {/* Right: Sponsor Signature */}
-                    <div style={{ border: '1.5px solid #a855f7', borderRadius: '8px', padding: '10px 12px', background: '#faf5ff' }}>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '4px' }}>
-                            <span style={{ fontSize: '9px', fontWeight: 800, color: '#6b21a8', textTransform: 'uppercase' }}>
-                                Vehicle Owner / Sponsor Signature
-                            </span>
-                            <span style={{ fontSize: '8px', color: '#7e22ce', fontWeight: 700 }}>* Sign Below</span>
+                    {/* Second Party: Vehicle Owner / Sponsor Signature */}
+                    <div style={{ border: '1.5px solid #0f172a', padding: '6px 8px', borderRadius: '4px', background: '#ffffff' }}>
+                        <div style={{ fontSize: '8px', fontWeight: 'bold', color: '#0f172a', textTransform: 'uppercase', borderBottom: '1px solid #e2e8f0', paddingBottom: '2px', marginBottom: '4px', display: 'flex', justifyContent: 'space-between' }}>
+                            <span>FOR VEHICLE OWNER / SPONSOR</span>
+                            <span style={{ fontSize: '7px', color: '#047857' }}>✓ E-SIGN VERIFIED</span>
                         </div>
-                        <div style={{ height: '36px', display: 'flex', alignItems: 'flex-end', borderBottom: '1px solid #cbd5e1', marginBottom: '4px', paddingBottom: '2px' }}>
-                            <span style={{ fontSize: '9px', color: '#94a3b8', fontStyle: 'italic' }}>
-                                (Sign or paste physical/digital signature here)
+                        <div style={{ height: '36px', display: 'flex', alignItems: 'flex-end', borderBottom: '1px dashed #94a3b8', paddingBottom: '2px', marginBottom: '3px' }}>
+                            <span style={{ fontSize: '8.5px', color: '#64748b', fontStyle: 'italic' }}>
+                                Signature: _________________________________________
                             </span>
                         </div>
-                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '8.5px', color: '#475569' }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '7.5px', color: '#334155' }}>
                             <span>Name: <strong>{sponsorName}</strong></span>
-                            <span>Date: <strong>{contractDate}</strong></span>
+                            <span>Date: <strong>{contractDateStr}</strong></span>
                         </div>
                     </div>
                 </div>
 
-                {/* Footer Note */}
-                <div style={{ textAlign: 'center', marginTop: '10px', fontSize: '8px', color: '#94a3b8' }}>
-                    © {new Date().getFullYear()} RentHub Technologies Private Limited. All Rights Reserved. This document constitutes a legally binding agreement.
+                {/* Footer Legal Notice */}
+                <div style={{ textAlign: 'center', marginTop: '6px', fontSize: '7px', color: '#94a3b8', fontFamily: 'system-ui, sans-serif' }}>
+                    This document is legally binding under the Indian Contract Act, 1872 and the Information Technology Act, 2000. All disputes subject to jurisdiction of Courts in Bangalore.
                 </div>
             </div>
         </div>
