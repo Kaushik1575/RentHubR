@@ -937,10 +937,13 @@ exports.lookupTracking = async (req, res) => {
             tracking_id: trackingId,
             name: request.name || details.name,
             model: request.model || details.model,
-            vehicle_type: request.vehicle_type || 'bike',
+            vehicle_type: request.vehicle_type || details.vehicle_type || 'bike',
             year: request.year || details.year,
             price: request.price || details.price,
             registration_number: request.registration_number || details.registration_number,
+            color: details.color || details.survey_report?.color || request.color || 'Matte Black',
+            chassis_number: details.chassis_number || details.survey_report?.chassis_number || request.chassis_number || null,
+            engine_number: details.engine_number || details.survey_report?.engine_number || request.engine_number || null,
             current_stage: currentStage,
             stage_name: details.stage_name || null,
             status: request.status,
@@ -965,7 +968,8 @@ exports.lookupTracking = async (req, res) => {
             terms_accepted: isTermsAgreed,
             terms_declined: isTermsAgreed ? false : (details.terms_declined || false),
             terms_accepted_at: details.terms_accepted_at || details.agreement_accepted_at || null,
-            sponsor: request.sponsors
+            sponsor: request.sponsors,
+            vehicle_details: details
         });
     } catch (error) {
         console.error('Error in lookupTracking:', error);
