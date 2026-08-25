@@ -137,28 +137,40 @@ class SponsorModel {
         if (reqError) throw reqError;
         if (!request) throw new Error('Request not found');
 
-        // 2. Prepare data for main table
+        // 2. Prepare data matching exact Supabase table schema
+        const details = request.vehicle_details || {};
+        const vehicleType = (request.vehicle_type || details.type || 'bike').toLowerCase();
+        let tableName = 'bikes';
+        if (vehicleType === 'car') tableName = 'cars';
+        else if (vehicleType === 'scooty') tableName = 'scooty';
+
+        const fullName = `${request.name || details.name || ''} ${request.model || details.model || ''}`.trim() || 'Vehicle';
         const vehicleData = {
-            ...request.vehicle_details,
+            name: fullName,
+            engine: details.engine || details.engine_cc || (vehicleType === 'car' ? '1200cc' : '150cc'),
+            fuel_type: details.fuel_type || 'Petrol',
+            price: parseFloat(details.pricing_terms?.proposed_price || request.price || details.price || 65),
+            image_url: request.image_url || details.image_url || null,
+            sponsor_id: request.sponsor_id,
             is_approved: true,
             is_available: true
         };
 
-        // Determine table
-        let tableName;
-        if (request.vehicle_type === 'bike') tableName = 'bikes';
-        else if (request.vehicle_type === 'car') tableName = 'cars';
-        else if (request.vehicle_type === 'scooty') tableName = 'scooty';
-        else throw new Error('Invalid vehicle type');
+        if (tableName === 'bikes') {
+            vehicleData.rc_url = request.rc_url || details.rc_url || null;
+        }
 
         // 3. Insert into main table
-        const { data: string, error: insertError } = await supabase
+        const { data: inserted, error: insertError } = await supabase
             .from(tableName)
             .insert([vehicleData])
             .select()
             .single();
 
-        if (insertError) throw insertError;
+        if (insertError) {
+            console.error(`Error inserting into ${tableName}:`, insertError);
+            throw insertError;
+        }
 
         // 4. Update request status
         await supabase
