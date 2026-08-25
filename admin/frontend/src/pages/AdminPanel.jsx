@@ -1359,25 +1359,59 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
                                                                 {/* Step 7 -> Step 8 */}
                                                                 {currentStage === 7 && (
-                                                                    <button
-                                                                        style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
-                                                                        onClick={() => {
-                                                                            setStageFormData({ requestId: r.id, device_imei: `86420904${Date.now().toString().slice(-7)}`, notes: 'GPS tracker installed and paired' });
-                                                                            setModal({ type: 'stageGPSInstallation', data: r });
-                                                                        }}
-                                                                    >
-                                                                        <i className="fas fa-map-marker-alt"></i> Step 8: Install & Pair GPS Tracker
-                                                                    </button>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                        {(r.signed_contract_url || r.vehicle_details?.signed_contract_url) && (
+                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '8px 10px' }}>
+                                                                                <span style={{ fontSize: '0.78rem', color: '#065f46', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                                    <i className="fas fa-file-check" style={{ color: '#059669' }}></i> Verified Signed Contract
+                                                                                </span>
+                                                                                <a
+                                                                                    href={r.signed_contract_url || r.vehicle_details?.signed_contract_url}
+                                                                                    target="_blank"
+                                                                                    rel="noreferrer"
+                                                                                    style={{ background: '#059669', color: '#fff', padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, textDecoration: 'none' }}
+                                                                                >
+                                                                                    <i className="fas fa-external-link-alt"></i> View Contract
+                                                                                </a>
+                                                                            </div>
+                                                                        )}
+                                                                        <button
+                                                                            style={{ width: '100%', padding: '12px', background: 'linear-gradient(135deg, #4f46e5, #6366f1)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '800', fontSize: '0.9rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }}
+                                                                            onClick={() => {
+                                                                                setStageFormData({ requestId: r.id, device_imei: `86420904${Date.now().toString().slice(-7)}`, notes: 'GPS tracker installed and paired' });
+                                                                                setModal({ type: 'stageGPSInstallation', data: r });
+                                                                            }}
+                                                                        >
+                                                                            <i className="fas fa-map-marker-alt"></i> Step 8: Install & Pair GPS Tracker
+                                                                        </button>
+                                                                    </div>
                                                                 )}
 
-                                                                {/* Step 8 -> Step 9 */}
+                                                                {/* Step 8 -> Step 9 (Vehicle Fleet Live Launch) */}
                                                                 {currentStage === 8 && (
-                                                                    <button
-                                                                        style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)' }}
-                                                                        onClick={() => handleAdvanceStage(r.id, 9, { notes: 'Vehicle published live to fleet' })}
-                                                                    >
-                                                                        <i className="fas fa-rocket"></i> Step 9: Launch & Push Vehicle LIVE! 🟢
-                                                                    </button>
+                                                                    <div style={{ display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                                                                        {(r.signed_contract_url || r.vehicle_details?.signed_contract_url) && (
+                                                                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '8px', padding: '8px 10px' }}>
+                                                                                <span style={{ fontSize: '0.78rem', color: '#065f46', fontWeight: 800, display: 'flex', alignItems: 'center', gap: '4px' }}>
+                                                                                    <i className="fas fa-file-check" style={{ color: '#059669' }}></i> Signed Contract on File
+                                                                                </span>
+                                                                                <a
+                                                                                    href={r.signed_contract_url || r.vehicle_details?.signed_contract_url}
+                                                                                    target="_blank"
+                                                                                    rel="noreferrer"
+                                                                                    style={{ background: '#059669', color: '#fff', padding: '3px 8px', borderRadius: '6px', fontSize: '0.72rem', fontWeight: 800, textDecoration: 'none' }}
+                                                                                >
+                                                                                    <i className="fas fa-external-link-alt"></i> View Contract
+                                                                                </a>
+                                                                            </div>
+                                                                        )}
+                                                                        <button
+                                                                            style={{ width: '100%', padding: '14px', background: 'linear-gradient(135deg, #10b981, #059669)', color: '#fff', border: 'none', borderRadius: '8px', fontWeight: '900', fontSize: '1rem', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', boxShadow: '0 4px 15px rgba(16, 185, 129, 0.4)' }}
+                                                                            onClick={() => handleAdvanceStage(r.id, 9, { notes: 'Vehicle published live to customer rental fleet' })}
+                                                                        >
+                                                                            <i className="fas fa-rocket"></i> Step 9: Launch & Push Vehicle LIVE! 🟢
+                                                                        </button>
+                                                                    </div>
                                                                 )}
                                                             </>
                                                         )}
