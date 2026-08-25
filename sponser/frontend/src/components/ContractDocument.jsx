@@ -7,11 +7,12 @@ export const downloadContractPDF = async (elementRef, filename = 'RentHub_Partne
     try {
         const element = elementRef.current;
         const canvas = await html2canvas(element, {
-            scale: 2,
+            scale: 2.2,
             useCORS: true,
             logging: false,
             backgroundColor: '#ffffff',
-            windowWidth: 794
+            scrollX: 0,
+            scrollY: 0
         });
 
         const imgData = canvas.toDataURL('image/jpeg', 0.98);
@@ -21,10 +22,26 @@ export const downloadContractPDF = async (elementRef, filename = 'RentHub_Partne
             format: 'a4'
         });
 
-        const pdfWidth = pdf.internal.pageSize.getWidth();
-        const pdfHeight = pdf.internal.pageSize.getHeight();
+        const pageWidth = pdf.internal.pageSize.getWidth(); // 210 mm
+        const pageHeight = pdf.internal.pageSize.getHeight(); // 297 mm
 
-        pdf.addImage(imgData, 'JPEG', 0, 0, pdfWidth, pdfHeight);
+        // Calculate proportions so it fits 100% inside 1 single A4 page with 5mm margins
+        const margin = 5;
+        const printableWidth = pageWidth - (margin * 2);
+        const printableHeight = pageHeight - (margin * 2);
+
+        let imgWidth = printableWidth;
+        let imgHeight = (canvas.height * imgWidth) / canvas.width;
+
+        if (imgHeight > printableHeight) {
+            imgHeight = printableHeight;
+            imgWidth = (canvas.width * imgHeight) / canvas.height;
+        }
+
+        const posX = margin + ((printableWidth - imgWidth) / 2);
+        const posY = margin + ((printableHeight - imgHeight) / 2);
+
+        pdf.addImage(imgData, 'JPEG', posX, posY, imgWidth, imgHeight);
         pdf.save(filename);
         return true;
     } catch (err) {
@@ -84,12 +101,12 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
             ref={ref}
             id="renthub-partnership-agreement"
             style={{
-                width: '794px',
-                height: '1120px',
-                padding: '24px 30px',
+                width: '780px',
+                height: '1060px',
+                padding: '20px 24px',
                 backgroundColor: '#ffffff',
                 color: '#0f172a',
-                fontFamily: "'Segoe UI', Roboto, Helvetica, Arial, sans-serif",
+                fontFamily: "'Segoe UI', Roboto, -apple-system, BlinkMacSystemFont, Arial, sans-serif",
                 boxSizing: 'border-box',
                 position: 'relative',
                 display: 'flex',
@@ -97,26 +114,27 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
                 justifyContent: 'space-between',
                 border: '1.5px solid #0f172a',
                 background: '#ffffff',
-                margin: '0 auto'
+                margin: '0 auto',
+                overflow: 'hidden'
             }}
         >
-            {/* Inner Border Frame */}
-            <div style={{ position: 'absolute', top: '5px', left: '5px', right: '5px', bottom: '5px', border: '1px solid #cbd5e1', pointerEvents: 'none' }} />
+            {/* Elegant Inner Border Frame */}
+            <div style={{ position: 'absolute', top: '4px', left: '4px', right: '4px', bottom: '4px', border: '1px solid #cbd5e1', pointerEvents: 'none' }} />
 
             <div>
-                {/* 1. HEADER */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: '2px solid #0f172a', paddingBottom: '8px', marginBottom: '8px' }}>
+                {/* 1. TOP HEADER */}
+                <table style={{ width: '100%', borderCollapse: 'collapse', borderBottom: '2px solid #0f172a', paddingBottom: '6px', marginBottom: '6px' }}>
                     <tbody>
                         <tr>
-                            <td style={{ width: '50%', verticalAlign: 'middle', padding: 0 }}>
-                                <div style={{ fontSize: '20px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px' }}>
+                            <td style={{ width: '60%', verticalAlign: 'middle', padding: 0 }}>
+                                <div style={{ fontSize: '18px', fontWeight: 900, color: '#0f172a', letterSpacing: '-0.5px' }}>
                                     RENTHUB <span style={{ color: '#2563eb' }}>MOBILITY</span>
                                 </div>
-                                <div style={{ fontSize: '8px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px', marginTop: '1px' }}>
+                                <div style={{ fontSize: '7.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.4px', marginTop: '1px' }}>
                                     Smart Urban Fleet Partnership Network
                                 </div>
                             </td>
-                            <td style={{ width: '50%', textAlign: 'right', verticalAlign: 'middle', padding: 0 }}>
+                            <td style={{ width: '40%', textAlign: 'right', verticalAlign: 'middle', padding: 0 }}>
                                 <div style={{ display: 'inline-block', border: '1px solid #2563eb', background: '#eff6ff', borderRadius: '4px', padding: '3px 8px', textAlign: 'right' }}>
                                     <div style={{ fontSize: '7.5px', fontWeight: 800, color: '#1e40af' }}>AGREEMENT ID: {agreementId}</div>
                                     <div style={{ fontSize: '7.5px', color: '#334155', marginTop: '1px' }}>DATE: <strong>{contractDateStr}</strong></div>
@@ -127,40 +145,40 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
                 </table>
 
                 {/* 2. TITLE & PREAMBLE */}
-                <div style={{ textAlign: 'center', marginBottom: '8px' }}>
-                    <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                <div style={{ textAlign: 'center', marginBottom: '6px' }}>
+                    <div style={{ fontSize: '12px', fontWeight: 900, color: '#0f172a', textTransform: 'uppercase', letterSpacing: '0.4px' }}>
                         COMMERCIAL VEHICLE SPONSOR PARTNERSHIP AGREEMENT
                     </div>
-                    <div style={{ fontSize: '8px', color: '#2563eb', fontWeight: 600, marginTop: '1px' }}>
+                    <div style={{ fontSize: '7.5px', color: '#2563eb', fontWeight: 600, marginTop: '1px' }}>
                         Executed under the Indian Contract Act, 1872 & Motor Vehicles Operational Guidelines
                     </div>
-                    <div style={{ fontSize: '8px', color: '#334155', textAlign: 'justify', lineHeight: '1.35', marginTop: '4px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '5px 8px' }}>
+                    <div style={{ fontSize: '7.5px', color: '#334155', textAlign: 'justify', lineHeight: '1.3', marginTop: '3px', background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '4px 8px' }}>
                         <strong>THIS AGREEMENT</strong> is entered into on <strong>{contractDateStr}</strong> by and between <strong>RentHub Mobility Private Limited</strong> (Platform Operator / "RentHub") of the FIRST PART; and <strong>{sponsorName}</strong> (Vehicle Sponsor / "Owner") of the SECOND PART for commercial fleet deployment.
                     </div>
                 </div>
 
                 {/* 3. PARTIES DETAILS TABLE */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px', fontSize: '8px', border: '1px solid #cbd5e1' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px', fontSize: '7.5px', border: '1px solid #cbd5e1' }}>
                     <thead>
                         <tr style={{ background: '#f1f5f9', borderBottom: '1px solid #cbd5e1' }}>
-                            <th style={{ width: '50%', padding: '4px 8px', textAlign: 'left', fontWeight: 800, color: '#1e40af', borderRight: '1px solid #cbd5e1' }}>
+                            <th style={{ width: '50%', padding: '3px 6px', textAlign: 'left', fontWeight: 800, color: '#1e40af', borderRight: '1px solid #cbd5e1' }}>
                                 [PARTY 1] PLATFORM OPERATOR
                             </th>
-                            <th style={{ width: '50%', padding: '4px 8px', textAlign: 'left', fontWeight: 800, color: '#15803d' }}>
+                            <th style={{ width: '50%', padding: '3px 6px', textAlign: 'left', fontWeight: 800, color: '#15803d' }}>
                                 [PARTY 2] VEHICLE SPONSOR / OWNER
                             </th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td style={{ padding: '6px 8px', verticalAlign: 'top', borderRight: '1px solid #cbd5e1', lineHeight: '1.4' }}>
-                                <strong style={{ fontSize: '9px', color: '#0f172a' }}>RentHub Mobility Private Limited</strong><br />
+                            <td style={{ padding: '4px 6px', verticalAlign: 'top', borderRight: '1px solid #cbd5e1', lineHeight: '1.35' }}>
+                                <strong style={{ fontSize: '8.5px', color: '#0f172a' }}>RentHub Mobility Private Limited</strong><br />
                                 <span style={{ color: '#475569' }}>CIN: U72900KA2024PTC189210</span><br />
                                 <span style={{ color: '#475569' }}>Address: Bhubaneswar, Odisha, India</span><br />
                                 <span style={{ color: '#475569' }}>Phone: +91 98765 43210 | Email: support@renthub.in</span>
                             </td>
-                            <td style={{ padding: '6px 8px', verticalAlign: 'top', lineHeight: '1.4' }}>
-                                <strong style={{ fontSize: '9px', color: '#0f172a' }}>{sponsorName}</strong> (Sponsor ID: {sponsorId})<br />
+                            <td style={{ padding: '4px 6px', verticalAlign: 'top', lineHeight: '1.35' }}>
+                                <strong style={{ fontSize: '8.5px', color: '#0f172a' }}>{sponsorName}</strong> (Sponsor ID: {sponsorId})<br />
                                 <span style={{ color: '#475569' }}>Phone: {sponsorPhone} | Email: {sponsorEmail}</span><br />
                                 <span style={{ color: '#475569' }}>Address: {sponsorAddress}</span>
                             </td>
@@ -169,72 +187,72 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
                 </table>
 
                 {/* 4. SCHEDULE 'A': VEHICLE ASSET DETAILS */}
-                <div style={{ fontSize: '8.5px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', marginBottom: '2px' }}>
+                <div style={{ fontSize: '8px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', marginBottom: '2px' }}>
                     1. SCHEDULE 'A' — VEHICLE ASSET SPECIFICATIONS
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px', fontSize: '8px', border: '1px solid #0f172a' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px', fontSize: '7.5px', border: '1px solid #0f172a' }}>
                     <thead>
                         <tr style={{ background: '#0f172a', color: '#ffffff' }}>
-                            <th style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #334155' }}>Type</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #334155' }}>Make & Model</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #334155' }}>Registration No.</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #334155' }}>Year</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #334155' }}>Color</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'center', borderRight: '1px solid #334155' }}>Chassis No.</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'center' }}>Engine No.</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'center', borderRight: '1px solid #334155' }}>Type</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'center', borderRight: '1px solid #334155' }}>Make & Model</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'center', borderRight: '1px solid #334155' }}>Registration No.</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'center', borderRight: '1px solid #334155' }}>Year</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'center', borderRight: '1px solid #334155' }}>Color</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'center', borderRight: '1px solid #334155' }}>Chassis No.</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'center' }}>Engine No.</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr style={{ textAlign: 'center', background: '#ffffff', color: '#0f172a' }}>
-                            <td style={{ padding: '4px 6px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', fontWeight: 700 }}>{vehicleType}</td>
-                            <td style={{ padding: '4px 6px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', fontWeight: 700 }}>{vehicleName}</td>
-                            <td style={{ padding: '4px 6px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', fontWeight: 800, color: '#1e40af' }}>{regNumber}</td>
-                            <td style={{ padding: '4px 6px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>{vehicleYear}</td>
-                            <td style={{ padding: '4px 6px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>{color}</td>
-                            <td style={{ padding: '4px 6px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', fontFamily: 'monospace' }}>{chassisNo}</td>
-                            <td style={{ padding: '4px 6px', borderBottom: '1px solid #cbd5e1', fontFamily: 'monospace' }}>{engineNo}</td>
+                            <td style={{ padding: '3px 5px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', fontWeight: 700 }}>{vehicleType}</td>
+                            <td style={{ padding: '3px 5px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', fontWeight: 700 }}>{vehicleName}</td>
+                            <td style={{ padding: '3px 5px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', fontWeight: 800, color: '#1e40af' }}>{regNumber}</td>
+                            <td style={{ padding: '3px 5px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>{vehicleYear}</td>
+                            <td style={{ padding: '3px 5px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1' }}>{color}</td>
+                            <td style={{ padding: '3px 5px', borderRight: '1px solid #cbd5e1', borderBottom: '1px solid #cbd5e1', fontFamily: 'monospace' }}>{chassisNo}</td>
+                            <td style={{ padding: '3px 5px', borderBottom: '1px solid #cbd5e1', fontFamily: 'monospace' }}>{engineNo}</td>
                         </tr>
                     </tbody>
                 </table>
 
                 {/* 5. SCHEDULE 'B': REVENUE SHARING & COMMERCIAL TERMS */}
-                <div style={{ fontSize: '8.5px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', marginBottom: '2px' }}>
+                <div style={{ fontSize: '8px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', marginBottom: '2px' }}>
                     2. SCHEDULE 'B' — COMMERCIAL CONSIDERATION & REVENUE SPLIT
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px', fontSize: '8px', border: '1px solid #cbd5e1' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px', fontSize: '7.5px', border: '1px solid #cbd5e1' }}>
                     <thead>
                         <tr style={{ background: '#f8fafc', borderBottom: '1px solid #cbd5e1' }}>
-                            <th style={{ padding: '4px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1' }}>Base Customer Tariff</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1', color: '#15803d' }}>Sponsor Share ({sponsorPercent}%)</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'left', borderRight: '1px solid #cbd5e1' }}>RentHub Commission ({platformPercent}%)</th>
-                            <th style={{ padding: '4px 6px', textAlign: 'left' }}>Settlement Cycle</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'left', borderRight: '1px solid #cbd5e1' }}>Base Customer Tariff</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'left', borderRight: '1px solid #cbd5e1', color: '#15803d' }}>Sponsor Share ({sponsorPercent}%)</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'left', borderRight: '1px solid #cbd5e1' }}>RentHub Commission ({platformPercent}%)</th>
+                            <th style={{ padding: '3px 5px', textAlign: 'left' }}>Settlement Cycle</th>
                         </tr>
                     </thead>
                     <tbody>
                         <tr>
-                            <td style={{ padding: '4px 6px', borderRight: '1px solid #cbd5e1', fontWeight: 700 }}>₹{hourlyRate.toFixed(2)}/hr (₹{dailyRate.toFixed(2)}/day)</td>
-                            <td style={{ padding: '4px 6px', borderRight: '1px solid #cbd5e1', fontWeight: 800, color: '#15803d' }}>₹{sponsorHourlyPayout}/hr (₹{sponsorDailyPayout.toFixed(2)}/day)</td>
-                            <td style={{ padding: '4px 6px', borderRight: '1px solid #cbd5e1' }}>₹{(hourlyRate * (platformPercent / 100)).toFixed(1)}/hr ({platformPercent}%)</td>
-                            <td style={{ padding: '4px 6px', fontWeight: 700 }}>Weekly Auto-Transfer (Every Monday)</td>
+                            <td style={{ padding: '3px 5px', borderRight: '1px solid #cbd5e1', fontWeight: 700 }}>₹{hourlyRate.toFixed(2)}/hr (₹{dailyRate.toFixed(2)}/day)</td>
+                            <td style={{ padding: '3px 5px', borderRight: '1px solid #cbd5e1', fontWeight: 800, color: '#15803d' }}>₹{sponsorHourlyPayout}/hr (₹{sponsorDailyPayout.toFixed(2)}/day)</td>
+                            <td style={{ padding: '3px 5px', borderRight: '1px solid #cbd5e1' }}>₹{(hourlyRate * (platformPercent / 100)).toFixed(1)}/hr ({platformPercent}%)</td>
+                            <td style={{ padding: '3px 5px', fontWeight: 700 }}>Weekly Auto-Transfer (Every Monday)</td>
                         </tr>
                     </tbody>
                 </table>
 
                 {/* 6. OPERATIVE CLAUSES */}
-                <div style={{ fontSize: '8.5px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', marginBottom: '2px' }}>
+                <div style={{ fontSize: '8px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', marginBottom: '2px' }}>
                     3. KEY OPERATIONAL & STATUTORY COVENANTS
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px', fontSize: '7.5px', border: '1px solid #cbd5e1', background: '#fafafa' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px', fontSize: '7px', border: '1px solid #cbd5e1', background: '#fafafa' }}>
                     <tbody>
                         <tr>
-                            <td style={{ width: '50%', padding: '6px 8px', verticalAlign: 'top', borderRight: '1px solid #cbd5e1', lineHeight: '1.35' }}>
+                            <td style={{ width: '50%', padding: '4px 6px', verticalAlign: 'top', borderRight: '1px solid #cbd5e1', lineHeight: '1.3' }}>
                                 <strong>RentHub Responsibilities:</strong><br />
                                 • Provide 24x7 app technology, verified bookings & payment gateway.<br />
                                 • Fit certified AIS-140 anti-theft GPS tracker & remote immobilizer.<br />
                                 • Comprehensive transit insurance coverage on all active trips.<br />
                                 • Disburse automated 70% revenue share weekly without delay.
                             </td>
-                            <td style={{ width: '50%', padding: '6px 8px', verticalAlign: 'top', lineHeight: '1.35' }}>
+                            <td style={{ width: '50%', padding: '4px 6px', verticalAlign: 'top', lineHeight: '1.3' }}>
                                 <strong>Sponsor / Owner Responsibilities:</strong><br />
                                 • Ensure vehicle possesses valid RC, Insurance, and PUC certificates.<br />
                                 • Maintain vehicle in clean, roadworthy, and safe operational condition.<br />
@@ -246,12 +264,12 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
                 </table>
 
                 {/* 7. VERIFICATION & DURATION CARDS */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '8px', fontSize: '7.5px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '6px', fontSize: '7px' }}>
                     <tbody>
                         <tr>
                             {/* Card 1: Verified Docs */}
-                            <td style={{ width: '33%', padding: '5px 8px', border: '1px solid #bbf7d0', background: '#f0fdf4', verticalAlign: 'top', borderRadius: '4px' }}>
-                                <strong style={{ color: '#15803d', fontSize: '8px', display: 'block', marginBottom: '2px' }}>DOCUMENTS VERIFIED</strong>
+                            <td style={{ width: '33%', padding: '4px 6px', border: '1px solid #bbf7d0', background: '#f0fdf4', verticalAlign: 'top', borderRadius: '4px' }}>
+                                <strong style={{ color: '#15803d', fontSize: '7.5px', display: 'block', marginBottom: '1px' }}>DOCUMENTS VERIFIED</strong>
                                 <div>{hasRC ? '✓' : '✗'} RC (Registration Certificate)</div>
                                 <div>{hasInsurance ? '✓' : '✗'} Insurance Policy</div>
                                 <div>{hasPUC ? '✓' : '✗'} PUC Certificate</div>
@@ -263,20 +281,20 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
                             <td style={{ width: '1%' }}></td>
 
                             {/* Card 2: Duration */}
-                            <td style={{ width: '33%', padding: '5px 8px', border: '1px solid #bfdbfe', background: '#f8fbff', verticalAlign: 'top', borderRadius: '4px' }}>
-                                <strong style={{ color: '#1e40af', fontSize: '8px', display: 'block', marginBottom: '2px' }}>AGREEMENT DURATION</strong>
+                            <td style={{ width: '33%', padding: '4px 6px', border: '1px solid #bfdbfe', background: '#f8fbff', verticalAlign: 'top', borderRadius: '4px' }}>
+                                <strong style={{ color: '#1e40af', fontSize: '7.5px', display: 'block', marginBottom: '1px' }}>AGREEMENT DURATION</strong>
                                 <div>Tenure: <strong>12 Months Active</strong></div>
                                 <div>Valid From: <strong>{contractDateStr}</strong></div>
                                 <div>Valid To: <strong>{validToStr}</strong></div>
-                                <div style={{ fontSize: '6.5px', color: '#64748b', marginTop: '2px' }}>Renewal subject to mutual consensus.</div>
+                                <div style={{ fontSize: '6px', color: '#64748b', marginTop: '1px' }}>Renewal subject to mutual consensus.</div>
                             </td>
 
                             <td style={{ width: '1%' }}></td>
 
                             {/* Card 3: Termination */}
-                            <td style={{ width: '32%', padding: '5px 8px', border: '1px solid #fecaca', background: '#fef2f2', verticalAlign: 'top', borderRadius: '4px' }}>
-                                <strong style={{ color: '#b91c1c', fontSize: '8px', display: 'block', marginBottom: '2px' }}>TERMINATION CLAUSE</strong>
-                                <div style={{ lineHeight: '1.3' }}>
+                            <td style={{ width: '32%', padding: '4px 6px', border: '1px solid #fecaca', background: '#fef2f2', verticalAlign: 'top', borderRadius: '4px' }}>
+                                <strong style={{ color: '#b91c1c', fontSize: '7.5px', display: 'block', marginBottom: '1px' }}>TERMINATION CLAUSE</strong>
+                                <div style={{ lineHeight: '1.25' }}>
                                     Either party may terminate this agreement with <strong>15-day prior written notice</strong> for breach of terms, vehicle withdrawal, or operational policy violation.
                                 </div>
                             </td>
@@ -286,46 +304,46 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
             </div>
 
             {/* 8. SIGNATURES & BOTTOM SEAL */}
-            <div>
-                <div style={{ fontSize: '8.5px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', marginBottom: '2px' }}>
+            <div style={{ marginTop: 'auto' }}>
+                <div style={{ fontSize: '8px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', marginBottom: '2px' }}>
                     4. EXECUTION & ATTESTATION
                 </div>
-                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1px solid #0f172a', background: '#ffffff', marginBottom: '6px' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', border: '1.5px solid #0f172a', background: '#ffffff', marginBottom: '4px' }}>
                     <tbody>
                         <tr>
                             {/* Operator Signatory */}
-                            <td style={{ width: '42%', padding: '6px 10px', verticalAlign: 'top', borderRight: '1px solid #cbd5e1' }}>
-                                <div style={{ fontSize: '7.5px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
+                            <td style={{ width: '40%', padding: '5px 8px', verticalAlign: 'top', borderRight: '1px solid #cbd5e1' }}>
+                                <div style={{ fontSize: '7px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase' }}>
                                     For RentHub Mobility Private Limited
                                 </div>
-                                <div style={{ fontFamily: "'Brush Script MT', cursive, sans-serif", fontSize: '20px', color: '#1e3a8a', height: '28px', display: 'flex', alignItems: 'center' }}>
+                                <div style={{ fontFamily: "'Brush Script MT', cursive, sans-serif", fontSize: '18px', color: '#1e3a8a', height: '24px', display: 'flex', alignItems: 'center' }}>
                                     G. Reddy
                                 </div>
-                                <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '2px', fontSize: '7px', color: '#64748b' }}>
+                                <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '1px', fontSize: '6.5px', color: '#64748b' }}>
                                     <div>Authorized Legal Signatory</div>
                                     <div>Date: {contractDateStr}</div>
                                 </div>
                             </td>
 
                             {/* Official Stamp */}
-                            <td style={{ width: '16%', padding: '4px', textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid #cbd5e1', background: '#f8fafc' }}>
-                                <div style={{ width: '48px', height: '48px', margin: '0 auto', borderRadius: '50%', border: '1.5px solid #1e40af', color: '#1e40af', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontSize: '5px', fontWeight: 800, textTransform: 'uppercase', lineHeight: 1.1, transform: 'rotate(-5deg)' }}>
+                            <td style={{ width: '20%', padding: '2px', textAlign: 'center', verticalAlign: 'middle', borderRight: '1px solid #cbd5e1', background: '#f8fafc' }}>
+                                <div style={{ width: '44px', height: '44px', margin: '0 auto', borderRadius: '50%', border: '1.5px solid #1e40af', color: '#1e40af', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', fontSize: '4.5px', fontWeight: 800, textTransform: 'uppercase', lineHeight: 1.05, transform: 'rotate(-4deg)' }}>
                                     <span>RENTHUB</span>
-                                    <span style={{ fontSize: '7px' }}>★ RH ★</span>
+                                    <span style={{ fontSize: '6.5px' }}>★ RH ★</span>
                                     <span>VERIFIED</span>
                                 </div>
                             </td>
 
                             {/* Sponsor Signatory */}
-                            <td style={{ width: '42%', padding: '6px 10px', verticalAlign: 'top' }}>
-                                <div style={{ fontSize: '7.5px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between' }}>
+                            <td style={{ width: '40%', padding: '5px 8px', verticalAlign: 'top' }}>
+                                <div style={{ fontSize: '7px', fontWeight: 800, color: '#0f172a', textTransform: 'uppercase', display: 'flex', justifyContent: 'space-between' }}>
                                     <span>Vehicle Sponsor / Owner</span>
-                                    <span style={{ color: '#15803d', fontSize: '6.5px' }}>✓ E-SIGN VERIFIED</span>
+                                    <span style={{ color: '#15803d', fontSize: '6px' }}>✓ E-SIGN VERIFIED</span>
                                 </div>
-                                <div style={{ fontFamily: "'Brush Script MT', cursive, sans-serif", fontSize: '18px', color: '#15803d', height: '28px', display: 'flex', alignItems: 'center' }}>
+                                <div style={{ fontFamily: "'Brush Script MT', cursive, sans-serif", fontSize: '17px', color: '#15803d', height: '24px', display: 'flex', alignItems: 'center' }}>
                                     {sponsorName}
                                 </div>
-                                <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '2px', fontSize: '7px', color: '#64748b' }}>
+                                <div style={{ borderTop: '1px solid #cbd5e1', paddingTop: '1px', fontSize: '6.5px', color: '#64748b' }}>
                                     <div>Signature of Vehicle Owner</div>
                                     <div>Date: {contractDateStr}</div>
                                 </div>
@@ -335,7 +353,7 @@ const ContractDocument = forwardRef(({ trackingData }, ref) => {
                 </table>
 
                 {/* Footer Strip */}
-                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '3px 8px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6.5px', color: '#64748b' }}>
+                <div style={{ background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '4px', padding: '2px 6px', display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: '6px', color: '#64748b' }}>
                     <span>This document is legally enforceable under the Indian Contract Act, 1872 & IT Act, 2000.</span>
                     <span>RentHub Technologies Pvt. Ltd. • www.renthub.in • Support: support@renthub.in</span>
                 </div>
