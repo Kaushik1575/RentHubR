@@ -1455,16 +1455,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {activeTab === 'earnings' && (
                         <div id="earnings" className="content-section active" style={{ padding: '24px' }}>
                             <ComingSoonCard
-                                title="Sponsor Revenue & Yield Management"
-                                subtitle="Automated 70/30 revenue distribution calculator, real-time ROI tracking per sponsored asset, and automated fleet performance disbursements."
+                                title="Sponsor Reports"
+                                subtitle="Detailed earnings and revenue share analytics for vehicle owners."
                                 icon="fas fa-chart-line"
-                                phase="Release 2.5 • Sponsor Ecosystem"
-                                features={[
-                                    "Automated 70% Sponsor Share & 30% Platform split ledger engine",
-                                    "Individual vehicle depreciation & capital recoupment tracker",
-                                    "Automated monthly earnings statement generator for vehicle owners",
-                                    "Multi-sponsor asset syndication and co-ownership distribution"
-                                ]}
                                 onBack={() => setActiveTab('dashboard')}
                             >
                                 <h2>Sponsor Earnings Report</h2>
@@ -1645,16 +1638,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {activeTab === 'withdrawals' && (
                         <div id="withdrawals" className="content-section active" style={{ padding: '24px' }}>
                             <ComingSoonCard
-                                title="Automated Banking & Payout Gateway"
-                                subtitle="Direct multi-bank RTGS/NEFT batch disbursement system with automated penny-drop verification and instantaneous UPI payout rails."
+                                title="Withdrawals Management"
+                                subtitle="Automated payout gateway and financial settlement tracking."
                                 icon="fas fa-money-bill-wave"
-                                phase="Release 2.5 • Financial Core"
-                                features={[
-                                    "Instant bank account verification via NPCI penny-drop API",
-                                    "Automated T+1 daily batch payout disbursements to sponsors",
-                                    "Automated TDS deduction certificate (Form 16A) generation",
-                                    "Comprehensive audit trail & multi-level financial approval workflows"
-                                ]}
                                 onBack={() => setActiveTab('dashboard')}
                             >
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -1832,16 +1818,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {activeTab === 'sponsorPortal' && (
                         <div id="sponsorPortal" className="content-section active" style={{ padding: '24px' }}>
                             <ComingSoonCard
-                                title="Sponsor Partner Portal & Mobile Dashboard"
-                                subtitle="Dedicated partner ecosystem allowing vehicle owners to monitor live GPS telemetry, trip revenue, and maintenance logs in real time."
+                                title="Sponsor Portal"
+                                subtitle="Dedicated partner dashboard and fleet management interface."
                                 icon="fas fa-handshake"
-                                phase="Release 2.5 • Partner Suite"
-                                features={[
-                                    "Real-time vehicle GPS live tracking with geofence security alerts",
-                                    "Instant wallet balance withdrawal via IMPS / UPI auto-payout",
-                                    "Digital contract management & automated yearly agreement renewal",
-                                    "Fleet maintenance scheduling with partner workshop network"
-                                ]}
                                 onBack={() => setActiveTab('dashboard')}
                             >
                                 <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
@@ -1891,16 +1870,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {activeTab === 'reports' && (
                         <div id="reports" className="content-section active" style={{ padding: '24px' }}>
                             <ComingSoonCard
-                                title="Advanced Analytics & Intelligence Reports"
-                                subtitle="Deep fleet performance analytics, customer cohort retention metrics, automated GST reconciliation, and predictive revenue forecasting engine."
+                                title="Analytics & Reports"
+                                subtitle="Advanced fleet performance, revenue insights, and booking metrics."
                                 icon="fas fa-chart-pie"
-                                phase="Release 2.5 • Enterprise Suite"
-                                features={[
-                                    "AI-Powered vehicle utilization & dynamic surge pricing models",
-                                    "Automated monthly GST/TDS tax compliance & invoicing reports",
-                                    "Customer lifetime value (LTV) & churn prediction analytics",
-                                    "Export reports in PDF, XLSX, and live BigQuery/PowerBI connectors"
-                                ]}
                                 onBack={() => setActiveTab('dashboard')}
                             >
                                 <AdminReports token={token} />
