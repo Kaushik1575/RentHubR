@@ -1466,7 +1466,84 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     "Multi-sponsor asset syndication and co-ownership distribution"
                                 ]}
                                 onBack={() => setActiveTab('dashboard')}
-                            />
+                            >
+                                <h2>Sponsor Earnings Report</h2>
+                                {(() => {
+                                    const totalRevenueAll = earnings.reduce((sum, e) => sum + (e.totalRevenue || 0), 0);
+                                    const sponsorShareAll = earnings.reduce((sum, e) => sum + (e.sponsorShare || 0), 0);
+                                    const platformShareAll = earnings.reduce((sum, e) => sum + (e.platformShare || 0), 0);
+                                    const withdrawnAll = earnings.reduce((sum, e) => sum + (e.totalWithdrawn || 0), 0);
+                                    const pendingBalanceAll = earnings.reduce((sum, e) => sum + (e.currentBalance || 0), 0);
+
+                                    return (
+                                        <div className="dashboard-stats" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '20px', marginBottom: '30px' }}>
+                                            <div className="stat-card" style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #4299e1' }}>
+                                                <div style={{ color: '#718096', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '500' }}>TOTAL REVENUE</div>
+                                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2d3748' }}>₹{totalRevenueAll.toLocaleString()}</div>
+                                            </div>
+                                            <div className="stat-card" style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #48bb78' }}>
+                                                <div style={{ color: '#718096', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '500' }}>SPONSOR SHARE (70%)</div>
+                                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2d3748' }}>₹{sponsorShareAll.toLocaleString()}</div>
+                                            </div>
+                                            <div className="stat-card" style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #ed8936' }}>
+                                                <div style={{ color: '#718096', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '500' }}>PLATFORM FEE (30%)</div>
+                                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2d3748' }}>₹{platformShareAll.toLocaleString()}</div>
+                                            </div>
+                                            <div className="stat-card" style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #e53e3e' }}>
+                                                <div style={{ color: '#718096', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '500' }}>TOTAL PAID</div>
+                                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2d3748' }}>₹{withdrawnAll.toLocaleString()}</div>
+                                            </div>
+                                            <div className="stat-card" style={{ background: 'white', padding: '20px', borderRadius: '10px', boxShadow: '0 2px 10px rgba(0,0,0,0.05)', borderLeft: '4px solid #805ad5' }}>
+                                                <div style={{ color: '#718096', fontSize: '0.85rem', marginBottom: '5px', fontWeight: '500' }}>PENDING BALANCE</div>
+                                                <div style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#2d3748' }}>₹{pendingBalanceAll.toLocaleString()}</div>
+                                            </div>
+                                        </div>
+                                    );
+                                })()}
+
+                                <div className="table-container">
+                                    <table id="earnings-table" className="sponsor-earnings-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Sponsor</th>
+                                                <th>Email</th>
+                                                <th>Vehicles</th>
+                                                <th>Total Revenue</th>
+                                                <th>Sponsor Share (70%)</th>
+                                                <th>Platform Fee (30%)</th>
+                                                <th>Withdrawn</th>
+                                                <th>Balance</th>
+                                                <th>Bookings</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {earnings.length === 0 ? (
+                                                <tr><td colSpan="10" style={{ textAlign: 'center', padding: '20px' }}>No earnings data found</td></tr>
+                                            ) : earnings.map((e, idx) => (
+                                                <tr key={e.id || idx}>
+                                                    <td>{e.name}</td>
+                                                    <td>{e.email}</td>
+                                                    <td style={{ textAlign: 'center' }}>{e.totalVehicles || 0}</td>
+                                                    <td style={{ fontWeight: 'bold' }}>₹{e.totalRevenue.toLocaleString()}</td>
+                                                    <td style={{ color: 'green' }}>₹{e.sponsorShare.toLocaleString()}</td>
+                                                    <td style={{ color: '#ed8936' }}>₹{e.platformShare.toLocaleString()}</td>
+                                                    <td style={{ color: '#e53e3e' }}>₹{e.totalWithdrawn?.toLocaleString() || 0}</td>
+                                                    <td style={{ fontWeight: 'bold', color: e.currentBalance < 0 ? 'red' : 'black' }}>
+                                                        ₹{e.currentBalance?.toLocaleString() || 0}
+                                                    </td>
+                                                    <td>{e.bookingsCount}</td>
+                                                    <td>
+                                                        <button className="action-btn btn-view btn-icon-only" onClick={() => setModal({ type: 'viewSponsorDetails', data: e })} title="View Details">
+                                                            <i className="fas fa-eye"></i>
+                                                        </button>
+                                                    </td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </ComingSoonCard>
                         </div>
                     )}
 
@@ -1565,8 +1642,6 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     )}
 
                     {/* WITHDRAWALS */}
-                    {/* WITHDRAWALS */}
-                    {/* WITHDRAWALS */}
                     {activeTab === 'withdrawals' && (
                         <div id="withdrawals" className="content-section active" style={{ padding: '24px' }}>
                             <ComingSoonCard
@@ -1581,7 +1656,175 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     "Comprehensive audit trail & multi-level financial approval workflows"
                                 ]}
                                 onBack={() => setActiveTab('dashboard')}
-                            />
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                                    <h2>Sponsor Withdrawals</h2>
+                                    <button className="action-btn" onClick={loadWithdrawalRequests}><i className="fas fa-sync-alt"></i></button>
+                                </div>
+
+                                {/* Stats Cards */}
+                                <div className="withdrawal-stats-container">
+                                    <div className="withdrawal-stat-card orange">
+                                        <div className="w-stat-icon"><i className="fas fa-hourglass-half"></i></div>
+                                        <div className="w-stat-info">
+                                            <h4>Pending Requests</h4>
+                                            <p>{withdrawalRequests.filter(r => r.status === 'pending').length}</p>
+                                        </div>
+                                    </div>
+                                    <div className="withdrawal-stat-card blue">
+                                        <div className="w-stat-icon"><i className="fas fa-rupee-sign"></i></div>
+                                        <div className="w-stat-info">
+                                            <h4>Pending Approval</h4>
+                                            <p>₹{withdrawalRequests.filter(r => r.status === 'pending').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        </div>
+                                    </div>
+                                    <div className="withdrawal-stat-card" style={{ borderLeft: '4px solid #3182ce', background: '#ebf8ff' }}>
+                                        <div className="w-stat-icon" style={{ color: '#3182ce' }}><i className="fas fa-check"></i></div>
+                                        <div className="w-stat-info">
+                                            <h4>Approved (Unpaid)</h4>
+                                            <p>₹{withdrawalRequests.filter(r => r.status === 'approved').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        </div>
+                                    </div>
+                                    <div className="withdrawal-stat-card green">
+                                        <div className="w-stat-icon"><i className="fas fa-check-double"></i></div>
+                                        <div className="w-stat-info">
+                                            <h4>Total Paid</h4>
+                                            <p>₹{withdrawalRequests.filter(r => r.status === 'completed').reduce((sum, r) => sum + parseFloat(r.amount || 0), 0).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</p>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                {/* Filters */}
+                                <div className="withdrawal-filters-container">
+                                    <div className="w-tabs">
+                                        <button className={`w-tab ${withdrawalFilter === 'pending' ? 'active' : ''}`} onClick={() => setWithdrawalFilter('pending')}>Pending</button>
+                                        <button className={`w-tab ${withdrawalFilter === 'approved' ? 'active' : ''}`} onClick={() => setWithdrawalFilter('approved')}>Approved</button>
+                                        <button className={`w-tab ${withdrawalFilter === 'history' ? 'active' : ''}`} onClick={() => setWithdrawalFilter('history')}>History</button>
+                                        <button className={`w-tab ${withdrawalFilter === 'all' ? 'active' : ''}`} onClick={() => setWithdrawalFilter('all')}>All Requests</button>
+                                    </div>
+                                </div>
+
+                                <div className="withdrawal-table-container">
+                                    <table id="withdrawals-table">
+                                        <thead>
+                                            <tr>
+                                                <th>Date & Time</th>
+                                                <th>Sponsor Details</th>
+                                                <th>Amount</th>
+                                                <th>Method</th>
+                                                <th>Payment Details</th>
+                                                <th>Status</th>
+                                                <th>Actions</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {withdrawalRequests
+                                                .filter(req => {
+                                                    if (withdrawalFilter === 'all') return true;
+                                                    if (withdrawalFilter === 'history') return ['completed', 'rejected'].includes(req.status);
+                                                    return req.status === withdrawalFilter;
+                                                })
+                                                .length === 0 ? (
+                                                <tr><td colSpan="7" style={{ textAlign: 'center', padding: '60px', color: '#A0AEC0' }}>
+                                                    <div style={{ marginBottom: '15px' }}><i className="fas fa-search" style={{ fontSize: '2.5rem', color: '#E2E8F0' }}></i></div>
+                                                    <div style={{ fontSize: '1.1rem', fontWeight: '500' }}>No {withdrawalFilter !== 'all' ? withdrawalFilter : ''} requests found</div>
+                                                </td></tr>
+                                            ) : withdrawalRequests
+                                                .filter(req => {
+                                                    if (withdrawalFilter === 'all') return true;
+                                                    if (withdrawalFilter === 'history') return ['completed', 'rejected'].includes(req.status);
+                                                    return req.status === withdrawalFilter;
+                                                })
+                                                .sort((a, b) => new Date(b.created_at) - new Date(a.created_at))
+                                                .map(req => {
+                                                    const sEarnings = earnings.find(e => e.id === req.sponsor_id);
+                                                    const balance = sEarnings ? sEarnings.currentBalance : null;
+                                                    return (
+                                                        <tr key={req.id} className="withdrawal-row">
+                                                            <td>
+                                                                <div className="col-date">
+                                                                    <div className="col-date-main">{new Date(req.created_at).toLocaleDateString()}</div>
+                                                                    <div className="col-date-sub">
+                                                                        <i className="far fa-clock"></i> {new Date(req.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td>
+                                                                <div className="sponsor-cell">
+                                                                    <div className="sponsor-avatar">
+                                                                        {(req.sponsors?.full_name || 'SP').substring(0, 2).toUpperCase()}
+                                                                    </div>
+                                                                    <div className="sponsor-info">
+                                                                        <div className="sponsor-name">{req.sponsors?.full_name || 'Unknown'}</div>
+                                                                        <div className="sponsor-email">{req.sponsors?.email || 'N/A'}</div>
+                                                                        {balance !== null && (
+                                                                            <div style={{ fontSize: '0.85rem', color: balance < 0 ? '#e53e3e' : '#2ecc71', fontWeight: 'bold' }}>
+                                                                                Bal: ₹{balance.toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            </td>
+                                                            <td className="withdrawal-amount">₹{parseFloat(req.amount).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
+                                                            <td>
+                                                                <span className={`method-badge ${req.payment_method}`}>
+                                                                    {req.payment_method === 'bank' ? <i className="fas fa-university"></i> : <i className="fas fa-mobile-alt"></i>}
+                                                                    {req.payment_method.toUpperCase()}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                {req.payment_method === 'bank' ? (
+                                                                    <div style={{ fontSize: '0.85em' }}>
+                                                                        <div>Acct: {req.bank_account_number}</div>
+                                                                        <div>IFSC: {req.ifsc_code}</div>
+                                                                    </div>
+                                                                ) : (
+                                                                    <div style={{ fontSize: '0.85em' }}>
+                                                                        UPI: {req.upi_id}
+                                                                    </div>
+                                                                )}
+                                                            </td>
+                                                            <td>
+                                                                <span className={`status-badge status-${req.status}`}>
+                                                                    {req.status.toUpperCase()}
+                                                                </span>
+                                                            </td>
+                                                            <td>
+                                                                {req.status === 'pending' && (
+                                                                    <div style={{ display: 'flex', gap: '5px' }}>
+                                                                        <button
+                                                                            className="action-btn btn-confirm"
+                                                                            title="Approve"
+                                                                            onClick={() => handleWithdrawalAction(req.id, 'approved')}
+                                                                        >
+                                                                            <i className="fas fa-check"></i>
+                                                                        </button>
+                                                                        <button
+                                                                            className="action-btn btn-delete"
+                                                                            title="Reject"
+                                                                            onClick={() => handleWithdrawalAction(req.id, 'rejected')}
+                                                                        >
+                                                                            <i className="fas fa-times"></i>
+                                                                        </button>
+                                                                    </div>
+                                                                )}
+                                                                {req.status === 'approved' && (
+                                                                    <button
+                                                                        className="action-btn btn-confirm"
+                                                                        style={{ background: '#2196F3', borderColor: '#2196F3' }}
+                                                                        onClick={() => handleWithdrawalAction(req.id, 'completed')}
+                                                                    >
+                                                                        <i className="fas fa-check-double"></i> Pay
+                                                                    </button>
+                                                                )}
+                                                            </td>
+                                                        </tr>
+                                                    );
+                                                })}
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </ComingSoonCard>
                         </div>
                     )}
 
@@ -1600,7 +1843,33 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     "Fleet maintenance scheduling with partner workshop network"
                                 ]}
                                 onBack={() => setActiveTab('dashboard')}
-                            />
+                            >
+                                <div style={{ background: '#f8fafc', padding: '24px', borderRadius: '16px', border: '1px solid #e2e8f0' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>
+                                        <div>
+                                            <h3 style={{ margin: '0 0 4px', color: '#1e293b' }}>Sponsor Fleet Central</h3>
+                                            <p style={{ margin: 0, color: '#64748b', fontSize: '0.9rem' }}>Real-time partner node overview & telemetry</p>
+                                        </div>
+                                        <a href="http://localhost:5175" target="_blank" rel="noreferrer" className="action-btn" style={{ background: '#3b82f6', color: 'white', padding: '8px 16px', borderRadius: '8px', textDecoration: 'none', fontWeight: 600, display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                            <i className="fas fa-external-link-alt"></i> Open Dedicated App (:5175)
+                                        </a>
+                                    </div>
+                                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '16px', marginBottom: '24px' }}>
+                                        <div className="stat-card" style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', borderLeft: '4px solid #3b82f6' }}>
+                                            <div style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>ACTIVE SPONSOR FLEET</div>
+                                            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#1e293b', marginTop: '4px' }}>{stats.totalVehicles} Vehicles</div>
+                                        </div>
+                                        <div className="stat-card" style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', borderLeft: '4px solid #10b981' }}>
+                                            <div style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>LIVE ON ROAD</div>
+                                            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#10b981', marginTop: '4px' }}>{stats.confirmedBookings} Active Trips</div>
+                                        </div>
+                                        <div className="stat-card" style={{ background: 'white', padding: '16px', borderRadius: '12px', boxShadow: '0 2px 8px rgba(0,0,0,0.04)', borderLeft: '4px solid #f59e0b' }}>
+                                            <div style={{ color: '#64748b', fontSize: '0.8rem', fontWeight: 600 }}>PENDING ONBOARDING</div>
+                                            <div style={{ fontSize: '1.4rem', fontWeight: 800, color: '#f59e0b', marginTop: '4px' }}>{requests.length} Requests</div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </ComingSoonCard>
                         </div>
                     )}
 
@@ -1633,7 +1902,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     "Export reports in PDF, XLSX, and live BigQuery/PowerBI connectors"
                                 ]}
                                 onBack={() => setActiveTab('dashboard')}
-                            />
+                            >
+                                <AdminReports token={token} />
+                            </ComingSoonCard>
                         </div>
                     )}
                 </main>
