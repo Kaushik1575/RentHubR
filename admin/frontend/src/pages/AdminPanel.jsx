@@ -1030,8 +1030,14 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
 
                     {/* REQUESTS */}
                     {activeTab === 'requests' && (
-                        <div id="requests" className="content-section active">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
+                        <div id="requests" className="content-section active" style={{ padding: '24px' }}>
+                            <ComingSoonCard
+                                title="Vehicle Onboarding Requests"
+                                subtitle="Multi-stage vehicle verification, mechanical survey, and fleet activation pipeline."
+                                icon="fas fa-clipboard-list"
+                                onBack={() => setActiveTab('dashboard')}
+                            >
+                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
                                 <div>
                                     <h2>Vehicle Onboarding Pipeline</h2>
                                     <p style={{ color: '#64748b', fontSize: '0.9rem', margin: '4px 0 0 0' }}>
@@ -1448,6 +1454,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     </div>
                                 )}
                             </div>
+                            </ComingSoonCard>
                         </div>
                     )}
 
