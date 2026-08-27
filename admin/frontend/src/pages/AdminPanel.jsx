@@ -6,6 +6,7 @@ import './AdminPanelStyles.css';
 import AdminIssues from '../components/AdminIssues';
 import AdminOffers from '../components/AdminOffers';
 import AdminReports from '../components/AdminReports';
+import ComingSoonCard from '../components/ComingSoonCard';
 
 
 const AdminPanel = () => {
@@ -143,11 +144,11 @@ const AdminPanel = () => {
     // Filtered Vehicles
     const filteredVehicles = vehicles.filter(v => {
         const searchLower = vehicleSearch.toLowerCase();
-        const matchesSearch = (v.name && v.name.toLowerCase().includes(searchLower)) || 
-                             (v.id && v.id.toString().includes(vehicleSearch)) ||
-                             (v.category && v.category.toLowerCase().includes(searchLower)) ||
-                             (v.sponsor_name && v.sponsor_name.toLowerCase().includes(searchLower)) ||
-                             (v.sponsor_phone && v.sponsor_phone.includes(vehicleSearch));
+        const matchesSearch = (v.name && v.name.toLowerCase().includes(searchLower)) ||
+            (v.id && v.id.toString().includes(vehicleSearch)) ||
+            (v.category && v.category.toLowerCase().includes(searchLower)) ||
+            (v.sponsor_name && v.sponsor_name.toLowerCase().includes(searchLower)) ||
+            (v.sponsor_phone && v.sponsor_phone.includes(vehicleSearch));
         const matchesType = vehicleTypeFilter === 'all' || v.type === vehicleTypeFilter;
         return matchesSearch && matchesType;
     });
@@ -662,11 +663,11 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <div className="inventory-controls">
                                 <div className="search-box-modern">
                                     <i className="fas fa-search"></i>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Search by name, email, or phone..." 
-                                        value={usersFilter} 
-                                        onChange={e => setUsersFilter(e.target.value)} 
+                                    <input
+                                        type="text"
+                                        placeholder="Search by name, email, or phone..."
+                                        value={usersFilter}
+                                        onChange={e => setUsersFilter(e.target.value)}
                                     />
                                 </div>
                             </div>
@@ -730,10 +731,10 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                             <button className="icon-btn-modern edit" onClick={() => { setEditUserData(u); setModal({ type: 'editUser' }); }} title="Edit User">
                                                                 <i className="fas fa-user-edit"></i>
                                                             </button>
-                                                            <button 
-                                                                className={`icon-btn-modern ${u.isBlocked ? 'available' : 'delete'}`} 
+                                                            <button
+                                                                className={`icon-btn-modern ${u.isBlocked ? 'available' : 'delete'}`}
                                                                 style={u.isBlocked ? { background: '#ecfdf5', color: '#10b981' } : {}}
-                                                                onClick={() => handleBlockUser(u.id, u.isBlocked)} 
+                                                                onClick={() => handleBlockUser(u.id, u.isBlocked)}
                                                                 title={u.isBlocked ? 'Unblock User' : 'Block User'}
                                                             >
                                                                 <i className={`fas ${u.isBlocked ? 'fa-user-check' : 'fa-user-slash'}`}></i>
@@ -890,28 +891,28 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <div className="inventory-controls">
                                 <div className="search-box-modern">
                                     <i className="fas fa-search"></i>
-                                    <input 
-                                        type="text" 
-                                        placeholder="Search by name, ID, or category..." 
-                                        value={vehicleSearch} 
-                                        onChange={(e) => setVehicleSearch(e.target.value)} 
+                                    <input
+                                        type="text"
+                                        placeholder="Search by name, ID, or category..."
+                                        value={vehicleSearch}
+                                        onChange={(e) => setVehicleSearch(e.target.value)}
                                     />
                                 </div>
                                 <div className="filter-group-modern">
-                                    <button 
-                                        className={`filter-pill ${vehicleTypeFilter === 'all' ? 'active' : ''}`} 
+                                    <button
+                                        className={`filter-pill ${vehicleTypeFilter === 'all' ? 'active' : ''}`}
                                         onClick={() => setVehicleTypeFilter('all')}
                                     >All</button>
-                                    <button 
-                                        className={`filter-pill ${vehicleTypeFilter === 'bike' ? 'active' : ''}`} 
+                                    <button
+                                        className={`filter-pill ${vehicleTypeFilter === 'bike' ? 'active' : ''}`}
                                         onClick={() => setVehicleTypeFilter('bike')}
                                     ><i className="fas fa-motorcycle"></i> Bikes</button>
-                                    <button 
-                                        className={`filter-pill ${vehicleTypeFilter === 'car' ? 'active' : ''}`} 
+                                    <button
+                                        className={`filter-pill ${vehicleTypeFilter === 'car' ? 'active' : ''}`}
                                         onClick={() => setVehicleTypeFilter('car')}
                                     ><i className="fas fa-car"></i> Cars</button>
-                                    <button 
-                                        className={`filter-pill ${vehicleTypeFilter === 'scooty' ? 'active' : ''}`} 
+                                    <button
+                                        className={`filter-pill ${vehicleTypeFilter === 'scooty' ? 'active' : ''}`}
                                         onClick={() => setVehicleTypeFilter('scooty')}
                                     ><i className="fas fa-moped"></i> Scooters</button>
                                 </div>
@@ -1313,10 +1314,10 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                                             {(r.counter_offer_price || r.vehicle_details?.counter_offer_price)
                                                                                 ? `💬 Sponsor Counter-Offer: Asked ₹${r.counter_offer_price || r.vehicle_details?.counter_offer_price}/hr (Action: Accept or Re-propose)`
                                                                                 : r.terms_declined
-                                                                                ? '✕ Sponsor Declined Pricing Terms'
-                                                                                : (r.agreement_accepted_at || r.terms_accepted)
-                                                                                ? '✓ Pricing Terms Agreed by Sponsor'
-                                                                                : '⏳ Waiting for Sponsor Price Agreement'}
+                                                                                    ? '✕ Sponsor Declined Pricing Terms'
+                                                                                    : (r.agreement_accepted_at || r.terms_accepted)
+                                                                                        ? '✓ Pricing Terms Agreed by Sponsor'
+                                                                                        : '⏳ Waiting for Sponsor Price Agreement'}
                                                                         </div>
 
                                                                         {/* Step 7 Button: STRICTLY LOCKED until Sponsor Agrees to Terms */}
@@ -2643,7 +2644,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                 <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1050 }}>
                     <div className="modal-backdrop" onClick={() => setModal({ type: null })}></div>
                     <div className="modal-content" style={{ maxWidth: '640px', width: '100%', maxHeight: '92vh', display: 'flex', flexDirection: 'column', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.3)', border: '1px solid #d1fae5' }}>
-                        
+
                         {/* Header */}
                         <div style={{ background: 'linear-gradient(135deg, #059669 0%, #047857 100%)', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', shrink: 0 }}>
                             <div>
@@ -2698,9 +2699,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 notes: stageFormData.notes || 'Vehicle passed physical survey checklist'
                             });
                         }} style={{ display: 'flex', flexDirection: 'column', flex: 1, overflow: 'hidden' }}>
-                            
+
                             <div className="modal-body" style={{ padding: '24px', overflowY: 'auto', flex: 1 }}>
-                                
+
                                 {/* Quick Preset Buttons */}
                                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '16px' }}>
                                     <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#1e293b', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
@@ -2901,8 +2902,8 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     {isSubmitting
                                         ? 'Processing...'
                                         : stageFormData.overall_status === 'FAILED'
-                                        ? 'Reject Application & Send Report'
-                                        : 'Publish & Approve Survey Report'
+                                            ? 'Reject Application & Send Report'
+                                            : 'Publish & Approve Survey Report'
                                     }
                                 </button>
                             </div>
@@ -3337,7 +3338,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                 <div className="modal active" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '16px', zIndex: 1050 }}>
                     <div className="modal-backdrop" onClick={() => setModal({ type: null })}></div>
                     <div className="modal-content" style={{ maxWidth: '580px', width: '100%', maxHeight: '90vh', display: 'flex', flexDirection: 'column', borderRadius: '24px', overflow: 'hidden', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.35)', border: '1px solid #fee2e2' }}>
-                        
+
                         {/* Modal Header */}
                         <div style={{ background: 'linear-gradient(135deg, #991b1b 0%, #dc2626 100%)', color: '#fff', padding: '20px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', shrink: 0 }}>
                             <div>
