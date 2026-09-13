@@ -780,7 +780,7 @@ const BookingForm = () => {
                                                 key={h}
                                                 type="button"
                                                 onClick={() => setFormData({ ...formData, duration: h })}
-                                                className={`preset-pill-btn ${Number(formData.duration) === h ? 'active' : ''}`}
+                                                className={`preset-pill-btn preset-pill-${h} ${Number(formData.duration) === h ? 'active' : ''}`}
                                             >
                                                 {h < 24 ? `${h} hrs` : `${h / 24} days`}
                                             </button>
