@@ -604,12 +604,15 @@ const BookingForm = () => {
                             </span>
                         </div>
 
-                        {/* Vertical Timeline Stream - Pure, Animated & Vibrant */}
-                        <div className="booking-timeline-stream">
-                            
+                        {/* Vertical Timeline Stream with Normal Professional Progress */}
+                        <div className={`booking-timeline-stream progress-step-${step}`}>
+                            {/* Base Track and Dynamic Active Progress Fill Line */}
+                            <div className="timeline-track-base"></div>
+                            <div className="timeline-track-fill"></div>
+
                             {/* STEP 1: Schedule & Timing */}
-                            <div className={`timeline-node ${step > 1 ? 'node-completed' : 'node-active'} node-theme-emerald`}>
-                                <div className="timeline-node-icon-wrap node-color-emerald">
+                            <div className={`timeline-node node-theme-emerald ${step > 1 ? 'node-completed' : 'node-active'}`}>
+                                <div className={`timeline-node-icon-wrap ${step > 1 ? 'node-color-completed' : 'node-color-emerald'}`}>
                                     <i className={step > 1 ? "fas fa-check" : "far fa-calendar-alt"}></i>
                                 </div>
                                 <div className="timeline-node-content">
@@ -623,8 +626,8 @@ const BookingForm = () => {
                             </div>
 
                             {/* STEP 2: Token Advance & Pricing */}
-                            <div className={`timeline-node ${step === 3 ? 'node-completed' : step === 2 ? 'node-active' : 'node-upcoming'} node-theme-amber`}>
-                                <div className="timeline-node-icon-wrap node-color-amber">
+                            <div className={`timeline-node node-theme-amber ${step === 3 ? 'node-completed' : step === 2 ? 'node-active' : 'node-upcoming'}`}>
+                                <div className={`timeline-node-icon-wrap ${step === 3 ? 'node-color-completed' : step === 2 ? 'node-color-amber' : 'node-color-upcoming'}`}>
                                     <i className={step === 3 ? "fas fa-check" : "fas fa-wallet"}></i>
                                 </div>
                                 <div className="timeline-node-content">
@@ -638,23 +641,23 @@ const BookingForm = () => {
                             </div>
 
                             {/* STEP 3: Safety & Verification */}
-                            <div className={`timeline-node ${step === 3 ? 'node-completed' : 'node-active'} node-theme-blue`}>
-                                <div className="timeline-node-icon-wrap node-color-blue">
+                            <div className={`timeline-node node-theme-blue ${step === 3 ? 'node-completed' : step === 2 ? 'node-active' : 'node-upcoming'}`}>
+                                <div className={`timeline-node-icon-wrap ${step === 3 ? 'node-color-completed' : step === 2 ? 'node-color-blue' : 'node-color-upcoming'}`}>
                                     <i className={step === 3 ? "fas fa-check" : "fas fa-shield-alt"}></i>
                                 </div>
                                 <div className="timeline-node-content">
                                     <span className="timeline-node-step-tag tag-blue">STEP 03</span>
                                     <h4 className="timeline-node-title">Protection & Verification</h4>
                                     <p className="timeline-node-desc">Valid Driving License & 24/7 AI SOS included</p>
-                                    <span className="timeline-node-badge badge-blue">
-                                        🛡️ Guaranteed
+                                    <span className={`timeline-node-badge ${step === 3 ? 'badge-completed' : 'badge-blue'}`}>
+                                        {step === 3 ? '✓ Verified' : '🛡️ Guaranteed'}
                                     </span>
                                 </div>
                             </div>
 
                             {/* STEP 4: Handover & QR Gate-Pass */}
-                            <div className={`timeline-node ${step === 3 ? 'node-completed' : 'node-upcoming'} node-theme-purple`}>
-                                <div className="timeline-node-icon-wrap node-color-purple">
+                            <div className={`timeline-node node-theme-purple ${step === 3 ? 'node-completed' : 'node-upcoming'}`}>
+                                <div className={`timeline-node-icon-wrap ${step === 3 ? 'node-color-completed' : 'node-color-upcoming'}`}>
                                     <i className={step === 3 ? "fas fa-check" : "fas fa-qrcode"}></i>
                                 </div>
                                 <div className="timeline-node-content">

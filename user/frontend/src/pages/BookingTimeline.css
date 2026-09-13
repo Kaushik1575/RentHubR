@@ -279,7 +279,7 @@
 }
 
 /* ==========================================================================
-   COLOURFUL VERTICAL TIMELINE STREAM & ANIMATED BEAM
+   CLEAN & PROFESSIONAL VERTICAL TIMELINE PROGRESS STREAM
    ========================================================================== */
 .booking-timeline-stream {
     position: relative;
@@ -289,60 +289,41 @@
     padding: 2px 0;
 }
 
-/* Continuous multi-color track line */
-.booking-timeline-stream::before {
-    content: '';
+/* Background neutral track line */
+.timeline-track-base {
     position: absolute;
-    top: 22px;
-    bottom: 22px;
+    top: 24px;
+    bottom: 24px;
     left: 28px;
     width: 3.5px;
-    background: linear-gradient(180deg, 
-        #059669 0%, 
-        #f59e0b 33%, 
-        #3b82f6 66%, 
-        #8b5cf6 100%
-    );
+    background: #e2e8f0;
     border-radius: 4px;
     z-index: 1;
-    box-shadow: 0 0 10px rgba(16, 185, 129, 0.35);
 }
 
-/* Animated traveling light beam */
-.booking-timeline-stream::after {
-    content: '';
+/* Dynamic Active Progress Fill Line */
+.timeline-track-fill {
     position: absolute;
-    top: 20px;
-    left: 27px;
-    width: 5.5px;
-    height: 36px;
-    border-radius: 999px;
-    background: linear-gradient(180deg, rgba(255, 255, 255, 0) 0%, #ffffff 50%, #10b981 100%);
-    box-shadow: 0 0 10px #ffffff, 0 0 16px rgba(16, 185, 129, 0.95);
+    top: 24px;
+    left: 28px;
+    width: 3.5px;
+    border-radius: 4px;
+    background: linear-gradient(180deg, #10b981 0%, #059669 40%, #f59e0b 70%, #3b82f6 90%, #8b5cf6 100%);
+    box-shadow: 0 0 10px rgba(16, 185, 129, 0.45);
     z-index: 2;
-    animation: travelBeam 3.6s cubic-bezier(0.4, 0, 0.2, 1) infinite;
-    pointer-events: none;
+    transition: height 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-@keyframes travelBeam {
-    0% {
-        top: 20px;
-        opacity: 0;
-        height: 10px;
-    }
-    18% {
-        opacity: 1;
-        height: 36px;
-    }
-    82% {
-        opacity: 1;
-        height: 36px;
-    }
-    100% {
-        top: calc(100% - 42px);
-        opacity: 0;
-        height: 10px;
-    }
+.progress-step-1 .timeline-track-fill {
+    height: 18%;
+}
+
+.progress-step-2 .timeline-track-fill {
+    height: 60%;
+}
+
+.progress-step-3 .timeline-track-fill {
+    height: calc(100% - 48px);
 }
 
 /* Rich, Tinted Step Cards for Distinct Visual Contrast */
@@ -355,7 +336,33 @@
     padding: 10px 12px;
     border-radius: 14px;
     border: 1.5px solid transparent;
+    cursor: default;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.timeline-node.node-active {
+    opacity: 1;
+    transform: translateX(2px);
+    box-shadow: 0 4px 14px rgba(16, 185, 129, 0.12);
+}
+
+.timeline-node.node-completed {
+    opacity: 1;
+    border-color: rgba(16, 185, 129, 0.35);
+}
+
+.timeline-node.node-completed .timeline-node-title {
+    color: #065f46;
+}
+
+.timeline-node.node-upcoming {
+    opacity: 0.72;
+    filter: saturate(0.85);
+}
+
+.timeline-node.node-upcoming:hover {
+    opacity: 0.95;
+    filter: saturate(1);
 }
 
 /* Step 1: Emerald Theme Card */
@@ -432,6 +439,22 @@
 .node-color-purple {
     background: linear-gradient(135deg, #8b5cf6 0%, #7c3aed 100%);
     box-shadow: 0 0 0 3px #ffffff, 0 4px 12px rgba(139, 92, 246, 0.45);
+}
+
+.node-color-completed {
+    background: linear-gradient(135deg, #10b981 0%, #059669 100%);
+    box-shadow: 0 0 0 3px #ffffff, 0 4px 12px rgba(16, 185, 129, 0.45);
+}
+
+.node-color-upcoming {
+    background: #f1f5f9;
+    color: #94a3b8;
+    border: 2px dashed #cbd5e1;
+    box-shadow: 0 0 0 3px #ffffff;
+}
+
+.node-color-upcoming i {
+    color: #94a3b8 !important;
 }
 
 .timeline-node.node-active .timeline-node-icon-wrap {
@@ -950,16 +973,19 @@
         box-shadow: 0 0 0 2.5px #f8fafc;
     }
 
-    .booking-timeline-stream::before {
+    .timeline-track-base, .timeline-track-fill {
         left: 21px;
         top: 12px;
-        bottom: 12px;
-        width: 2px;
+        width: 2.5px;
     }
 
-    .booking-timeline-stream::after {
-        display: none;
+    .timeline-track-base {
+        bottom: 12px;
     }
+
+    .progress-step-1 .timeline-track-fill { height: 18%; }
+    .progress-step-2 .timeline-track-fill { height: 60%; }
+    .progress-step-3 .timeline-track-fill { height: calc(100% - 24px); }
 
     .timeline-node-content {
         display: flex;
