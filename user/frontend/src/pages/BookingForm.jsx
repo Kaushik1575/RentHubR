@@ -1,7 +1,68 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 import TermsPopup from '../components/TermsPopup';
+import './BookingTimeline.css';
+
+// Helper function to format schedule dates and calculate return time
+const getFormattedSchedule = (startDate, startTime, durationHours) => {
+    if (!startDate) {
+        return {
+            pickup: 'Please select date & time',
+            returnTime: 'Calculated once slot is chosen',
+            durationText: `${durationHours || 2} Hours`
+        };
+    }
+
+    try {
+        const dateObj = new Date(startDate + 'T00:00:00');
+        const options = { weekday: 'short', month: 'short', day: 'numeric' };
+        const dateFormatted = dateObj.toLocaleDateString('en-US', options);
+
+        let pickupFormatted = dateFormatted;
+        if (startTime) {
+            const [h, m] = startTime.split(':');
+            const hour = parseInt(h, 10);
+            const ampm = hour >= 12 ? 'PM' : 'AM';
+            const hour12 = hour % 12 || 12;
+            pickupFormatted = `${dateFormatted} • ${hour12}:${m} ${ampm}`;
+        }
+
+        let returnFormatted = 'Select time & duration to calculate';
+        if (startTime && durationHours) {
+            const [h, m] = startTime.split(':');
+            const startDateTime = new Date(startDate + `T${h}:${m}:00`);
+            if (!isNaN(startDateTime.getTime())) {
+                const returnDateTime = new Date(startDateTime.getTime() + durationHours * 3600000);
+                const returnDateStr = returnDateTime.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+                const retHour = returnDateTime.getHours();
+                const retM = String(returnDateTime.getMinutes()).padStart(2, '0');
+                const retAmpm = retHour >= 12 ? 'PM' : 'AM';
+                const retHour12 = retHour % 12 || 12;
+                returnFormatted = `${returnDateStr} • ${retHour12}:${retM} ${retAmpm}`;
+            }
+        }
+
+        const days = Math.floor(durationHours / 24);
+        const remHours = durationHours % 24;
+        let durationText = `${durationHours} Hours`;
+        if (days > 0) {
+            durationText = remHours > 0 ? `${days}d ${remHours}h` : `${days} Days`;
+        }
+
+        return {
+            pickup: pickupFormatted,
+            returnTime: returnFormatted,
+            durationText
+        };
+    } catch (e) {
+        return {
+            pickup: startDate || 'Select date',
+            returnTime: 'Calculated at checkout',
+            durationText: `${durationHours || 2} Hours`
+        };
+    }
+};
 
 const BookingForm = () => {
     const [searchParams] = useSearchParams();
@@ -485,506 +546,625 @@ const BookingForm = () => {
         }
     };
 
-    if (loading) return <div style={{ textAlign: 'center', padding: '4rem' }}>Loading...</div>;
+    const scheduleInfo = useMemo(() => {
+        return getFormattedSchedule(formData.startDate, formData.startTime, formData.duration);
+    }, [formData.startDate, formData.startTime, formData.duration]);
+
+    if (loading) return <div style={{ textAlign: 'center', padding: '4rem', color: '#0f172a', fontWeight: '600' }}>Loading vehicle details...</div>;
 
     return (
-        <div style={{
-            background: 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)',
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            padding: '40px 20px',
-            fontFamily: "'Segoe UI', sans-serif"
-        }}>
+        <div className="booking-page-wrapper">
+            {/* Ambient Floating Decorative Glows */}
+            <div className="ambient-blob blob-emerald" aria-hidden="true"></div>
+            <div className="ambient-blob blob-purple" aria-hidden="true"></div>
+
             {/* Added 'notranslate' class to prevent Google Translate from breaking React DOM updates */}
-            <div className="booking-container notranslate" style={{
-                maxWidth: '850px',
-                width: '100%',
-                margin: '0 auto',
-                background: 'white',
-                padding: '40px',
-                borderRadius: '16px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)'
-            }}>
-                <div className="booking-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem', paddingBottom: '1rem', borderBottom: '1px solid #eee' }}>
-                    <h1 style={{ margin: 0, color: '#2c3e50', fontSize: '1.8rem', fontWeight: 'bold' }}>
-                        {step === 1 ? 'Book Vehicle' : step === 2 ? 'Complete Payment' : 'Booking Confirmed'}
-                    </h1>
-                    <button onClick={() => navigate(-1)} style={{ background: 'none', border: 'none', fontSize: '1.5rem', color: '#666', cursor: 'pointer' }}>&times;</button>
-                </div>
-
-                {/* Progress Bar */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '2rem', position: 'relative' }}>
-                    {['Details', 'Payment', 'Done'].map((label, idx) => (
-                        <div key={idx} style={{ textAlign: 'center', zIndex: 1, flex: 1 }}>
-                            <div style={{
-                                width: '30px', height: '30px', borderRadius: '50%',
-                                background: step > idx + 1 ? '#28a745' : step === idx + 1 ? '#007bff' : '#dee2e6',
-                                color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 5px'
-                            }}>
-                                {step > idx + 1 ? '✓' : idx + 1}
-                            </div>
-                            <span style={{ fontSize: '0.9rem', color: step === idx + 1 ? '#007bff' : '#6c757d' }}>{label}</span>
-                        </div>
-                    ))}
-                    <div style={{ position: 'absolute', top: '15px', left: '16%', right: '16%', height: '2px', background: '#dee2e6', zIndex: 0 }}>
-                        <div style={{ width: `${(step - 1) * 50}%`, height: '100%', background: '#28a745', transition: 'width 0.3s' }}></div>
-                    </div>
-                </div>
-
-                {/* Vehicle Summary (Small) */}
-                <div className="vehicle-info" style={{ display: 'flex', gap: '1rem', background: '#f8f9fa', padding: '1rem', borderRadius: '4px', marginBottom: '2rem' }}>
-                    <img
-                        src={vehicle.image_url}
-                        alt={vehicle.name}
-                        onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/80x80?text=Vehicle'; }}
-                        style={{ width: '80px', height: '80px', objectFit: 'cover', borderRadius: '4px' }}
-                    />
+            <div className="booking-master-card notranslate">
+                
+                {/* ================================================================= */}
+                {/* LEFT PANEL: INTERACTIVE TIMELINE & RIDE INTELLIGENCE              */}
+                {/* ================================================================= */}
+                <div className="booking-timeline-panel">
                     <div>
-                        <h3 style={{ margin: '0 0 5px 0', fontSize: '1.1rem' }}>{vehicle.name}</h3>
-                        <p style={{ margin: 0, color: '#666', fontSize: '0.9rem' }}>₹{vehicle.price}/hour • {vehicle.fuel_type}</p>
-                    </div>
-                </div>
-
-                {/* STEP 1: Details */}
-                {step === 1 && (
-                    <form onSubmit={handleCheckAvailability}>
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1.5rem', marginBottom: '1.5rem' }}>
-                            <div className="form-group">
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
-                                    <i className="far fa-calendar-alt" style={{ marginRight: '8px', color: '#007bff' }}></i> Start Date
-                                </label>
-                                <input
-                                    type="date"
-                                    name="startDate"
-                                    min={today}
-                                    value={formData.startDate}
-                                    onChange={handleChange}
-                                    required
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.8rem 1rem',
-                                        border: '1px solid #e5e7eb',
-                                        borderRadius: '8px',
-                                        fontSize: '1rem',
-                                        backgroundColor: '#f9fafb',
-                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                        outline: 'none',
-                                        transition: 'all 0.2s ease',
-                                        color: '#1f2937'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = '#007bff';
-                                        e.target.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
-                                        e.target.style.backgroundColor = '#ffffff';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = '#e5e7eb';
-                                        e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                                        e.target.style.backgroundColor = '#f9fafb';
-                                    }}
+                        {/* Vehicle Identity Card with Floating Hover Effect */}
+                        <div className="timeline-vehicle-card">
+                            <div className="timeline-vehicle-img-wrap">
+                                <img
+                                    src={vehicle.image_url}
+                                    alt={vehicle.name}
+                                    onError={(e) => { e.target.onerror = null; e.target.src = 'https://placehold.co/80x80?text=Vehicle'; }}
+                                    className="timeline-vehicle-img"
                                 />
                             </div>
-                            <div className="form-group">
-                                <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
-                                    <i className="far fa-clock" style={{ marginRight: '8px', color: '#007bff' }}></i> Start Time
-                                </label>
-                                <input
-                                    type="time"
-                                    name="startTime"
-                                    value={formData.startTime}
-                                    onChange={handleChange}
-                                    required
-                                    style={{
-                                        width: '100%',
-                                        padding: '0.8rem 1rem',
-                                        border: '1px solid #e5e7eb',
-                                        borderRadius: '8px',
-                                        fontSize: '1rem',
-                                        backgroundColor: '#f9fafb',
-                                        boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                        outline: 'none',
-                                        transition: 'all 0.2s ease',
-                                        color: '#1f2937'
-                                    }}
-                                    onFocus={(e) => {
-                                        e.target.style.borderColor = '#007bff';
-                                        e.target.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
-                                        e.target.style.backgroundColor = '#ffffff';
-                                    }}
-                                    onBlur={(e) => {
-                                        e.target.style.borderColor = '#e5e7eb';
-                                        e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                                        e.target.style.backgroundColor = '#f9fafb';
-                                    }}
-                                />
-                            </div>
-                        </div>
-
-                        <div className="form-group" style={{ marginBottom: '1.5rem' }}>
-                            <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#374151' }}>
-                                <i className="fas fa-hourglass-half" style={{ marginRight: '8px', color: '#007bff' }}></i> Duration (hours)
-                            </label>
-                            <input
-                                type="number"
-                                name="duration"
-                                min="1"
-                                max="672"
-                                value={formData.duration}
-                                onChange={handleChange}
-                                required
-                                style={{
-                                    width: '100%',
-                                    padding: '0.8rem 1rem',
-                                    border: '1px solid #e5e7eb',
-                                    borderRadius: '8px',
-                                    fontSize: '1rem',
-                                    backgroundColor: '#f9fafb',
-                                    boxShadow: '0 1px 2px rgba(0,0,0,0.05)',
-                                    outline: 'none',
-                                    transition: 'all 0.2s ease',
-                                    color: '#1f2937'
-                                }}
-                                onFocus={(e) => {
-                                    e.target.style.borderColor = '#007bff';
-                                    e.target.style.boxShadow = '0 0 0 3px rgba(0, 123, 255, 0.1)';
-                                    e.target.style.backgroundColor = '#ffffff';
-                                }}
-                                onBlur={(e) => {
-                                    e.target.style.borderColor = '#e5e7eb';
-                                    e.target.style.boxShadow = '0 1px 2px rgba(0,0,0,0.05)';
-                                    e.target.style.backgroundColor = '#f9fafb';
-                                }}
-                            />
-                        </div>
-
-                        <div className="price-details" style={{ background: '#e3f2fd', padding: '1rem', borderRadius: '4px', margin: '1.5rem 0' }}>
-                            <div style={{ marginBottom: '15px' }}>
-                                <label style={{ display: 'block', marginBottom: '8px', fontWeight: '600', color: '#1565c0' }}>Have a Coupon Code?</label>
-                                <div style={{ display: 'flex', gap: '10px' }}>
-                                    <input
-                                        type="text"
-                                        placeholder="Enter Coupon Code"
-                                        value={couponInput}
-                                        onChange={(e) => {
-                                            setCouponInput(e.target.value.toUpperCase());
-                                            if (e.target.value === '') setSelectedReward(null);
-                                        }}
-                                        style={{ padding: '8px', borderRadius: '4px', border: '1px solid #ccc', flex: 1, textTransform: 'uppercase' }}
-                                    />
-                                    <button
-                                        type="button"
-                                        disabled={processing}
-                                        onClick={async () => {
-                                            const code = couponInput.trim();
-                                            if (!code) return;
-
-                                            setProcessing(true);
-                                            try {
-                                                const token = localStorage.getItem('token');
-                                                
-                                                if (!token) {
-                                                    setPopup({ 
-                                                        isOpen: true, 
-                                                        type: 'error', 
-                                                        title: 'Login Required', 
-                                                        message: 'Please login to apply coupons and view your rewards.',
-                                                        isLoginNudge: true 
-                                                    });
-                                                    setProcessing(false);
-                                                    return;
-                                                }
-
-                                                // 1. Try General Offers first
-                                                const offerRes = await fetch('/api/offers/validate', {
-                                                    method: 'POST',
-                                                    headers: { 
-                                                        'Content-Type': 'application/json',
-                                                        'Authorization': `Bearer ${token}`
-                                                    },
-                                                    body: JSON.stringify({ 
-                                                        code, 
-                                                        bookingDetails: {
-                                                            duration, 
-                                                            vehicleCategory: apiType,
-                                                            totalAmount: baseTotal,
-                                                            startDate: formData.startDate,
-                                                            startTime: formData.startTime
-                                                        }
-                                                    })
-                                                });
-
-                                                const offerData = await offerRes.json();
-
-                                                if (offerRes.ok && offerData.success) {
-                                                    const offer = offerData.offer;
-                                                    setAppliedOffer(offer);
-                                                    setSelectedReward(null); // Clear loyalty reward if using general offer
-                                                    
-                                                    let successMsg = `Coupon '${offer.code}' applied successfully!`;
-                                                    if (offer.usage_limit_per_user === 1) {
-                                                        successMsg += " (Note: This is a one-time use offer)";
-                                                    }
-                                                    
-                                                    setPopup({ isOpen: true, type: 'success', title: 'Applied!', message: successMsg });
-                                                } else {
-                                                    // 2. Fallback to Loyalty Rewards
-                                                    const reward = rewards.find(r => r.coupon_code === code && !r.is_used);
-                                                    
-                                                    if (reward) {
-                                                        if (reward.reward_type === 'FREE_2_HOUR_RIDE') {
-                                                            if (duration < 4) {
-                                                                setPopup({
-                                                                    isOpen: true,
-                                                                    type: 'warning',
-                                                                    title: '⚠️ Minimum 4 Hours Required',
-                                                                    message: 'To use your Free 2-Hour Ride coupon, you must book for at least 4 hours.',
-                                                                    customActions: (
-                                                                        <div style={{ marginTop: '15px', textAlign: 'center' }}>
-                                                                            <button
-                                                                                onClick={() => {
-                                                                                    setFormData({ ...formData, duration: 4 });
-                                                                                    setSelectedReward(reward);
-                                                                                    setAppliedOffer(null);
-                                                                                    setPopup({ isOpen: false });
-                                                                                }}
-                                                                                style={{ padding: '12px 30px', background: '#E57373', color: 'white', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold' }}
-                                                                            >
-                                                                                Okay, Got it
-                                                                            </button>
-                                                                        </div>
-                                                                    )
-                                                                });
-                                                            } else {
-                                                                setSelectedReward(reward);
-                                                                setAppliedOffer(null);
-                                                                setPopup({ isOpen: true, type: 'success', title: 'Applied!', message: 'Coupon Applied: Free 2-Hour Ride' });
-                                                            }
-                                                        } else {
-                                                            setPopup({ isOpen: true, type: 'error', title: 'Invalid', message: 'This coupon is not applicable.' });
-                                                        }
-                                                    } else {
-                                                        // Show the exact reason why the general coupon failed
-                                                        const isLimit = offerData.error?.includes('used this coupon once');
-                                                        const isExpired = offerData.error?.toLowerCase().includes('expired');
-                                                        setPopup({ 
-                                                            isOpen: true, 
-                                                            type: 'error', 
-                                                            title: isExpired ? 'Offer Expired' : (isLimit ? 'Offer Limit Reached' : 'Offer Not Applicable'), 
-                                                            message: offerData.error || 'Invalid or used coupon code.' 
-                                                        });
-                                                    }
-                                                }
-                                            } catch (err) {
-                                                console.error(err);
-                                                setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to validate coupon.' });
-                                            } finally {
-                                                setProcessing(false);
-                                            }
-                                        }}
-                                        style={{ padding: '10px 15px', background: '#1976d2', color: 'white', border: 'none', borderRadius: '4px', cursor: processing ? 'not-allowed' : 'pointer', fontWeight: 'bold' }}
-                                    >
-                                        {processing ? '...' : 'Apply'}
-                                    </button>
+                            <div className="timeline-vehicle-meta">
+                                <div className="timeline-vehicle-badge-row">
+                                    <span className="timeline-type-pill">
+                                        {apiType === 'cars' ? '🚗 Car' : apiType === 'scooty' ? '🛵 Scooty' : '🏍️ Bike'}
+                                    </span>
+                                    <span className="timeline-rating-pill">
+                                        <i className="fas fa-star"></i> 4.9
+                                    </span>
                                 </div>
-                                {selectedReward && <small style={{ color: '#2e7d32', fontWeight: 'bold', marginTop: '5px', display: 'block' }}>✅ Reward '{selectedReward.coupon_code}' Applied!</small>}
-                                {appliedOffer && <small style={{ color: '#2e7d32', fontWeight: 'bold', marginTop: '5px', display: 'block' }}>✅ Offer '{appliedOffer.code}' Applied!</small>}
-                            </div>
-
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                                <span>Total Amount:</span>
-                                <strong>
-                                    {selectedReward ? <s style={{ color: '#999', marginRight: '5px' }}>₹{baseTotal}</s> : null}
-                                    ₹{finalTotal}
-                                </strong>
-                            </div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem', color: '#007bff' }}><span>Advance Pay (30%):</span><strong>₹{advancePayment}</strong></div>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #bbdefb', paddingTop: '0.5rem' }}><span>Remaining:</span><strong>₹{remainingAmount}</strong></div>
-                        </div>
-
-                        <button type="submit" disabled={processing} className="submit-btn" style={{ width: '100%', padding: '1rem', background: '#007bff', color: 'white', border: 'none', borderRadius: '4px', fontSize: '1rem', fontWeight: '600', cursor: processing ? 'not-allowed' : 'pointer' }}>
-                            {processing ? 'Checking...' : 'Continue to Pay'}
-                        </button>
-                    </form>
-                )}
-
-                {/* STEP 2: Payment */}
-                {step === 2 && (
-                    <div>
-                        <div style={{ padding: '1.5rem', background: '#fef3c7', borderRadius: '8px', marginBottom: '1.5rem', border: '1px solid #fcd34d' }}>
-                            <h3 style={{ margin: '0 0 1rem 0', color: '#92400e' }}>Booking Summary</h3>
-                            <p><strong>Date:</strong> {formData.startDate}</p>
-                            <p><strong>Time:</strong> {formData.startTime}</p>
-                            <p><strong>Duration:</strong> {formData.duration} hours</p>
-                            <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #fde68a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                                <span style={{ color: '#92400e' }}>Advance Amount to Pay:</span>
-                                <span style={{ fontSize: '1.5rem', fontWeight: 'bold', color: '#d97706' }}>₹{advancePayment}</span>
+                                <h3 className="timeline-vehicle-name" title={vehicle.name}>{vehicle.name}</h3>
+                                <p className="timeline-vehicle-price">
+                                    <span className="timeline-price-accent">₹{vehicle.price}</span> / hr
+                                    {vehicle.fuel_type && <span>• {vehicle.fuel_type}</span>}
+                                </p>
                             </div>
                         </div>
 
-                        <div style={{
-                            marginBottom: '1.5rem',
-                            display: 'flex',
-                            alignItems: 'flex-start',
-                            gap: '12px',
-                            background: '#f8f9fa',
-                            padding: '12px',
-                            borderRadius: '8px',
-                            border: '1px solid #eee'
-                        }}>
-                            <input
-                                type="checkbox"
-                                id="termsCheckbox"
-                                checked={termsAccepted}
-                                onChange={(e) => {
-                                    if (e.target.checked) {
-                                        // User trying to check: Show popup first
-                                        // We don't set checked here, we wait for popup 'Accept'
-                                        setShowTermsPopup(true);
-                                    } else {
-                                        // User trying to uncheck: Allow immediately
-                                        setTermsAccepted(false);
-                                    }
-                                }}
-                                style={{
-                                    marginTop: '4px',
-                                    width: '20px',
-                                    height: '20px',
-                                    cursor: 'pointer',
-                                    accentColor: '#d97706'
-                                }}
-                            />
-                            <label
-                                htmlFor="termsCheckbox"
-                                style={{ fontSize: '0.95rem', color: '#555', cursor: 'pointer', lineHeight: '1.5' }}
-                                onClick={(e) => {
-                                    // Handle label click manually to ensure popup opens if not checked
-                                    if (!termsAccepted) {
-                                        e.preventDefault();
-                                        setShowTermsPopup(true);
-                                    }
-                                }}
-                            >
-                                I agree to the <span
-                                    style={{ color: '#d97706', textDecoration: 'underline', fontWeight: 'bold', cursor: 'pointer' }}
-                                >Terms and Conditions</span>. I confirm that I possess a valid driving license.
-                            </label>
+                        {/* Timeline Header */}
+                        <div className="timeline-section-header">
+                            <span className="timeline-section-title">
+                                <i className="fas fa-route"></i> Journey Timeline
+                            </span>
+                            <span className="timeline-step-indicator">
+                                <span className="indicator-pulse-dot"></span>
+                                {step === 1 ? 'Step 1: Timing' : step === 2 ? 'Step 2: Payment' : 'Step 3: Confirmed ✓'}
+                            </span>
                         </div>
 
-                        {/* Terms Popup */}
-                        <TermsPopup
-                            isOpen={showTermsPopup}
-                            onClose={() => setShowTermsPopup(false)}
-                            onAccept={() => {
-                                setTermsAccepted(true);
-                                setShowTermsPopup(false);
-                            }}
-                            onDecline={() => {
-                                setTermsAccepted(false);
-                                setShowTermsPopup(false);
-                            }}
-                        />
+                        {/* Vertical Timeline Stream - Pure, Animated & Vibrant */}
+                        <div className="booking-timeline-stream">
+                            
+                            {/* STEP 1: Schedule & Timing */}
+                            <div className={`timeline-node ${step > 1 ? 'node-completed' : 'node-active'} node-theme-emerald`}>
+                                <div className="timeline-node-icon-wrap node-color-emerald">
+                                    <i className={step > 1 ? "fas fa-check" : "far fa-calendar-alt"}></i>
+                                </div>
+                                <div className="timeline-node-content">
+                                    <span className="timeline-node-step-tag tag-emerald">STEP 01</span>
+                                    <h4 className="timeline-node-title">Schedule & Timing</h4>
+                                    <p className="timeline-node-desc">Pick start date, time & rental duration</p>
+                                    <span className={`timeline-node-badge ${step > 1 ? 'badge-completed' : 'badge-emerald'}`}>
+                                        {step > 1 ? '✓ Configured' : '● In Progress'}
+                                    </span>
+                                </div>
+                            </div>
 
-                        <button onClick={handlePayment} disabled={processing} style={{ width: '100%', padding: '1rem', background: '#d97706', color: 'white', border: 'none', borderRadius: '4px', fontSize: '1rem', fontWeight: 'bold', cursor: processing ? 'not-allowed' : 'pointer', display: 'flex', justifyContent: 'center', alignItems: 'center', gap: '10px' }}>
-                            {processing ? 'Processing...' : <><i className="fas fa-lock"></i> Pay ₹{advancePayment} Now</>}
-                        </button>
-                        <button onClick={() => setStep(1)} style={{ width: '100%', marginTop: '1rem', padding: '0.8rem', background: 'none', border: '1px solid #ccc', borderRadius: '4px', cursor: 'pointer' }}>Back to Details</button>
+                            {/* STEP 2: Token Advance & Pricing */}
+                            <div className={`timeline-node ${step === 3 ? 'node-completed' : step === 2 ? 'node-active' : 'node-upcoming'} node-theme-amber`}>
+                                <div className="timeline-node-icon-wrap node-color-amber">
+                                    <i className={step === 3 ? "fas fa-check" : "fas fa-wallet"}></i>
+                                </div>
+                                <div className="timeline-node-content">
+                                    <span className="timeline-node-step-tag tag-amber">STEP 02</span>
+                                    <h4 className="timeline-node-title">Advance Token (30%)</h4>
+                                    <p className="timeline-node-desc">Lock your vehicle with secure token</p>
+                                    <span className={`timeline-node-badge ${step === 3 ? 'badge-completed' : step === 2 ? 'badge-active' : 'badge-amber'}`}>
+                                        {step === 3 ? '✓ Paid' : step === 2 ? '● Ready to Pay' : '🔒 30% Token'}
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* STEP 3: Safety & Verification */}
+                            <div className={`timeline-node ${step === 3 ? 'node-completed' : 'node-active'} node-theme-blue`}>
+                                <div className="timeline-node-icon-wrap node-color-blue">
+                                    <i className={step === 3 ? "fas fa-check" : "fas fa-shield-alt"}></i>
+                                </div>
+                                <div className="timeline-node-content">
+                                    <span className="timeline-node-step-tag tag-blue">STEP 03</span>
+                                    <h4 className="timeline-node-title">Protection & Verification</h4>
+                                    <p className="timeline-node-desc">Valid Driving License & 24/7 AI SOS included</p>
+                                    <span className="timeline-node-badge badge-blue">
+                                        🛡️ Guaranteed
+                                    </span>
+                                </div>
+                            </div>
+
+                            {/* STEP 4: Handover & QR Gate-Pass */}
+                            <div className={`timeline-node ${step === 3 ? 'node-completed' : 'node-upcoming'} node-theme-purple`}>
+                                <div className="timeline-node-icon-wrap node-color-purple">
+                                    <i className={step === 3 ? "fas fa-check" : "fas fa-qrcode"}></i>
+                                </div>
+                                <div className="timeline-node-content">
+                                    <span className="timeline-node-step-tag tag-purple">STEP 04</span>
+                                    <h4 className="timeline-node-title">Instant Digital Pass</h4>
+                                    <p className="timeline-node-desc">Contactless hub check-in & deed invoice</p>
+                                    <span className={`timeline-node-badge ${step === 3 ? 'badge-completed' : 'badge-purple'}`}>
+                                        {step === 3 ? '✓ Issued' : '⚡ Instant At Hub'}
+                                    </span>
+                                </div>
+                            </div>
+
+                        </div>
                     </div>
-                )}
 
-                {/* STEP 3: Success */}
-                {step === 3 && (
-                    <div style={{ textAlign: 'center', padding: '2rem 0' }}>
-                        <div style={{ width: '80px', height: '80px', background: '#d1e7dd', color: '#0f5132', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.5rem', fontSize: '2.5rem' }}>
-                            <i className="fas fa-check"></i>
+                    {/* Guarantees Footer */}
+                    <div className="timeline-guarantees-footer">
+                        <div className="timeline-guarantee-item">
+                            <div className="timeline-guarantee-icon icon-bolt"><i className="fas fa-bolt"></i></div>
+                            <span>Instant booking confirmation & contactless handover</span>
                         </div>
-                        <h2 style={{ color: '#0f5132' }}>Booking Confirmed!</h2>
-                        <p style={{ color: '#666', marginBottom: '2rem' }}>We've sent a confirmation email to you. Your vehicle is reserved.</p>
+                        <div className="timeline-guarantee-item">
+                            <div className="timeline-guarantee-icon icon-support"><i className="fas fa-headset"></i></div>
+                            <span>RentHub 24x7 Roadside Voice AI SOS ('Aarohi')</span>
+                        </div>
+                    </div>
+                </div>
 
-                        <div style={{ display: 'flex', gap: '1rem', justifyContent: 'center', flexWrap: 'wrap' }}>
-                            <button
-                                onClick={async () => {
-                                    if (!bookingId) {
-                                        setPopup({
-                                            isOpen: true,
-                                            type: 'error',
-                                            title: 'Error',
-                                            message: 'Booking ID not found. Please try from My Bookings.'
-                                        });
-                                        return;
-                                    }
+                {/* ================================================================= */}
+                {/* RIGHT PANEL: ACTIONS, FORMS & PAYMENT GATEWAY                     */}
+                {/* ================================================================= */}
+                <div className="booking-form-panel">
+                    <div>
+                        {/* Top Navigation */}
+                        <div className="booking-panel-top-nav">
+                            <h1 className="booking-form-header-title">
+                                <i className={step === 1 ? "far fa-calendar-check" : step === 2 ? "fas fa-lock" : "fas fa-badge-check"} style={{ color: '#059669' }}></i>
+                                {step === 1 ? 'Configure Rental Slot' : step === 2 ? 'Complete Payment' : 'Booking Confirmed!'}
+                            </h1>
+                            <button onClick={() => navigate(-1)} className="booking-close-btn" title="Back to vehicle">&times;</button>
+                        </div>
 
-                                    setDownloadingInvoice(true);
-                                    try {
-                                        const token = localStorage.getItem('token');
-                                        const response = await fetch(`/api/bookings/${bookingId}/invoice`, {
-                                            method: 'GET',
-                                            headers: {
-                                                'Authorization': `Bearer ${token}`
+                        {/* Top Stepper */}
+                        <div className="booking-top-stepper">
+                            <div 
+                                className="booking-top-stepper-progress" 
+                                style={{ width: `${(step - 1) * 50}%` }}
+                            ></div>
+                            {[
+                                { num: 1, label: 'Trip Timing' },
+                                { num: 2, label: 'Secure Token' },
+                                { num: 3, label: 'Ready & Pass' }
+                            ].map((s) => (
+                                <div 
+                                    key={s.num} 
+                                    className={`stepper-item ${step > s.num ? 'stepper-completed' : step === s.num ? 'stepper-active' : ''}`}
+                                >
+                                    <div className="stepper-circle">
+                                        {step > s.num ? '✓' : s.num}
+                                    </div>
+                                    <span className="stepper-label">{s.label}</span>
+                                </div>
+                            ))}
+                        </div>
+
+                        {/* STEP 1: Details */}
+                        {step === 1 && (
+                            <form onSubmit={handleCheckAvailability}>
+                                <div className="booking-datetime-grid">
+                                    <div className="form-group">
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#334155', fontSize: '0.92rem' }}>
+                                            <i className="far fa-calendar-alt" style={{ marginRight: '8px', color: '#059669' }}></i> Pickup Date
+                                        </label>
+                                        <input
+                                            type="date"
+                                            name="startDate"
+                                            min={today}
+                                            value={formData.startDate}
+                                            onChange={handleChange}
+                                            required
+                                            className="booking-input-field"
+                                        />
+                                    </div>
+                                    <div className="form-group">
+                                        <label style={{ display: 'block', marginBottom: '0.5rem', fontWeight: '600', color: '#334155', fontSize: '0.92rem' }}>
+                                            <i className="far fa-clock" style={{ marginRight: '8px', color: '#059669' }}></i> Pickup Time
+                                        </label>
+                                        <input
+                                            type="time"
+                                            name="startTime"
+                                            value={formData.startTime}
+                                            onChange={handleChange}
+                                            required
+                                            className="booking-input-field"
+                                        />
+                                    </div>
+                                </div>
+
+                                <div className="form-group" style={{ marginBottom: '1.25rem' }}>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.5rem' }}>
+                                        <label style={{ fontWeight: '600', color: '#334155', fontSize: '0.92rem', margin: 0 }}>
+                                            <i className="fas fa-hourglass-half" style={{ marginRight: '8px', color: '#059669' }}></i> Rental Duration (hours)
+                                        </label>
+                                        <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: '500' }}>
+                                            {scheduleInfo.durationText}
+                                        </span>
+                                    </div>
+                                    <input
+                                        type="number"
+                                        name="duration"
+                                        min="1"
+                                        max="672"
+                                        value={formData.duration}
+                                        onChange={handleChange}
+                                        required
+                                        className="booking-input-field"
+                                    />
+                                    
+                                    {/* Quick Duration Preset Pills */}
+                                    <div style={{ display: 'flex', gap: '8px', marginTop: '8px', flexWrap: 'wrap' }}>
+                                        {[2, 4, 8, 12, 24, 48].map((h) => (
+                                            <button
+                                                key={h}
+                                                type="button"
+                                                onClick={() => setFormData({ ...formData, duration: h })}
+                                                className={`preset-pill-btn ${Number(formData.duration) === h ? 'active' : ''}`}
+                                            >
+                                                {h < 24 ? `${h} hrs` : `${h / 24} days`}
+                                            </button>
+                                        ))}
+                                    </div>
+                                </div>
+
+                                {/* Coupon / Offers Box */}
+                                <div className="booking-summary-box">
+                                    <div style={{ marginBottom: '14px' }}>
+                                        <label style={{ display: 'block', marginBottom: '6px', fontWeight: '600', color: '#1e293b', fontSize: '0.88rem' }}>
+                                            <i className="fas fa-tag" style={{ marginRight: '6px', color: '#059669' }}></i> Have a Coupon Code?
+                                        </label>
+                                        <div style={{ display: 'flex', gap: '8px' }}>
+                                            <input
+                                                type="text"
+                                                placeholder="e.g. SUMMER20 or RHD..."
+                                                value={couponInput}
+                                                onChange={(e) => {
+                                                    setCouponInput(e.target.value.toUpperCase());
+                                                    if (e.target.value === '') setSelectedReward(null);
+                                                }}
+                                                style={{ padding: '9px 12px', borderRadius: '8px', border: '1.5px solid #cbd5e1', flex: 1, textTransform: 'uppercase', fontSize: '0.9rem', outline: 'none', background: '#ffffff' }}
+                                            />
+                                            <button
+                                                type="button"
+                                                disabled={processing}
+                                                onClick={async () => {
+                                                    const code = couponInput.trim();
+                                                    if (!code) return;
+
+                                                    setProcessing(true);
+                                                    try {
+                                                        const token = localStorage.getItem('token');
+                                                        
+                                                        if (!token) {
+                                                            setPopup({ 
+                                                                isOpen: true, 
+                                                                type: 'error', 
+                                                                title: 'Login Required', 
+                                                                message: 'Please login to apply coupons and view your rewards.',
+                                                                isLoginNudge: true 
+                                                            });
+                                                            setProcessing(false);
+                                                            return;
+                                                        }
+
+                                                        // 1. Try General Offers first
+                                                        const offerRes = await fetch('/api/offers/validate', {
+                                                            method: 'POST',
+                                                            headers: { 
+                                                                'Content-Type': 'application/json',
+                                                                'Authorization': `Bearer ${token}`
+                                                            },
+                                                            body: JSON.stringify({ 
+                                                                code, 
+                                                                bookingDetails: {
+                                                                    duration, 
+                                                                    vehicleCategory: apiType,
+                                                                    totalAmount: baseTotal,
+                                                                    startDate: formData.startDate,
+                                                                    startTime: formData.startTime
+                                                                }
+                                                            })
+                                                        });
+
+                                                        const offerData = await offerRes.json();
+
+                                                        if (offerRes.ok && offerData.success) {
+                                                            const offer = offerData.offer;
+                                                            setAppliedOffer(offer);
+                                                            setSelectedReward(null);
+                                                            
+                                                            let successMsg = `Coupon '${offer.code}' applied successfully!`;
+                                                            if (offer.usage_limit_per_user === 1) {
+                                                                successMsg += " (Note: This is a one-time use offer)";
+                                                            }
+                                                            
+                                                            setPopup({ isOpen: true, type: 'success', title: 'Applied!', message: successMsg });
+                                                        } else {
+                                                            // 2. Fallback to Loyalty Rewards
+                                                            const reward = rewards.find(r => r.coupon_code === code && !r.is_used);
+                                                            
+                                                            if (reward) {
+                                                                if (reward.reward_type === 'FREE_2_HOUR_RIDE') {
+                                                                    if (duration < 4) {
+                                                                        setPopup({
+                                                                            isOpen: true,
+                                                                            type: 'warning',
+                                                                            title: '⚠️ Minimum 4 Hours Required',
+                                                                            message: 'To use your Free 2-Hour Ride coupon, you must book for at least 4 hours.',
+                                                                            customActions: (
+                                                                                <div style={{ marginTop: '15px', textAlign: 'center' }}>
+                                                                                    <button
+                                                                                        onClick={() => {
+                                                                                            setFormData({ ...formData, duration: 4 });
+                                                                                            setSelectedReward(reward);
+                                                                                            setAppliedOffer(null);
+                                                                                            setPopup({ isOpen: false });
+                                                                                        }}
+                                                                                        style={{ padding: '12px 30px', background: '#E57373', color: 'white', border: 'none', borderRadius: '50px', cursor: 'pointer', fontWeight: 'bold' }}
+                                                                                    >
+                                                                                        Okay, Got it
+                                                                                    </button>
+                                                                                </div>
+                                                                            )
+                                                                        });
+                                                                    } else {
+                                                                        setSelectedReward(reward);
+                                                                        setAppliedOffer(null);
+                                                                        setPopup({ isOpen: true, type: 'success', title: 'Applied!', message: 'Coupon Applied: Free 2-Hour Ride' });
+                                                                    }
+                                                                } else {
+                                                                    setPopup({ isOpen: true, type: 'error', title: 'Invalid', message: 'This coupon is not applicable.' });
+                                                                }
+                                                            } else {
+                                                                const isLimit = offerData.error?.includes('used this coupon once');
+                                                                const isExpired = offerData.error?.toLowerCase().includes('expired');
+                                                                setPopup({ 
+                                                                    isOpen: true, 
+                                                                    type: 'error', 
+                                                                    title: isExpired ? 'Offer Expired' : (isLimit ? 'Offer Limit Reached' : 'Offer Not Applicable'), 
+                                                                    message: offerData.error || 'Invalid or used coupon code.' 
+                                                                });
+                                                            }
+                                                        }
+                                                    } catch (err) {
+                                                        console.error(err);
+                                                        setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Failed to validate coupon.' });
+                                                    } finally {
+                                                        setProcessing(false);
+                                                    }
+                                                }}
+                                                style={{ padding: '8px 20px', background: '#0f172a', color: 'white', border: 'none', borderRadius: '8px', cursor: processing ? 'not-allowed' : 'pointer', fontWeight: '700', fontSize: '0.88rem', transition: 'all 0.15s ease' }}
+                                            >
+                                                {processing ? '...' : 'Apply'}
+                                            </button>
+                                        </div>
+                                        {selectedReward && <small style={{ color: '#059669', fontWeight: '700', marginTop: '6px', display: 'block' }}>✅ Reward '{selectedReward.coupon_code}' Applied!</small>}
+                                        {appliedOffer && <small style={{ color: '#059669', fontWeight: '700', marginTop: '6px', display: 'block' }}>✅ Offer '{appliedOffer.code}' Applied!</small>}
+                                    </div>
+
+                                    {/* Financial Breakdown */}
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.75rem', fontSize: '0.96rem', color: '#475569' }}>
+                                        <span>Base Total ({duration} hrs):</span>
+                                        <strong style={{ color: '#0f172a', fontSize: '1.02rem' }}>
+                                            {selectedReward ? <s style={{ color: '#94a3b8', marginRight: '6px' }}>₹{baseTotal}</s> : null}
+                                            ₹{finalTotal}
+                                        </strong>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', color: '#065f46', background: '#ecfdf5', padding: '9px 14px', borderRadius: '10px', border: '1px solid #a7f3d0', fontSize: '0.98rem' }}>
+                                        <span style={{ fontWeight: 700 }}>Advance Token (30% to reserve):</span>
+                                        <strong style={{ fontSize: '1.12rem', color: '#047857' }}>₹{advancePayment}</strong>
+                                    </div>
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', borderTop: '1px solid #e2e8f0', paddingTop: '0.75rem', color: '#64748b', fontSize: '0.92rem' }}>
+                                        <span>Remaining at Pickup Hub (70%):</span>
+                                        <strong style={{ color: '#334155' }}>₹{remainingAmount}</strong>
+                                    </div>
+                                </div>
+
+                                <button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="btn-primary-action"
+                                >
+                                    {processing ? 'Checking Availability...' : <>Continue to Payment <i className="fas fa-arrow-right" style={{ fontSize: '0.9rem' }}></i></>}
+                                </button>
+                            </form>
+                        )}
+
+                        {/* STEP 2: Payment */}
+                        {step === 2 && (
+                            <div>
+                                <div style={{ padding: '1.5rem', background: '#fffbeb', borderRadius: '12px', marginBottom: '1.5rem', border: '1px solid #fef3c7' }}>
+                                    <h3 style={{ margin: '0 0 1rem 0', color: '#92400e', fontSize: '1.1rem' }}>
+                                        <i className="fas fa-clipboard-check" style={{ marginRight: '8px' }}></i> Booking Summary
+                                    </h3>
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '8px', fontSize: '0.9rem', color: '#451a03' }}>
+                                        <p style={{ margin: 0 }}><strong>Date:</strong> {formData.startDate}</p>
+                                        <p style={{ margin: 0 }}><strong>Time:</strong> {formData.startTime}</p>
+                                        <p style={{ margin: 0 }}><strong>Duration:</strong> {scheduleInfo.durationText}</p>
+                                        <p style={{ margin: 0 }}><strong>Est. Return:</strong> {scheduleInfo.returnTime}</p>
+                                    </div>
+                                    <div style={{ marginTop: '1rem', paddingTop: '1rem', borderTop: '1px solid #fde68a', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                        <span style={{ color: '#92400e', fontWeight: 600 }}>Advance Amount to Pay:</span>
+                                        <span style={{ fontSize: '1.6rem', fontWeight: '800', color: '#d97706' }}>₹{advancePayment}</span>
+                                    </div>
+                                </div>
+
+                                <div style={{
+                                    marginBottom: '1.5rem',
+                                    display: 'flex',
+                                    alignItems: 'flex-start',
+                                    gap: '12px',
+                                    background: '#f8fafc',
+                                    padding: '14px',
+                                    borderRadius: '10px',
+                                    border: '1px solid #e2e8f0'
+                                }}>
+                                    <input
+                                        type="checkbox"
+                                        id="termsCheckbox"
+                                        checked={termsAccepted}
+                                        onChange={(e) => {
+                                            if (e.target.checked) {
+                                                setShowTermsPopup(true);
+                                            } else {
+                                                setTermsAccepted(false);
                                             }
-                                        });
+                                        }}
+                                        style={{
+                                            marginTop: '3px',
+                                            width: '18px',
+                                            height: '18px',
+                                            cursor: 'pointer',
+                                            accentColor: '#059669'
+                                        }}
+                                    />
+                                    <label
+                                        htmlFor="termsCheckbox"
+                                        style={{ fontSize: '0.9rem', color: '#334155', cursor: 'pointer', lineHeight: '1.5' }}
+                                        onClick={(e) => {
+                                            if (!termsAccepted) {
+                                                e.preventDefault();
+                                                setShowTermsPopup(true);
+                                            }
+                                        }}
+                                    >
+                                        I agree to the <span
+                                            style={{ color: '#059669', textDecoration: 'underline', fontWeight: 'bold', cursor: 'pointer' }}
+                                        >Terms and Conditions</span>. I confirm that I possess a valid driving license for pickup verification.
+                                    </label>
+                                </div>
 
-                                        if (!response.ok) {
-                                            throw new Error('Failed to download invoice');
-                                        }
+                                {/* Terms Popup */}
+                                <TermsPopup
+                                    isOpen={showTermsPopup}
+                                    onClose={() => setShowTermsPopup(false)}
+                                    onAccept={() => {
+                                        setTermsAccepted(true);
+                                        setShowTermsPopup(false);
+                                    }}
+                                    onDecline={() => {
+                                        setTermsAccepted(false);
+                                        setShowTermsPopup(false);
+                                    }}
+                                />
 
-                                        // Create blob from response
-                                        const blob = await response.blob();
-                                        const url = window.URL.createObjectURL(blob);
+                                <button
+                                    onClick={handlePayment}
+                                    disabled={processing}
+                                    className="btn-primary-action"
+                                >
+                                    {processing ? 'Processing Payment...' : <><i className="fas fa-lock"></i> Pay ₹{advancePayment} Advance Now</>}
+                                </button>
+                                
+                                <button
+                                    onClick={() => setStep(1)}
+                                    style={{
+                                        width: '100%',
+                                        marginTop: '0.8rem',
+                                        padding: '0.75rem',
+                                        background: 'none',
+                                        border: '1px solid #cbd5e1',
+                                        borderRadius: '10px',
+                                        cursor: 'pointer',
+                                        color: '#64748b',
+                                        fontWeight: '600',
+                                        fontSize: '0.9rem'
+                                    }}
+                                >
+                                    ← Back to Details
+                                </button>
+                            </div>
+                        )}
 
-                                        // Create temporary link and trigger download
-                                        const a = document.createElement('a');
-                                        a.href = url;
-                                        a.download = `invoice_${formattedBookingId || bookingId}.pdf`;
-                                        document.body.appendChild(a);
-                                        a.click();
-
-                                        // Cleanup
-                                        window.URL.revokeObjectURL(url);
-                                        document.body.removeChild(a);
-
-                                        setPopup({
-                                            isOpen: true,
-                                            type: 'success',
-                                            title: 'Success',
-                                            message: 'Invoice downloaded successfully!'
-                                        });
-                                    } catch (error) {
-                                        console.error('Error downloading invoice:', error);
-                                        setPopup({
-                                            isOpen: true,
-                                            type: 'error',
-                                            title: 'Download Failed',
-                                            message: 'Failed to download invoice. Please try again or check My Bookings.'
-                                        });
-                                    } finally {
-                                        setDownloadingInvoice(false);
-                                    }
-                                }}
-                                disabled={downloadingInvoice}
-                                style={{
-                                    padding: '0.8rem 1.5rem',
-                                    background: downloadingInvoice ? '#6c757d' : '#0f5132',
-                                    color: 'white',
-                                    border: 'none',
-                                    borderRadius: '4px',
-                                    cursor: downloadingInvoice ? 'not-allowed' : 'pointer',
+                        {/* STEP 3: Success */}
+                        {step === 3 && (
+                            <div style={{ textAlign: 'center', padding: '1.5rem 0' }}>
+                                <div style={{
+                                    width: '76px',
+                                    height: '76px',
+                                    background: '#dcfce7',
+                                    color: '#16a34a',
+                                    borderRadius: '50%',
                                     display: 'flex',
                                     alignItems: 'center',
-                                    gap: '0.5rem',
-                                    fontSize: '1rem',
-                                    fontWeight: '500'
-                                }}
-                            >
-                                <i className={downloadingInvoice ? 'fas fa-spinner fa-spin' : 'fas fa-print'}></i>
-                                {downloadingInvoice ? 'Downloading...' : 'Print Invoice'}
-                            </button>
-                            <button onClick={() => navigate('/my-bookings')} style={{ padding: '0.8rem 1.5rem', background: '#0f5132', color: 'white', border: 'none', borderRadius: '4px', cursor: 'pointer' }}>My Bookings</button>
-                            <button onClick={() => navigate('/')} style={{ padding: '0.8rem 1.5rem', background: 'none', border: '1px solid #0f5132', color: '#0f5132', borderRadius: '4px', cursor: 'pointer' }}>Home</button>
-                        </div>
+                                    justifyContent: 'center',
+                                    margin: '0 auto 1.25rem',
+                                    fontSize: '2.4rem',
+                                    boxShadow: '0 0 20px rgba(22, 163, 74, 0.2)'
+                                }}>
+                                    <i className="fas fa-check"></i>
+                                </div>
+                                <h2 style={{ color: '#166534', margin: '0 0 8px 0', fontSize: '1.5rem', fontWeight: '800' }}>
+                                    Booking Confirmed!
+                                </h2>
+                                <p style={{ color: '#475569', marginBottom: '1.5rem', fontSize: '0.95rem' }}>
+                                    We've dispatched confirmation details to your email. Your vehicle is reserved.
+                                </p>
+
+                                <div style={{ display: 'flex', gap: '0.8rem', justifyContent: 'center', flexWrap: 'wrap' }}>
+                                    <button
+                                        onClick={async () => {
+                                            if (!bookingId) {
+                                                setPopup({
+                                                    isOpen: true,
+                                                    type: 'error',
+                                                    title: 'Error',
+                                                    message: 'Booking ID not found. Please try from My Bookings.'
+                                                });
+                                                return;
+                                            }
+
+                                            setDownloadingInvoice(true);
+                                            try {
+                                                const token = localStorage.getItem('token');
+                                                const response = await fetch(`/api/bookings/${bookingId}/invoice`, {
+                                                    method: 'GET',
+                                                    headers: {
+                                                        'Authorization': `Bearer ${token}`
+                                                    }
+                                                });
+
+                                                if (!response.ok) {
+                                                    throw new Error('Failed to download invoice');
+                                                }
+
+                                                const blob = await response.blob();
+                                                const url = window.URL.createObjectURL(blob);
+
+                                                const a = document.createElement('a');
+                                                a.href = url;
+                                                a.download = `invoice_${formattedBookingId || bookingId}.pdf`;
+                                                document.body.appendChild(a);
+                                                a.click();
+
+                                                window.URL.revokeObjectURL(url);
+                                                document.body.removeChild(a);
+
+                                                setPopup({
+                                                    isOpen: true,
+                                                    type: 'success',
+                                                    title: 'Success',
+                                                    message: 'Invoice downloaded successfully!'
+                                                });
+                                            } catch (error) {
+                                                console.error('Error downloading invoice:', error);
+                                                setPopup({
+                                                    isOpen: true,
+                                                    type: 'error',
+                                                    title: 'Download Failed',
+                                                    message: 'Failed to download invoice. Please try again or check My Bookings.'
+                                                });
+                                            } finally {
+                                                setDownloadingInvoice(false);
+                                            }
+                                        }}
+                                        disabled={downloadingInvoice}
+                                        style={{
+                                            padding: '0.8rem 1.4rem',
+                                            background: downloadingInvoice ? '#64748b' : '#166534',
+                                            color: 'white',
+                                            border: 'none',
+                                            borderRadius: '8px',
+                                            cursor: downloadingInvoice ? 'not-allowed' : 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            gap: '0.5rem',
+                                            fontSize: '0.95rem',
+                                            fontWeight: '600'
+                                        }}
+                                    >
+                                        <i className={downloadingInvoice ? 'fas fa-spinner fa-spin' : 'fas fa-print'}></i>
+                                        {downloadingInvoice ? 'Downloading...' : 'Print Deed & Invoice'}
+                                    </button>
+                                    <button onClick={() => navigate('/my-bookings')} style={{ padding: '0.8rem 1.4rem', background: '#0284c7', color: 'white', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95rem' }}>My Bookings</button>
+                                    <button onClick={() => navigate('/')} style={{ padding: '0.8rem 1.4rem', background: 'none', border: '1px solid #cbd5e1', color: '#334155', borderRadius: '8px', cursor: 'pointer', fontWeight: '600', fontSize: '0.95rem' }}>Home</button>
+                                </div>
+                            </div>
+                        )}
                     </div>
-                )}
+                </div>
+
             </div>
 
             {/* Status Popup */}
