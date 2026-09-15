@@ -130,9 +130,23 @@ const LoginSponsor = () => {
             </style>
 
             <div className="login-card">
-                <div className="login-header">
-                    <h2>Host Login</h2>
-                    <p>Manage your vehicles</p>
+                <div className="login-header" style={{ textAlign: 'center', marginBottom: '20px' }}>
+                    <img 
+                        src="/renthub-logo.png" 
+                        alt="RentHub" 
+                        style={{ 
+                            width: '100px', 
+                            height: '100px', 
+                            borderRadius: '50%', 
+                            objectFit: 'cover',
+                            margin: '0 auto 12px auto',
+                            display: 'block',
+                            boxShadow: '0 0 28px rgba(0, 195, 255, 0.75), 0 0 50px rgba(0, 150, 255, 0.35)',
+                            border: '3px solid #00D8FF'
+                        }} 
+                    />
+                    <h2 style={{ margin: '0 0 4px 0' }}>Host Login</h2>
+                    <p style={{ margin: 0 }}>Manage your fleet</p>
                 </div>
 
                 <form onSubmit={handleSubmit}>

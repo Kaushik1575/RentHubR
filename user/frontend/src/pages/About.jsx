@@ -4,12 +4,26 @@ const About = () => {
     return (
         <main>
             <section className="about-header" style={{
-                padding: '8rem 5% 2rem',
+                padding: '8rem 5% 2.5rem',
                 backgroundColor: '#f8f9fa',
                 textAlign: 'center'
             }}>
-                <h1>About Us</h1>
-                <p>Your trusted partner for bike rentals since 2024</p>
+                <img 
+                    src="/renthub-logo.png" 
+                    alt="RentHub" 
+                    style={{ 
+                        width: '110px', 
+                        height: '110px', 
+                        borderRadius: '50%', 
+                        objectFit: 'cover',
+                        margin: '0 auto 18px auto',
+                        display: 'block',
+                        boxShadow: '0 0 30px rgba(0, 195, 255, 0.75), 0 0 60px rgba(0, 150, 255, 0.35)',
+                        border: '3.5px solid #00D8FF'
+                    }} 
+                />
+                <h1 style={{ fontSize: '36px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px 0' }}>About Us</h1>
+                <p style={{ color: '#64748b', fontSize: '16px', margin: 0 }}>Smart Mobility, Delivered To Your Door</p>
             </section>
 
             <section className="about-content" style={{ padding: '4rem 5%' }}>

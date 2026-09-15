@@ -158,9 +158,23 @@ const RegisterSponsor = () => {
             </style>
 
             <div className="register-card">
-                <div className="register-header">
-                    <h2>Become a Host</h2>
-                    <p>Start earning by renting your vehicle</p>
+                <div className="register-header" style={{ textAlign: 'center', marginBottom: '20px' }}>
+                    <img 
+                        src="/renthub-logo.png" 
+                        alt="RentHub" 
+                        style={{ 
+                            width: '100px', 
+                            height: '100px', 
+                            borderRadius: '50%', 
+                            objectFit: 'cover',
+                            margin: '0 auto 12px auto',
+                            display: 'block',
+                            boxShadow: '0 0 28px rgba(0, 195, 255, 0.75), 0 0 50px rgba(0, 150, 255, 0.35)',
+                            border: '3px solid #00D8FF'
+                        }} 
+                    />
+                    <h2 style={{ margin: '0 0 4px 0' }}>Become a Host</h2>
+                    <p style={{ margin: 0 }}>Start earning by renting your vehicle</p>
                 </div>
 
                 <form onSubmit={handleSubmit}>

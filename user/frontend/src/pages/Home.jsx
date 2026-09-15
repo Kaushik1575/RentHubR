@@ -1,7 +1,9 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { toast } from 'react-hot-toast';
 import HeroAvailabilityWidget from '../components/HeroAvailabilityWidget';
+import FloatingBackground from '../components/FloatingBackground';
+import './Home.css';
 
 const Home = () => {
     const [bikes, setBikes] = useState([]);
@@ -11,7 +13,17 @@ const Home = () => {
     const [activeCategory, setActiveCategory] = useState('All');
     const [offers, setOffers] = useState([]);
     const [currentTime, setCurrentTime] = useState(new Date());
-    
+
+    // Search and sort states
+    const [searchKeyword, setSearchKeyword] = useState('');
+    const [sortBy, setSortBy] = useState('default');
+
+    // FAQ open index state
+    const [openFaqIndex, setOpenFaqIndex] = useState(null);
+
+    // Reviews continuous marquee state
+    const [isReviewPaused, setIsReviewPaused] = useState(false);
+
     // Availability search states
     const [activeAvailabilityQuery, setActiveAvailabilityQuery] = useState(null);
     const [availabilityResults, setAvailabilityResults] = useState({});
@@ -120,179 +132,196 @@ const Home = () => {
         toast.success('Availability filter reset. Showing full fleet.');
     };
 
-    // Scroll Animation Observer
-    useEffect(() => {
-        const observer = new IntersectionObserver((entries) => {
-            entries.forEach(entry => {
-                if (entry.isIntersecting) {
-                    entry.target.classList.add('visible');
-                }
+    // Scroll to specific section
+    const scrollToSection = (id) => {
+        const element = document.getElementById(id);
+        if (element) {
+            const offset = 120;
+            const bodyRect = document.body.getBoundingClientRect().top;
+            const elementRect = element.getBoundingClientRect().top;
+            const elementPosition = elementRect - bodyRect;
+            const offsetPosition = elementPosition - offset;
+
+            window.scrollTo({
+                top: offsetPosition,
+                behavior: 'smooth'
             });
-        }, { threshold: 0.1 });
+            setActiveCategory(id);
+        } else if (id === 'All') {
+            const el = document.getElementById('vehicle-showcase-section');
+            if (el) {
+                el.scrollIntoView({ behavior: 'smooth' });
+            }
+            setActiveCategory('All');
+        }
+    };
 
-        const headers = document.querySelectorAll('.category-header');
-        headers.forEach(header => observer.observe(header));
+    // Filter and Sort helper
+    const filterAndSortVehicles = (list) => {
+        let items = [...list];
+        if (searchKeyword.trim()) {
+            const q = searchKeyword.toLowerCase();
+            items = items.filter(v => 
+                v.name?.toLowerCase().includes(q) || 
+                v.engine?.toLowerCase().includes(q) || 
+                v.fuel_type?.toLowerCase().includes(q)
+            );
+        }
+        if (sortBy === 'price-asc') {
+            items.sort((a, b) => (parseFloat(a.price) || 0) - (parseFloat(b.price) || 0));
+        } else if (sortBy === 'price-desc') {
+            items.sort((a, b) => (parseFloat(b.price) || 0) - (parseFloat(a.price) || 0));
+        }
+        return items;
+    };
 
-        return () => headers.forEach(header => observer.unobserve(header));
-    }, []);
-
+    // Industrial Vehicle Card Component
     const VehicleCard = ({ vehicle, type }) => {
-        // Mock rating if not present (random between 4.5 and 5.0)
-        const rating = (4.5 + Math.random() * 0.5).toFixed(1);
-
-        // Check if availability query is active for this vehicle
+        const rating = (4.6 + ((vehicle.id % 5) * 0.08)).toFixed(1);
         const avail = activeAvailabilityQuery ? availabilityResults[vehicle.id] : null;
         const isAvailableForSlot = avail ? avail.isAvailable : true;
 
-        // Construct booking URL
         let rentUrl = `/booking-form?vehicleId=${vehicle.id}&type=${type}`;
         if (activeAvailabilityQuery) {
             rentUrl += `&startDate=${activeAvailabilityQuery.startDate}&startTime=${activeAvailabilityQuery.startTime}&duration=${activeAvailabilityQuery.duration}`;
         }
 
-        return (
-            <div className="vehicle-card" data-id={vehicle.id} data-type={type} style={{
-                position: 'relative',
-                opacity: (avail && !isAvailableForSlot) ? 0.75 : 1,
-                border: (avail && isAvailableForSlot) ? '2px solid #22c55e' : (avail && !isAvailableForSlot) ? '2px solid #fca5a5' : '1px solid rgba(0,0,0,0.08)'
-            }}>
-                <div className="card-image-wrapper">
-                    <Link to={`/vehicle/${type}/${vehicle.id}`}>
-                        <img src={vehicle.image_url} alt={vehicle.name} />
-                    </Link>
-                    <span className="rating-badge"><i className="fas fa-star"></i> {rating}</span>
+        const handleCardMouseMove = (e) => {
+            const card = e.currentTarget;
+            const rect = card.getBoundingClientRect();
+            const x = e.clientX - rect.left;
+            const y = e.clientY - rect.top;
+            const cx = rect.width / 2;
+            const cy = rect.height / 2;
+            const rotX = ((y - cy) / cy) * -7;
+            const rotY = ((x - cx) / cx) * 7;
+            card.style.transform = `perspective(1000px) rotateX(${rotX.toFixed(2)}deg) rotateY(${rotY.toFixed(2)}deg) translateY(-5px)`;
+            card.style.setProperty('--glare-x', `${(x / rect.width) * 100}%`);
+            card.style.setProperty('--glare-y', `${(y / rect.height) * 100}%`);
+            card.style.setProperty('--glare-opacity', '1');
+        };
 
-                    {/* Live Availability Badge if filter active */}
+        const handleCardMouseLeave = (e) => {
+            const card = e.currentTarget;
+            card.style.transform = 'perspective(1000px) rotateX(0deg) rotateY(0deg) translateY(0)';
+            card.style.setProperty('--glare-opacity', '0');
+        };
+
+        return (
+            <div 
+                className="industrial-vehicle-card" 
+                data-id={vehicle.id} 
+                data-type={type}
+                onMouseMove={handleCardMouseMove}
+                onMouseLeave={handleCardMouseLeave}
+                style={{
+                    opacity: (avail && !isAvailableForSlot) ? 0.78 : 1,
+                    borderColor: (avail && isAvailableForSlot) ? '#10b981' : (avail && !isAvailableForSlot) ? '#fca5a5' : undefined
+                }}
+            >
+                {/* 3D Holographic Specular Glare */}
+                <div className="card-glare-overlay" aria-hidden="true" />
+
+                {/* Visual Top Preview */}
+                <div className="card-top-preview">
+                    <Link to={`/vehicle/${type}/${vehicle.id}`} style={{ width: '100%', height: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                        <img 
+                            src={vehicle.image_url} 
+                            alt={vehicle.name} 
+                            className="card-vehicle-image" 
+                            loading="lazy"
+                        />
+                    </Link>
+
+                    {/* Category Type Pill */}
+                    <span className={`card-type-pill ${type === 'car' ? 'pill-car' : type === 'scooty' ? 'pill-scooty' : 'pill-bike'}`}>
+                        {type === 'car' ? '🚗 Car' : type === 'scooty' ? '🛵 Scooty' : '🏍️ Bike'}
+                    </span>
+
+                    {/* Star Rating & Review Count Badge */}
+                    <span className="card-rating-badge">
+                        <i className="fas fa-star"></i> {rating}
+                        <span style={{ fontSize: '0.68rem', color: '#78350f', marginLeft: '3px', fontWeight: '700' }}>
+                            ({24 + ((vehicle.id * 7) % 38)})
+                        </span>
+                    </span>
+
+                    {/* Live Availability Status Bar if Slot Checked */}
                     {activeAvailabilityQuery && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '12px',
-                            left: '12px',
-                            zIndex: 2,
-                            padding: '6px 12px',
-                            borderRadius: '20px',
-                            fontSize: '11px',
-                            fontWeight: '800',
-                            textTransform: 'uppercase',
-                            letterSpacing: '0.5px',
-                            background: isAvailableForSlot ? 'rgba(34, 197, 94, 0.95)' : 'rgba(239, 68, 68, 0.95)',
-                            color: 'white',
-                            boxShadow: '0 4px 10px rgba(0,0,0,0.15)',
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '5px'
-                        }}>
+                        <div className={`card-slot-banner ${isAvailableForSlot ? 'slot-available' : 'slot-booked'}`}>
                             <i className={isAvailableForSlot ? "fas fa-check-circle" : "fas fa-ban"}></i>
-                            {isAvailableForSlot ? 'Available' : 'Booked'}
+                            {isAvailableForSlot ? 'Available for selected slot' : (avail.reason || 'Booked for this time')}
                         </div>
                     )}
                 </div>
-                <div className="vehicle-details">
-                    <div className="vehicle-header">
-                        <Link to={`/vehicle/${type}/${vehicle.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
-                            <h3>{vehicle.name}</h3>
-                        </Link>
-                        <span className="engine-badge">{vehicle.engine || 'N/A'}</span>
-                    </div>
 
-                    <div className="vehicle-specs">
-                        <span><i className="fas fa-gas-pump"></i> {vehicle.fuel_type || 'Petrol'}</span>
-                        <span><i className="fas fa-tachometer-alt"></i> Manual</span>
-                    </div>
-
-                    {/* Conflict reason if booked */}
-                    {avail && !isAvailableForSlot && (
-                        <div style={{
-                            background: '#fef2f2',
-                            border: '1px solid #fecaca',
-                            borderRadius: '6px',
-                            padding: '6px 10px',
-                            fontSize: '11.5px',
-                            color: '#991b1b',
-                            marginTop: '8px',
-                            fontWeight: '600'
-                        }}>
-                            <i className="fas fa-info-circle" style={{ marginRight: '4px' }}></i>
-                            {avail.reason}
+                {/* Card Content Body */}
+                <div className="card-body-content">
+                    <div>
+                        <div className="card-title-row">
+                            <Link to={`/vehicle/${type}/${vehicle.id}`} style={{ textDecoration: 'none', color: 'inherit' }}>
+                                <h3 className="card-vehicle-title">{vehicle.name}</h3>
+                            </Link>
                         </div>
-                    )}
 
-                    <div className="card-divider"></div>
+                        {/* High-Contrast Spec Tags */}
+                        <div className="card-spec-tags-grid">
+                            <span className="spec-badge-item">
+                                <i className="fas fa-microchip"></i> {vehicle.engine || (type === 'car' ? '1200cc' : '150cc')}
+                            </span>
+                            <span className="spec-badge-item">
+                                <i className="fas fa-gas-pump"></i> {vehicle.fuel_type || 'Petrol'}
+                            </span>
+                            <span className="spec-badge-item">
+                                <i className="fas fa-cog"></i> Manual
+                            </span>
+                            <span className="spec-badge-item">
+                                <i className="fas fa-shield-alt"></i> Insured
+                            </span>
+                        </div>
+                    </div>
 
-                    <div className="vehicle-footer">
-                        <div className="price-info">
+                    {/* Footer: Pricing & Action Buttons */}
+                    <div className="card-action-footer">
+                        <div className="card-pricing-block">
                             {avail && isAvailableForSlot ? (
                                 <>
-                                    <span className="price-label" style={{ color: '#16a34a', fontWeight: '700' }}>
-                                        Est. for {activeAvailabilityQuery.duration} hrs
-                                    </span>
-                                    <span className="price-value" style={{ color: '#15803d' }}>
+                                    <span className="price-main-value" style={{ color: '#059669' }}>
                                         ₹{avail.estimatedTotal}
-                                        <small style={{ fontSize: '12px', color: '#64748b', fontWeight: 'normal', marginLeft: '4px' }}>
-                                            (₹{vehicle.price}/h)
-                                        </small>
+                                    </span>
+                                    <span className="price-hourly-sub">
+                                        For {activeAvailabilityQuery.duration}h (₹{vehicle.price}/hr)
                                     </span>
                                 </>
                             ) : (
                                 <>
-                                    <span className="price-label">Price per Hour</span>
-                                    <span className="price-value">₹{vehicle.price}</span>
+                                    <span className="price-main-value">
+                                        ₹{vehicle.price}
+                                    </span>
+                                    <span className="price-hourly-sub">
+                                        Per hour • ₹{(vehicle.price * 10).toLocaleString()} / day
+                                    </span>
                                 </>
                             )}
                         </div>
 
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginTop: '10px' }}>
-                            <Link to={`/vehicle/${type}/${vehicle.id}`} className="view-btn" style={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                padding: '10px',
-                                border: '1px solid #007bff',
-                                borderRadius: '8px',
-                                color: '#007bff',
-                                textDecoration: 'none',
-                                fontWeight: '600',
-                                backgroundColor: 'white',
-                                fontSize: '1rem',
-                                transition: 'all 0.2s ease'
-                            }}>
-                                View Details
+                        <div className="card-cta-buttons">
+                            <Link to={`/vehicle/${type}/${vehicle.id}`} className="btn-card-specs" title="View vehicle technical specifications">
+                                Specs
                             </Link>
 
                             {isAvailableForSlot ? (
-                                <Link to={rentUrl} className="rent-btn" style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    padding: '10px',
-                                    borderRadius: '8px',
-                                    textAlign: 'center',
-                                    fontSize: '1rem',
-                                    height: 'auto',
-                                    width: '100%',
-                                    boxSizing: 'border-box',
-                                    background: activeAvailabilityQuery ? '#16a34a' : undefined
-                                }}>
-                                    {activeAvailabilityQuery ? 'Book Slot' : 'Rent Now'}
+                                <Link 
+                                    to={rentUrl} 
+                                    className="btn-card-rent"
+                                    style={{
+                                        background: activeAvailabilityQuery ? 'linear-gradient(135deg, #059669 0%, #10b981 100%)' : undefined
+                                    }}
+                                >
+                                    {activeAvailabilityQuery ? 'Book Slot' : 'Rent Now'} <i className="fas fa-arrow-right" style={{ fontSize: '0.75rem' }}></i>
                                 </Link>
                             ) : (
-                                <Link to={`/vehicle/${type}/${vehicle.id}`} style={{
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    padding: '10px',
-                                    borderRadius: '8px',
-                                    textAlign: 'center',
-                                    fontSize: '0.9rem',
-                                    height: 'auto',
-                                    width: '100%',
-                                    boxSizing: 'border-box',
-                                    background: '#f1f5f9',
-                                    color: '#64748b',
-                                    border: '1px solid #cbd5e1',
-                                    textDecoration: 'none',
-                                    fontWeight: '700'
-                                }}>
+                                <Link to={`/vehicle/${type}/${vehicle.id}`} className="btn-card-specs" style={{ color: '#dc2626' }}>
                                     Check Dates
                                 </Link>
                             )}
@@ -303,395 +332,219 @@ const Home = () => {
         );
     };
 
+    // Filtered lists
+    const filteredBikes = filterAndSortVehicles(bikes);
+    const filteredScooters = filterAndSortVehicles(scooters);
+    const filteredCars = filterAndSortVehicles(cars);
+    const totalVehiclesCount = filteredBikes.length + filteredScooters.length + filteredCars.length;
 
-    // Scroll to specific section
-    const scrollToSection = (id) => {
-        const element = document.getElementById(id);
-        if (element) {
-            const offset = 80; // Adjust for sticky navbar
-            const bodyRect = document.body.getBoundingClientRect().top;
-            const elementRect = element.getBoundingClientRect().top;
-            const elementPosition = elementRect - bodyRect;
-            const offsetPosition = elementPosition - offset;
-
-            window.scrollTo({
-                top: offsetPosition,
-                behavior: 'smooth'
-            });
-            setActiveCategory(id); // Optional: keep highlighting the button
-        } else if (id === 'All') {
-            window.scrollTo({ top: 0, behavior: 'smooth' });
-            setActiveCategory('All');
+    // FAQ Items
+    const faqs = [
+        {
+            q: 'What documents are required to rent a bike or car?',
+            a: 'You only need a valid original Government Driving License (Motorcycle with Gear / LMV) and an Aadhaar card or Passport for identity verification. Verification is 100% digital and takes under 60 seconds.'
+        },
+        {
+            q: 'How does the 30% advance token work?',
+            a: 'To guarantee your slot without holding large deposits, you only pay a 30% advance token online via UPI, NetBanking, or Cards. The remaining 70% is payable at the pickup hub upon vehicle handover.'
+        },
+        {
+            q: 'Is fuel included in the hourly rental rate?',
+            a: 'Vehicles are handed over with a full or standard tank. You can return the vehicle with the same fuel level, giving you complete freedom without inflated fuel surcharges.'
+        },
+        {
+            q: 'What if my vehicle encounters a flat tyre or emergency on the road?',
+            a: 'All RentHub bookings come with complimentary 24/7 Roadside Voice AI SOS Support ("Aarohi"). Our AI dispatches an authorized recovery vehicle or mobile mechanic directly to your live GPS location.'
+        },
+        {
+            q: 'Can I extend my booking duration if my trip gets delayed?',
+            a: 'Yes, absolutely! You can extend your active rental directly from your "My Bookings" dashboard with one tap, provided the vehicle is not pre-reserved by another rider for that subsequent slot.'
         }
-    };
+    ];
+
+    // Rich Verified Customer Reviews Data for the Slider
+    const testimonials = [
+        {
+            id: 1,
+            name: "Ankit Roy",
+            avatar: "AR",
+            avatarBg: "linear-gradient(135deg, #059669 0%, #3b82f6 100%)",
+            location: "Bengaluru",
+            vehicle: "Royal Enfield Himalayan 450",
+            type: "bike",
+            tripType: "Spiti Valley Expedition • 6 Days",
+            rating: 5,
+            date: "2 days ago",
+            tag: "Mountain Trail",
+            tagColor: "#047857",
+            tagBg: "#ecfdf5",
+            quote: "Rented the new Himalayan 450 for our Spiti circuit. The bike was fresh out of 28-point inspection with brand new Ceat dual-sport tyres. The 30% advance token made reservation instantaneous without holding huge deposit funds!"
+        },
+        {
+            id: 2,
+            name: "Pooja Sharma",
+            avatar: "PS",
+            avatarBg: "linear-gradient(135deg, #ec4899 0%, #8b5cf6 100%)",
+            location: "Delhi NCR",
+            vehicle: "Honda Activa 6G",
+            type: "scooty",
+            tripType: "City Commute & Client Meets • 2 Days",
+            rating: 5,
+            date: "Yesterday",
+            tag: "Urban Mobility",
+            tagColor: "#7c3aed",
+            tagBg: "#f5f3ff",
+            quote: "The contactless QR gate-pass system is so futuristic! I arrived at the Connaught Place hub, scanned the pass from my phone, received sanitized keys with two clean helmets, and zoomed away in under 90 seconds."
+        },
+        {
+            id: 3,
+            name: "Vikram Kulkarni",
+            avatar: "VK",
+            avatarBg: "linear-gradient(135deg, #3b82f6 0%, #06b6d4 100%)",
+            location: "Mumbai",
+            vehicle: "Hyundai Creta SX (O)",
+            type: "car",
+            tripType: "Mahabaleshwar Family Trip • 3 Days",
+            rating: 5,
+            date: "3 days ago",
+            tag: "Family Highway",
+            tagColor: "#0284c7",
+            tagBg: "#f0f9ff",
+            quote: "100% transparent pricing with zero surprise charges. Plus the 24/7 AI roadside SOS ('Aarohi') gave my entire family peace of mind on night ghat drives. The car was spotless with crisp dual-zone AC."
+        },
+        {
+            id: 4,
+            name: "Rohan Deshmukh",
+            avatar: "RD",
+            avatarBg: "linear-gradient(135deg, #f59e0b 0%, #ea580c 100%)",
+            location: "Pune",
+            vehicle: "KTM Duke 390 Gen-3",
+            type: "bike",
+            tripType: "Lavasa Ghats Cornering • 1 Day",
+            rating: 5,
+            date: "4 days ago",
+            tag: "Apex Performance",
+            tagColor: "#c2410c",
+            tagBg: "#fff7ed",
+            quote: "Incredible machine condition! The quickshifter slipped into gear effortlessly and the dual-channel ABS gave supreme bite. The pre-handover digital gauge telemetry check on my phone is pure racing-grade attention to detail."
+        },
+        {
+            id: 5,
+            name: "Sneha Nair",
+            avatar: "SN",
+            avatarBg: "linear-gradient(135deg, #10b981 0%, #059669 100%)",
+            location: "Kochi",
+            vehicle: "Mahindra Thar 4x4 AT",
+            type: "car",
+            tripType: "Munnar Off-Road Trail • 4 Days",
+            rating: 5,
+            date: "5 days ago",
+            tag: "4x4 Adventure",
+            tagColor: "#0f766e",
+            tagBg: "#f0fdfa",
+            quote: "Climbed steep rocky tea plantation slopes without breaking a sweat. The 4x4 low-range was silky smooth. Handover took 2 minutes at the airport hub and the security refund was instantly credited back to UPI."
+        },
+        {
+            id: 6,
+            name: "Aditya Mehta",
+            avatar: "AM",
+            avatarBg: "linear-gradient(135deg, #6366f1 0%, #4338ca 100%)",
+            location: "Hyderabad",
+            vehicle: "BMW G 310 GS",
+            type: "bike",
+            tripType: "Hampi Heritage Cruise • 3 Days",
+            rating: 5,
+            date: "1 week ago",
+            tag: "Touring Sprint",
+            tagColor: "#4338ca",
+            tagBg: "#eef2ff",
+            quote: "Top tier hospitality! Rented for an interstate sprint from Hyderabad to Hampi. Upright touring ergonomics, zero handlebar buzzing, and returning with the same fuel level saved me from overpriced fuel penalty gimmicks."
+        },
+        {
+            id: 7,
+            name: "Kavya Venkatesh",
+            avatar: "KV",
+            avatarBg: "linear-gradient(135deg, #06b6d4 0%, #0891b2 100%)",
+            location: "Chennai",
+            vehicle: "Yamaha MT-15 V2",
+            type: "bike",
+            tripType: "ECR Coastal Night Sprint • 2 Days",
+            rating: 5,
+            date: "1 week ago",
+            tag: "Coastal Ride",
+            tagColor: "#0891b2",
+            tagBg: "#ecfeff",
+            quote: "Unbeatable 48+ kmpl mileage along East Coast Road and lightweight agility in evening rush hour. The one-tap trip extension button on the RentHub portal let us extend by 5 hours seamlessly with no phone calls!"
+        },
+        {
+            id: 8,
+            name: "Harsh Vardhan",
+            avatar: "HV",
+            avatarBg: "linear-gradient(135deg, #10b981 0%, #2563eb 100%)",
+            location: "Chandigarh",
+            vehicle: "Tata Nexon EV Max",
+            type: "car",
+            tripType: "Kasauli Mountain Retreat • 2 Days",
+            rating: 5,
+            date: "2 weeks ago",
+            tag: "Electric Eco",
+            tagColor: "#1d4ed8",
+            tagBg: "#eff6ff",
+            quote: "First time driving an electric vehicle in the Himalayas! Picked up at 100% battery with 400+ km range. The downhill regenerative braking recharged the battery by 9% going down Kalka. Unbelievable comfort!"
+        }
+    ];
+
+    // Duplicated testimonials for seamless infinite marquee scroll
+    const marqueeReviews = [...testimonials, ...testimonials];
 
     return (
-        <main>
+        <main className="home-page-main">
 
-
-            <section className="hero">
-                <div className="hero-content">
-                    <h1>Your Adventure Starts Here</h1>
-                    <p>Explore our wide range of bikes, scooty, and cars for your next journey.</p>
-                </div>
+            {/* 1. SCENIC HERO IMAGE BANNER (Clear, Crisp, High-Res, No Blur, No Text) */}
+            <section className="scenic-hero-banner">
+                <img 
+                    src="https://wallpaperaccess.com/full/526697.jpg" 
+                    alt="Scenic Mountain Road Adventure" 
+                    className="scenic-hero-img"
+                    loading="eager"
+                />
             </section>
 
-            {/* Vehicle Showcase Section */}
-            <section className="vehicle-showcase" id="vehicle-showcase-section" style={{ paddingTop: '20px' }}>
-                <div className="container" style={{ maxWidth: '100%', padding: '0' }}>
+            {/* 2. DEDICATED BOOKING SEARCH & PLATFORM HIGHLIGHTS (Directly Below Image) */}
+            <section className="hero-booking-dock-section">
+                {/* Floating Canvas Physics Background with Live Twin Speedometer & Odometer */}
+                <FloatingBackground density={28} meterType="speedo" />
 
-                    {/* DYNAMIC FESTIVE OFFERS SECTION - MOVED ABOVE VEHICLE HEADER */}
-                    {offers && offers.length > 0 && (
-                        <div style={{
-                            margin: '0 0 60px 0',
-                            background: 'rgba(248, 250, 252, 0.5)',
-                            backdropFilter: 'blur(10px)',
-                            padding: '60px 0',
-                            borderRadius: '0 0 60px 60px',
-                            borderBottom: '1px solid rgba(226, 232, 240, 0.8)'
-                        }}>
-                            <div style={{
-                                width: '100%',
-                                padding: '0 5%'
-                            }}>
-                                {/* Decorative Glow Background */}
-                                <div style={{
-                                    position: 'absolute',
-                                    top: '-40px',
-                                    left: '-20px',
-                                    width: '400px',
-                                    height: '200px',
-                                    background: 'radial-gradient(circle, rgba(79, 70, 229, 0.08) 0%, rgba(255, 255, 255, 0) 70%)',
-                                    zIndex: 0,
-                                    pointerEvents: 'none'
-                                }}></div>
-
-                                <div style={{
-                                    textAlign: 'center',
-                                    marginBottom: '60px',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    alignItems: 'center',
-                                    gap: '20px',
-                                    position: 'relative',
-                                    zIndex: 1
-                                }}>
-                                    <div style={{ display: 'flex', alignItems: 'center', gap: '15px', flexWrap: 'wrap', justifyContent: 'center' }}>
-                                        <span style={{
-                                            padding: '10px 24px',
-                                            background: 'linear-gradient(135deg, #6366f1 0%, #4f46e5 100%)',
-                                            color: 'white',
-                                            borderRadius: '50px',
-                                            fontSize: '12px',
-                                            fontWeight: '950',
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '2.5px',
-                                            boxShadow: '0 10px 25px rgba(79, 70, 229, 0.4)',
-                                            animation: 'pulse 2s infinite'
-                                        }}>
-                                            <style>{`
-                                                    @keyframes pulse {
-                                                        0% { transform: scale(1); box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4); }
-                                                        50% { transform: scale(1.05); box-shadow: 0 15px 35px rgba(79, 70, 229, 0.6); }
-                                                        100% { transform: scale(1); box-shadow: 0 10px 25px rgba(79, 70, 229, 0.4); }
-                                                    }
-                                                `}</style>
-                                            Limited Time
-                                        </span>
-                                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                                            <span style={{ fontSize: '42px', animation: 'float 3s ease-in-out infinite' }}>
-                                                <style>{`
-                                                        @keyframes float {
-                                                            0% { transform: translateY(0px) rotate(0deg); }
-                                                            50% { transform: translateY(-10px) rotate(5deg); }
-                                                            100% { transform: translateY(0px) rotate(0deg); }
-                                                        }
-                                                    `}</style>
-                                                🎉
-                                            </span>
-                                            <h2 style={{
-                                                fontSize: window.innerWidth < 768 ? '36px' : '58px',
-                                                fontWeight: '950',
-                                                margin: '0',
-                                                color: '#1e1b4b',
-                                                letterSpacing: '-2px',
-                                                lineHeight: '1.1'
-                                            }}>
-                                                Festive <span style={{ color: '#4f46e5' }}>Rewards</span> & Deals
-                                            </h2>
-                                        </div>
-                                    </div>
-
-                                    <p style={{
-                                        color: '#64748b',
-                                        margin: '0',
-                                        fontSize: '18px',
-                                        fontWeight: '500',
-                                        maxWidth: '750px',
-                                        lineHeight: '1.6'
-                                    }}>
-                                        Exclusive seasonal perks handcrafted for your next unforgettable journey.
-                                    </p>
-
-                                    {offers.length > 1 && (
-                                        <div style={{ display: 'flex', gap: '15px', marginTop: '20px' }}>
-                                            <button className="scroll-btn" onClick={() => document.getElementById('offers-container').scrollBy({ left: -450, behavior: 'smooth' })} style={{ width: '56px', height: '56px', borderRadius: '18px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.04)', transition: '0.4s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className="fas fa-chevron-left" style={{ color: '#4f46e5', fontSize: '18px' }}></i></button>
-                                            <button className="scroll-btn" onClick={() => document.getElementById('offers-container').scrollBy({ left: 450, behavior: 'smooth' })} style={{ width: '56px', height: '56px', borderRadius: '18px', border: '1px solid #e2e8f0', background: 'white', cursor: 'pointer', boxShadow: '0 10px 20px rgba(0,0,0,0.04)', transition: '0.4s', display: 'flex', alignItems: 'center', justifyContent: 'center' }}><i className="fas fa-chevron-right" style={{ color: '#4f46e5', fontSize: '18px' }}></i></button>
-                                        </div>
-                                    )}
-                                </div>
-
-                                <div
-                                    id="offers-container"
-                                    style={{
-                                        display: 'flex',
-                                        gap: window.innerWidth < 768 ? '20px' : '40px',
-                                        overflowX: offers.length === 1 ? 'hidden' : 'auto',
-                                        padding: '20px 50px 40px 50px', // Added side padding for 'peeking' effect
-                                        scrollbarWidth: 'none',
-                                        msOverflowStyle: 'none',
-                                        scrollSnapType: 'x mandatory',
-                                        justifyContent: offers.length === 1 ? 'center' : 'flex-start',
-                                        scrollPadding: '50px' // Ensure snap accounts for padding
-                                    }}
-                                >
-                                {offers && offers
-                                    .filter(offer => {
-                                        // 1. Hide if completely expired (valid_until passed)
-                                        if (offer.valid_until && new Date(offer.valid_until) < currentTime) return false;
-                                        // 2. Hide if it's too far in the future (optional, but keep it for now)
-                                        return true;
-                                    })
-                                    .map((offer, idx) => {
-                                        const isFuture = offer.valid_from && new Date(offer.valid_from) > currentTime;
-                                        const isMobile = window.innerWidth < 768;
-                                        const launchDateTime = isFuture 
-                                            ? new Date(offer.valid_from).toLocaleString('en-IN', { 
-                                                day: 'numeric', 
-                                                month: 'short', 
-                                                hour: '2-digit', 
-                                                minute: '2-digit',
-                                                hour12: true 
-                                            }) 
-                                            : null;
-
-                                        return (
-                                            <div 
-                                                key={offer.id}
-                                                className={`offer-card-modern ${isFuture ? 'offer-future' : ''}`}
-                                                style={{ 
-                                                    minWidth: offers.length === 1 ? 'min(600px, 92vw)' : 'min(480px, 85vw)', 
-                                                    background: 'white', 
-                                                    borderRadius: '32px', 
-                                                    overflow: 'hidden', 
-                                                    boxShadow: '0 25px 50px -12px rgba(0,0,0,0.1)',
-                                                    border: '1px solid #f1f5f9',
-                                                    scrollSnapAlign: 'center',
-                                                    transition: 'all 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275)',
-                                                    position: 'relative',
-                                                    flexShrink: 0,
-                                                    display: 'flex',
-                                                    flexDirection: 'column',
-                                                    height: isMobile ? 'auto' : '780px',
-                                                    cursor: isFuture ? 'default' : 'pointer'
-                                                }}
-                                            >
-                                                {/* Future Blur Overlay */}
-                                                {isFuture && (
-                                                    <div style={{
-                                                        position: 'absolute',
-                                                        inset: 0,
-                                                        background: 'rgba(255, 255, 255, 0.1)',
-                                                        backdropFilter: 'blur(8px)',
-                                                        zIndex: 10,
-                                                        display: 'flex',
-                                                        flexDirection: 'column',
-                                                        alignItems: 'center',
-                                                        justifyContent: 'center',
-                                                        textAlign: 'center',
-                                                        padding: '30px'
-                                                    }}>
-                                                        <div style={{ 
-                                                            background: '#4f46e5', 
-                                                            color: 'white', 
-                                                            padding: '12px 24px', 
-                                                            borderRadius: '50px', 
-                                                            fontWeight: '900', 
-                                                            fontSize: '18px', 
-                                                            boxShadow: '0 10px 25px rgba(79, 70, 229, 0.4)',
-                                                            marginBottom: '15px',
-                                                            animation: 'pulse 2s infinite'
-                                                        }}>
-                                                            🚀 LAUNCHING SOON
-                                                        </div>
-                                                        <div style={{ color: '#1e1b4b', fontWeight: '800', fontSize: '20px' }}>
-                                                            Starts on {launchDateTime}
-                                                        </div>
-                                                        <p style={{ color: '#64748b', fontSize: '14px', maxWidth: '250px', marginTop: '10px' }}>
-                                                            Set your reminders! This exclusive deal will be unlocked on {launchDateTime}.
-                                                        </p>
-                                                    </div>
-                                                )}
-
-                                                {/* Top Status Header */}
-                                                <div style={{ 
-                                                    padding: isMobile ? '15px 20px' : '20px 30px', 
-                                                    borderBottom: '1px solid #f1f5f9',
-                                                    display: 'flex',
-                                                    justifyContent: 'space-between',
-                                                    alignItems: 'center',
-                                                    flexShrink: 0,
-                                                    filter: isFuture ? 'blur(2px)' : 'none'
-                                                }}>
-                                                    <div style={{ 
-                                                        background: isFuture ? '#f1f5f9' : '#fff7ed', 
-                                                        padding: '6px 12px', 
-                                                        borderRadius: '100px', 
-                                                        fontSize: '10px', 
-                                                        fontWeight: '800', 
-                                                        color: isFuture ? '#64748b' : '#c2410c',
-                                                        letterSpacing: '1px',
-                                                        textTransform: 'uppercase'
-                                                    }}>
-                                                        {isFuture ? '📅 UPCOMING' : '✨ Exclusive Deal'}
-                                                    </div>
-                                                    <div style={{ fontSize: '12px', fontWeight: '700', color: '#94a3b8' }}>
-                                                        {isFuture ? `Starting ${launchDateTime}` : `Ends ${offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon'}`}
-                                                    </div>
-                                                </div>
-
-                                                <div style={{ display: 'flex', flexDirection: 'column', flex: 1, filter: isFuture ? 'blur(2px)' : 'none' }}>
-                                                    {/* Visual Section */}
-                                                    <div className="offer-card-image" style={{ width: '100%', height: '240px', position: 'relative', flexShrink: 0 }}>
-                                                        <img src={offer.image_url || 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&q=80&w=800'} alt={offer.title} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                                                        <div style={{ 
-                                                            position: 'absolute', 
-                                                            top: isMobile ? '15px' : '20px', 
-                                                            left: isMobile ? '15px' : '20px',
-                                                            background: 'rgba(255, 255, 255, 0.95)',
-                                                            padding: '6px 12px',
-                                                            borderRadius: '10px',
-                                                            fontSize: isMobile ? '12px' : '14px',
-                                                            fontWeight: '900',
-                                                            color: '#4f46e5',
-                                                            boxShadow: '0 4px 10px rgba(0,0,0,0.1)'
-                                                        }}>
-                                                            {offer.discount_percentage ? `${offer.discount_percentage}% OFF` : `₹${offer.flat_discount} OFF`}
-                                                        </div>
-                                                    </div>
-
-                                                    {/* Content Section */}
-                                                    <div style={{ padding: isMobile ? '20px' : '30px', flex: 1, display: 'flex', flexDirection: 'column' }}>
-                                                        <div style={{ flex: 1 }}>
-                                                            <h3 className="offer-card-title" style={{ 
-                                                                fontSize: '32px', 
-                                                                fontWeight: '800', 
-                                                                margin: '0 0 8px 0', 
-                                                                color: '#0f172a', 
-                                                                letterSpacing: '-0.5px', 
-                                                                lineHeight: '1.2' 
-                                                            }}>{offer.title}</h3>
-                                                            <p className="offer-card-desc" style={{ color: '#64748b', fontSize: '16px', margin: '0 0 20px 0', lineHeight: '1.5' }}>{offer.description}</p>
-                                                            
-                                                            {/* Capsule Badges Grid */}
-                                                            <div className="offer-info-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '10px', marginBottom: '30px' }}>
-                                                                {[
-                                                                    { icon: 'fa-tag', label: 'Valid For', value: offer.target_category, color: '#6366f1' },
-                                                                    { icon: 'fa-calendar-alt', label: 'Availability', value: offer.valid_days ? offer.valid_days.split(',').map(d => ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'][parseInt(d)]).join(', ') : 'Every Day', color: '#8b5cf6' },
-                                                                    { icon: 'fa-clock', label: 'Min Booking', value: offer.min_duration > 0 ? `${offer.min_duration}h` : 'No Min', color: '#f59e0b', hide: offer.min_duration <= 0 },
-                                                                    { icon: 'fa-wallet', label: 'Min Spend', value: offer.min_booking_amount > 0 ? `₹${offer.min_booking_amount}` : 'Any', color: '#10b981', hide: offer.min_booking_amount <= 0 },
-                                                                    { icon: 'fa-hourglass-half', label: 'Expires', value: offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon', color: '#ef4444' }
-                                                                ].filter(r => !r.hide).map((rule, idx) => (
-                                                                    <div key={idx} className="offer-info-box" style={{ 
-                                                                        display: 'flex', 
-                                                                        alignItems: 'center', 
-                                                                        gap: '8px',
-                                                                        padding: '12px',
-                                                                        background: '#f8fafc',
-                                                                        borderRadius: '12px',
-                                                                        border: '1px solid #f1f5f9'
-                                                                    }}>
-                                                                        <div style={{ color: rule.color, fontSize: isMobile ? '12px' : '14px' }}>
-                                                                            <i className={`fas ${rule.icon}`}></i>
-                                                                        </div>
-                                                                        <div>
-                                                                            <div style={{ fontSize: '8px', color: '#94a3b8', fontWeight: '800', textTransform: 'uppercase' }}>{rule.label}</div>
-                                                                            <div style={{ fontSize: isMobile ? '11px' : '13px', fontWeight: '700', color: '#1e293b' }}>{rule.value}</div>
-                                                                        </div>
-                                                                    </div>
-                                                                ))}
-                                                            </div>
-                                                        </div>
-
-                                                        {/* Copy Code Action - Always at Bottom */}
-                                                        <div className="offer-promo-bar" style={{ 
-                                                            display: 'flex', 
-                                                            alignItems: 'center', 
-                                                            justifyContent: 'space-between', 
-                                                            background: isFuture ? '#cbd5e1' : '#0f172a', 
-                                                            padding: '10px 10px 10px 25px', 
-                                                            borderRadius: '20px', 
-                                                            boxShadow: isFuture ? 'none' : '0 20px 40px rgba(15, 23, 42, 0.2)',
-                                                            flexShrink: 0,
-                                                            marginTop: 'auto'
-                                                        }}>
-                                                            <div style={{ flex: 1 }}>
-                                                                <div style={{ fontSize: '8px', color: isFuture ? '#64748b' : '#94a3b8', fontWeight: '800', textTransform: 'uppercase', letterSpacing: '1px' }}>Promo Code</div>
-                                                                <div className="promo-code-text" style={{ fontSize: '24px', fontWeight: '800', color: '#ffffff', letterSpacing: '4px', fontFamily: 'monospace' }}>
-                                                                    {isFuture ? '••••••' : offer.code}
-                                                                </div>
-                                                            </div>
-                                                            <button 
-                                                                className="copy-btn-modern"
-                                                                disabled={isFuture}
-                                                                onClick={(e) => {
-                                                                    if (isFuture) return;
-                                                                    navigator.clipboard.writeText(offer.code);
-                                                                    const btn = e.currentTarget;
-                                                                    const originalContent = btn.innerHTML;
-                                                                    btn.innerHTML = '<i class="fas fa-check"></i>';
-                                                                    btn.style.background = '#10b981';
-                                                                    setTimeout(() => {
-                                                                        btn.innerHTML = originalContent;
-                                                                        btn.style.background = '#6366f1';
-                                                                    }, 2000);
-                                                                }}
-                                                                style={{ 
-                                                                    background: isFuture ? '#94a3b8' : '#6366f1', 
-                                                                    color: 'white', 
-                                                                    border: 'none', 
-                                                                    width: '56px',
-                                                                    height: '56px',
-                                                                    borderRadius: '14px', 
-                                                                    fontWeight: '700',
-                                                                    cursor: isFuture ? 'not-allowed' : 'pointer',
-                                                                    display: 'flex',
-                                                                    alignItems: 'center',
-                                                                    justifyContent: 'center',
-                                                                    fontSize: '18px',
-                                                                    transition: 'all 0.3s ease'
-                                                                }}
-                                                            >
-                                                                <i className={isFuture ? "fas fa-lock" : "far fa-copy"}></i>
-                                                            </button>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </div>
+                <div className="section-container">
+                    <div className="hero-headline-wrap">
+                        <div className="hero-trust-badge" style={{ display: 'inline-flex', alignItems: 'center', gap: '10px' }}>
+                            <img 
+                                src="/renthub-logo.png" 
+                                alt="RentHub" 
+                                style={{ 
+                                    width: '26px', 
+                                    height: '26px', 
+                                    borderRadius: '50%', 
+                                    objectFit: 'cover',
+                                    border: '1.5px solid #00D8FF',
+                                    boxShadow: '0 0 10px rgba(0, 195, 255, 0.75)'
+                                }} 
+                            />
+                            <span>RentHub Enterprise Mobility • Instant QR Gate-Pass Ready</span>
                         </div>
-                    )}
 
-                    <div className="section-header text-center" style={{ padding: '0 20px', marginBottom: '35px' }}>
-                        <h2 style={{ fontSize: '48px', fontWeight: '900', color: '#1e1b4b', marginBottom: '15px' }}>Featured Vehicles & Bikes</h2>
-                        <p className="section-subtitle" style={{ fontSize: '18px', color: '#64748b', maxWidth: '800px', margin: '0 auto 0 auto' }}>Choose from our premium fleet of well-maintained vehicles for a safe and comfortable ride.</p>
+                        <h1 className="hero-main-title">
+                            Rent High-Performance <span className="headline-gradient">Bikes & Cars</span> In Seconds
+                        </h1>
+
+                        <p className="hero-main-desc">
+                            Experience frictionless self-drive rentals with zero paperwork, transparent hourly rates, 
+                            100% sanitized vehicles, and 24/7 AI roadside assistance.
+                        </p>
                     </div>
 
-                    {/* Live Availability Checker Widget */}
-                    <div style={{ maxWidth: '1100px', margin: '0 auto 40px auto', padding: '0 20px' }}>
+                    {/* Check Availability Widget (Clean & Unobstructed, Below Image) */}
+                    <div className="hero-search-container">
                         <HeroAvailabilityWidget
                             onSearch={handleSearchAvailability}
                             isSearching={isSearchingAvailability}
@@ -700,157 +553,624 @@ const Home = () => {
                         />
                     </div>
 
-                    {/* Category Filter */}
-                    <div className="filter-container" style={{
-                        display: 'flex',
-                        justifyContent: 'center',
-                        gap: '15px',
-                        marginBottom: '40px',
-                        flexWrap: 'wrap',
-                        position: 'sticky',
-                        top: '80px',
-                        zIndex: 100,
-                        backgroundColor: '#f8f9fa',
-                        padding: '10px 0'
-                    }}>
-                        {[
-                            { name: 'All', id: 'All', icon: '✨' },
-                            { name: 'Bikes', id: 'bikes-section', icon: '🏍️' },
-                            { name: 'Scooty', id: 'scooters-section', icon: '🛵' },
-                            { name: 'Cars', id: 'cars-section', icon: '🚗' }
-                        ].map((category) => (
-                            <button
-                                key={category.name}
-                                onClick={() => scrollToSection(category.id)}
-                                style={{
-                                    padding: '16px 40px',
-                                    borderRadius: '50px',
-                                    border: 'none',
-                                    background: activeCategory === category.id
-                                        ? 'linear-gradient(135deg, #4facfe 0%, #00f2fe 100%)'
-                                        : 'white',
-                                    color: activeCategory === category.id ? 'white' : '#555',
-                                    fontSize: '18px',
-                                    fontWeight: '700',
-                                    cursor: 'pointer',
-                                    transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                                    boxShadow: activeCategory === category.id
-                                        ? '0 8px 20px rgba(79, 172, 254, 0.4)'
-                                        : '0 4px 6px rgba(0,0,0,0.05)',
-                                    transform: activeCategory === category.id ? 'translateY(-2px)' : 'none',
-                                    outline: 'none'
-                                }}
-                                onMouseEnter={(e) => {
-                                    if (activeCategory !== category.id) {
-                                        e.currentTarget.style.transform = 'translateY(-2px)';
-                                        e.currentTarget.style.boxShadow = '0 6px 12px rgba(0,0,0,0.1)';
-                                    }
-                                }}
-                                onMouseLeave={(e) => {
-                                    if (activeCategory !== category.id) {
-                                        e.currentTarget.style.transform = 'none';
-                                        e.currentTarget.style.boxShadow = '0 4px 6px rgba(0,0,0,0.05)';
-                                    }
-                                }}
-                            >
-                                {category.icon} {category.name}
-                            </button>
-                        ))}
-                    </div>
-
-                    {/* Bikes Section */}
-                    <div className="category-section" id="bikes-section">
-                        <h3 className="category-header">Bikes</h3>
-                        <div className="vehicle-grid" id="bikesGrid">
-                            {loading ? <p>Loading bikes...</p> : bikes.map(bike => <VehicleCard key={bike.id} vehicle={bike} type="bike" />)}
-                            {!loading && bikes.length === 0 && <p>No bikes available.</p>}
+                    {/* Live Platform Stats Strip */}
+                    <div className="hero-stats-row-light">
+                        <div className="stat-card-light">
+                            <div className="stat-icon-halo halo-emerald">
+                                <i className="fas fa-shield-alt"></i>
+                            </div>
+                            <div className="stat-content">
+                                <span className="stat-number">15,000+</span>
+                                <span className="stat-label">Verified Trips</span>
+                            </div>
                         </div>
-                    </div>
 
-                    {/* Scooty Section */}
-                    <div className="category-section" id="scooters-section">
-                        <h3 className="category-header">Scooty</h3>
-                        <div className="vehicle-grid" id="scootyGrid">
-                            {loading ? <p>Loading scooters...</p> : scooters.map(scooter => <VehicleCard key={scooter.id} vehicle={scooter} type="scooty" />)}
-                            {!loading && scooters.length === 0 && <p>No scooters available.</p>}
+                        <div className="stat-card-light">
+                            <div className="stat-icon-halo halo-blue">
+                                <i className="fas fa-bolt"></i>
+                            </div>
+                            <div className="stat-content">
+                                <span className="stat-number">2 Mins</span>
+                                <span className="stat-label">Digital Pass</span>
+                            </div>
                         </div>
-                    </div>
 
+                        <div className="stat-card-light">
+                            <div className="stat-icon-halo halo-amber">
+                                <i className="fas fa-star"></i>
+                            </div>
+                            <div className="stat-content">
+                                <span className="stat-number">4.9 / 5</span>
+                                <span className="stat-label">Rider Rating</span>
+                            </div>
+                        </div>
 
-                    {/* Cars Section */}
-                    <div className="category-section" id="cars-section">
-                        <h3 className="category-header">Cars</h3>
-                        <div className="vehicle-grid" id="carsGrid">
-                            {loading ? <p>Loading cars...</p> : cars.map(car => <VehicleCard key={car.id} vehicle={car} type="car" />)}
-                            {!loading && cars.length === 0 && <p>No cars available.</p>}
+                        <div className="stat-card-light">
+                            <div className="stat-icon-halo halo-purple">
+                                <i className="fas fa-headset"></i>
+                            </div>
+                            <div className="stat-content">
+                                <span className="stat-number">24x7</span>
+                                <span className="stat-label">Voice AI SOS</span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </section>
 
 
-            {/* How It Works Section */}
-            <section className="how-it-works">
-                <div className="container">
-                    <h2 className="text-center">How It Works</h2>
-                    <div className="steps-container">
-                        <div className="step-card">
-                            <div className="step-icon">
+            {/* 2. DYNAMIC FESTIVE & PROMO DEALS SECTION */}
+            {offers && offers.length > 0 && (
+                <section className="offers-section">
+                    <FloatingBackground density={16} meterType="none" />
+                    <div className="section-container">
+                        <div className="section-title-wrap">
+                            <span className="section-badge badge-indigo">
+                                <i className="fas fa-sparkles"></i> Limited Time Perks
+                            </span>
+                            <h2 className="section-heading">Exclusive Seasonal Rewards</h2>
+                            <p className="section-subtitle">
+                                Save more on your weekend getaways and daily commutes with our verified promo vouchers.
+                            </p>
+                        </div>
+
+                        <div className="offers-ribbon" id="offers-container">
+                            {offers.map(offer => {
+                                const isFuture = offer.start_date && new Date(offer.start_date) > currentTime;
+                                return (
+                                    <div key={offer.id} className="offer-ticket-card">
+                                        <div className="offer-ticket-header">
+                                            <img 
+                                                src={offer.image_url || 'https://images.unsplash.com/photo-1511735111819-9a3f7709049c?auto=format&fit=crop&q=80&w=800'} 
+                                                alt={offer.title} 
+                                                className="offer-ticket-img"
+                                            />
+                                            <div className="offer-discount-ribbon">
+                                                {offer.discount_percentage ? `${offer.discount_percentage}% OFF` : `₹${offer.flat_discount} OFF`}
+                                            </div>
+                                            <div className="offer-expiry-pill">
+                                                {isFuture ? '📅 Upcoming' : `Expires ${offer.valid_until ? new Date(offer.valid_until).toLocaleDateString('en-IN', { day: 'numeric', month: 'short' }) : 'Soon'}`}
+                                            </div>
+                                        </div>
+
+                                        <div className="offer-ticket-body">
+                                            <div>
+                                                <h3 className="offer-ticket-title">{offer.title}</h3>
+                                                <p className="offer-ticket-desc">{offer.description}</p>
+                                            </div>
+
+                                            <div className="offer-promo-action">
+                                                <div>
+                                                    <span style={{ fontSize: '0.68rem', color: '#94a3b8', textTransform: 'uppercase', fontWeight: '800' }}>Promo Voucher</span>
+                                                    <div className="promo-code-display">{isFuture ? '••••••' : offer.code}</div>
+                                                </div>
+                                                <button 
+                                                    className="copy-voucher-btn"
+                                                    disabled={isFuture}
+                                                    onClick={(e) => {
+                                                        if (isFuture) return;
+                                                        navigator.clipboard.writeText(offer.code);
+                                                        toast.success(`Copied "${offer.code}" to clipboard!`);
+                                                        const btn = e.currentTarget;
+                                                        const orig = btn.innerHTML;
+                                                        btn.innerHTML = '<i class="fas fa-check"></i> Copied';
+                                                        btn.style.background = '#10b981';
+                                                        setTimeout(() => {
+                                                            btn.innerHTML = orig;
+                                                            btn.style.background = '#3b82f6';
+                                                        }, 2000);
+                                                    }}
+                                                >
+                                                    <i className="far fa-copy"></i> Copy
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+
+            {/* 3. FLEET SHOWCASE & CONTROL TOOLBAR */}
+            <section className="fleet-showcase-section" id="vehicle-showcase-section">
+                <FloatingBackground density={24} meterType="none" />
+                <div className="section-container">
+                    
+                    <div className="section-title-wrap">
+                        <span className="section-badge badge-emerald">
+                            <i className="fas fa-motorcycle"></i> Verified Fleet Catalog
+                        </span>
+                        <h2 className="section-heading">Featured Vehicles & Bikes</h2>
+                        <p className="section-subtitle">
+                            Choose from our meticulously maintained fleet of high-performance motorcycles, scooters, and cars.
+                        </p>
+                    </div>
+
+                    {/* STICKY CONTROL TOOLBAR (Category Pills, Search, Sort) */}
+                    <div className="fleet-control-toolbar">
+                        <div className="toolbar-category-pills">
+                            {[
+                                { name: 'All', id: 'All', icon: '✨', count: totalVehiclesCount },
+                                { name: 'Bikes', id: 'bikes-section', icon: '🏍️', count: filteredBikes.length },
+                                { name: 'Scooty', id: 'scooters-section', icon: '🛵', count: filteredScooters.length },
+                                { name: 'Cars', id: 'cars-section', icon: '🚗', count: filteredCars.length },
+                            ].map(cat => (
+                                <button
+                                    key={cat.id}
+                                    className={`category-pill-btn ${activeCategory === cat.id ? 'active' : ''}`}
+                                    onClick={() => scrollToSection(cat.id)}
+                                >
+                                    <span>{cat.icon}</span>
+                                    <span>{cat.name}</span>
+                                    <span className="pill-count-badge">{cat.count}</span>
+                                </button>
+                            ))}
+                        </div>
+
+                        <div className="toolbar-actions">
+                            <div className="toolbar-search-box">
                                 <i className="fas fa-search"></i>
+                                <input
+                                    type="text"
+                                    placeholder="Search by vehicle name..."
+                                    className="toolbar-search-input"
+                                    value={searchKeyword}
+                                    onChange={(e) => setSearchKeyword(e.target.value)}
+                                />
                             </div>
-                            <h3>1. Pick Your Ride</h3>
-                            <p>Browse our extensive collection of well-maintained bikes and cars. Filter by price or model to find your best fit.</p>
-                        </div>
-                        <div className="step-card">
-                            <div className="step-icon">
-                                <i className="fas fa-calendar-check"></i>
-                            </div>
-                            <h3>2. Quick Booking</h3>
-                            <p>Choose your duration, upload your license, and pay securely. No long paperwork, just instant confirmation.</p>
-                        </div>
-                        <div className="step-card">
-                            <div className="step-icon">
-                                <i className="fas fa-road"></i>
-                            </div>
-                            <h3>3. Zoom Away</h3>
-                            <p>Reach the pickup point, verify your ID, and start your journey. Enjoy the freedom of the road!</p>
+
+                            <select 
+                                className="toolbar-sort-select"
+                                value={sortBy}
+                                onChange={(e) => setSortBy(e.target.value)}
+                            >
+                                <option value="default">Sort: Recommended</option>
+                                <option value="price-asc">Price: Low to High</option>
+                                <option value="price-desc">Price: High to Low</option>
+                            </select>
                         </div>
                     </div>
                 </div>
             </section>
 
-            {/* Why Choose Us Section */}
-            <section className="why-choose-us">
-                <div className="container">
-                    <h2 className="text-center">Why Choose Us?</h2>
-                    <div className="features-container">
-                        <div className="feature-card">
-                            <div className="feature-icon">
-                                <i className="fas fa-motorcycle"></i>
+            {/* BIKES SECTION (With Left & Right Speedometers) */}
+            {(activeCategory === 'All' || activeCategory === 'bikes-section') && (
+                <section className="fleet-category-section fleet-bike-section" id="bikes-section">
+                    <FloatingBackground density={14} meterType="bike" />
+                    <div className="section-container">
+                        <div className="fleet-category-headline-wrap">
+                            <div className="fleet-category-trust-badge">
+                                <span className="category-badge-dot"></span>
+                                <span>High-Torque Performance • {filteredBikes.length} Bikes Available</span>
                             </div>
-                            <h3>Unbeatable Prices</h3>
-                            <p>Rent high-quality vehicles at the most competitive daily and hourly rates in the city and save more.</p>
+                            <h2 className="fleet-category-main-heading">
+                                🏍️ Motorcycles & Sport Bikes
+                            </h2>
+                            <p className="fleet-category-sub-heading">
+                                Track-tuned superbikes, rugged Himalayan tourers, and nimble street commuters.
+                            </p>
                         </div>
-                        <div className="feature-card">
-                            <div className="feature-icon">
+
+                        <div className="fleet-cards-grid" id="bikesGrid">
+                            {loading ? (
+                                <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#64748b' }}>Loading premium bikes...</p>
+                            ) : filteredBikes.length > 0 ? (
+                                filteredBikes.map(bike => <VehicleCard key={bike.id} vehicle={bike} type="bike" />)
+                            ) : (
+                                <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#64748b', padding: '40px' }}>
+                                    No bikes match your current search criteria.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* SCOOTERS SECTION (With Left & Right Speedometers) */}
+            {(activeCategory === 'All' || activeCategory === 'scooters-section') && (
+                <section className="fleet-category-section fleet-scooty-section" id="scooters-section">
+                    <FloatingBackground density={14} meterType="scooty" />
+                    <div className="section-container">
+                        <div className="fleet-category-headline-wrap">
+                            <div className="fleet-category-trust-badge badge-emerald">
+                                <span className="category-badge-dot dot-emerald"></span>
+                                <span>Urban Agility & EV • {filteredScooters.length} Scooters Available</span>
+                            </div>
+                            <h2 className="fleet-category-main-heading">
+                                🛵 City Scooters & Gearless
+                            </h2>
+                            <p className="fleet-category-sub-heading">
+                                Lightweight, fuel-efficient, and effortless automatic rides for swift city commutes.
+                            </p>
+                        </div>
+
+                        <div className="fleet-cards-grid" id="scootyGrid">
+                            {loading ? (
+                                <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#64748b' }}>Loading scooters...</p>
+                            ) : filteredScooters.length > 0 ? (
+                                filteredScooters.map(scooter => <VehicleCard key={scooter.id} vehicle={scooter} type="scooty" />)
+                            ) : (
+                                <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#64748b', padding: '40px' }}>
+                                    No scooters match your current search criteria.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+            {/* CARS SECTION (With Left & Right Speedometers) */}
+            {(activeCategory === 'All' || activeCategory === 'cars-section') && (
+                <section className="fleet-category-section fleet-car-section" id="cars-section">
+                    <FloatingBackground density={14} meterType="car" />
+                    <div className="section-container">
+                        <div className="fleet-category-headline-wrap">
+                            <div className="fleet-category-trust-badge badge-blue">
+                                <span className="category-badge-dot dot-blue"></span>
+                                <span>Comfort & 4x4 Tourers • {filteredCars.length} Cars Available</span>
+                            </div>
+                            <h2 className="fleet-category-main-heading">
+                                🚗 Premium Sedans & SUVs
+                            </h2>
+                            <p className="fleet-category-sub-heading">
+                                Spacious family cruisers, all-weather 4x4 machines, and smooth highway sedans.
+                            </p>
+                        </div>
+
+                        <div className="fleet-cards-grid" id="carsGrid">
+                            {loading ? (
+                                <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#64748b' }}>Loading cars...</p>
+                            ) : filteredCars.length > 0 ? (
+                                filteredCars.map(car => <VehicleCard key={car.id} vehicle={car} type="car" />)
+                            ) : (
+                                <p style={{ gridColumn: '1/-1', textAlign: 'center', color: '#64748b', padding: '40px' }}>
+                                    No cars match your current search criteria.
+                                </p>
+                            )}
+                        </div>
+                    </div>
+                </section>
+            )}
+
+
+            {/* 4. HOW IT WORKS - 4-STEP INDUSTRIAL MILESTONE FLOW */}
+            <section className="how-it-works-section">
+                <FloatingBackground density={14} meterType="none" />
+                <div className="section-container">
+                    <div className="section-title-wrap">
+                        <span className="section-badge badge-emerald">
+                            <i className="fas fa-route"></i> Streamlined Process
+                        </span>
+                        <h2 className="section-heading">How RentHub Works</h2>
+                        <p className="section-subtitle">
+                            Zero cumbersome paperwork. Reserve, verify, and hit the highway in 4 easy milestones.
+                        </p>
+                    </div>
+
+                    <div className="process-steps-grid">
+                        <div className="process-card">
+                            <span className="step-number-pill">01</span>
+                            <div className="process-icon-wrap icon-emerald">
+                                <i className="fas fa-calendar-alt"></i>
+                            </div>
+                            <h3 className="process-card-title">1. Choose & Schedule</h3>
+                            <p className="process-card-desc">
+                                Select your favorite bike or car, pick your start date, time, and custom rental duration.
+                            </p>
+                        </div>
+
+                        <div className="process-card">
+                            <span className="step-number-pill">02</span>
+                            <div className="process-icon-wrap icon-amber">
                                 <i className="fas fa-wallet"></i>
                             </div>
-                            <h3>Zero Hidden Charges</h3>
-                            <p>Transparency is key. What you see is what you pay—no surprise taxes, insurance fees, or deposits.</p>
+                            <h3 className="process-card-title">2. Pay 30% Token</h3>
+                            <p className="process-card-desc">
+                                Secure your vehicle reservation instantly with a 30% advance token. Pay the rest at handover.
+                            </p>
                         </div>
-                        <div className="feature-card">
-                            <div className="feature-icon">
-                                <i className="fas fa-clock"></i>
+
+                        <div className="process-card">
+                            <span className="step-number-pill">03</span>
+                            <div className="process-icon-wrap icon-blue">
+                                <i className="fas fa-qrcode"></i>
                             </div>
-                            <h3>Flexible Rentals</h3>
-                            <p>Need to extend your trip? No problem. Easily extend your booking on the go with our flexible plans.</p>
+                            <h3 className="process-card-title">3. Instant QR Gate-Pass</h3>
+                            <p className="process-card-desc">
+                                Receive a contactless QR digital gate-pass and automated legal deed invoice directly on your phone.
+                            </p>
+                        </div>
+
+                        <div className="process-card">
+                            <span className="step-number-pill">04</span>
+                            <div className="process-icon-wrap icon-purple">
+                                <i className="fas fa-shield-alt"></i>
+                            </div>
+                            <h3 className="process-card-title">4. Zoom & AI SOS</h3>
+                            <p className="process-card-desc">
+                                Pick up keys at our hub and ride with complete peace of mind backed by 24/7 AI Voice SOS ('Aarohi').
+                            </p>
                         </div>
                     </div>
                 </div>
             </section>
 
 
-        </main >
+            {/* 5. WHY RENTHUB - ENTERPRISE ADVANTAGE GRID */}
+            <section className="why-renthub-section">
+                <FloatingBackground density={14} meterType="none" />
+                <div className="section-container">
+                    <div className="section-title-wrap">
+                        <span className="section-badge badge-indigo">
+                            <i className="fas fa-gem"></i> The RentHub Edge
+                        </span>
+                        <h2 className="section-heading">Why Discerning Riders Choose Us</h2>
+                        <p className="section-subtitle">
+                            Engineered for safety, transparency, and top-tier performance on every single trip.
+                        </p>
+                    </div>
+
+                    <div className="advantage-cards-grid">
+                        <div className="advantage-card">
+                            <div className="advantage-icon-box" style={{ background: '#ecfdf5', color: '#059669' }}>
+                                <i className="fas fa-receipt"></i>
+                            </div>
+                            <div className="advantage-content">
+                                <h4>Zero Hidden Charges</h4>
+                                <p>100% transparent pricing with honest hourly and daily rates. No surprise taxes or hidden fees.</p>
+                            </div>
+                        </div>
+
+                        <div className="advantage-card">
+                            <div className="advantage-icon-box" style={{ background: '#eff6ff', color: '#2563eb' }}>
+                                <i className="fas fa-robot"></i>
+                            </div>
+                            <div className="advantage-content">
+                                <h4>24/7 Voice AI Roadside SOS</h4>
+                                <p>Instant intelligent roadside assistance with automated dispatch of mobile mechanics across all corridors.</p>
+                            </div>
+                        </div>
+
+                        <div className="advantage-card">
+                            <div className="advantage-icon-box" style={{ background: '#fffbeb', color: '#d97706' }}>
+                                <i className="fas fa-sparkles"></i>
+                            </div>
+                            <div className="advantage-content">
+                                <h4>Sanitized & Certified Fleet</h4>
+                                <p>Every vehicle undergoes a 28-point technical inspection and deep steam sanitization before every handover.</p>
+                            </div>
+                        </div>
+
+                        <div className="advantage-card">
+                            <div className="advantage-icon-box" style={{ background: '#faf5ff', color: '#7c3aed' }}>
+                                <i className="fas fa-clock"></i>
+                            </div>
+                            <div className="advantage-content">
+                                <h4>One-Tap Trip Extensions</h4>
+                                <p>Plans changed? Easily extend your active rental slot on the fly with live dashboard availability synchronization.</p>
+                            </div>
+                        </div>
+
+                        <div className="advantage-card">
+                            <div className="advantage-icon-box" style={{ background: '#fdf2f8', color: '#db2777' }}>
+                                <i className="fas fa-coins"></i>
+                            </div>
+                            <div className="advantage-content">
+                                <h4>RentHub Loyalty Rewards</h4>
+                                <p>Earn reward credits on every completed trip and redeem them for free hours and seasonal festival discounts.</p>
+                            </div>
+                        </div>
+
+                        <div className="advantage-card">
+                            <div className="advantage-icon-box" style={{ background: '#f0fdfa', color: '#0d9488' }}>
+                                <i className="fas fa-map-marker-alt"></i>
+                            </div>
+                            <div className="advantage-content">
+                                <h4>Express Hub Handover</h4>
+                                <p>Walk in with your QR gate-pass and ride out within 2 minutes. Fast, polite, and completely contactless.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            {/* 6. VERIFIED RIDER TESTIMONIALS */}
+            <section className="testimonials-section">
+                <FloatingBackground density={14} meterType="none" />
+                <div className="section-container">
+                    <div className="section-title-wrap">
+                        <span className="section-badge badge-emerald">
+                            <i className="fas fa-comment-dots"></i> Community Trust
+                        </span>
+                        <h2 className="section-heading">Loved By 15,000+ Explorers</h2>
+                        <p className="section-subtitle">
+                            Hear real stories from weekend adventurers, daily commuters, and cross-country road trippers.
+                        </p>
+                    </div>
+
+                    {/* CONTINUOUS INFINITE MARQUEE SLIDER */}
+                    <div className="review-marquee-wrapper">
+                        {/* SLIDER TOP CONTROLS & RATING TRUST BAR */}
+                        <div className="review-slider-header-bar">
+                            <div className="review-trust-summary">
+                                <div className="trust-stars-badge">
+                                    <i className="fas fa-star"></i>
+                                    <span className="trust-score">4.98 / 5.0</span>
+                                </div>
+                                <span className="trust-divider">•</span>
+                                <span className="trust-meta-text">
+                                    <i className="fas fa-shield-alt" style={{ color: '#10b981', marginRight: '5px' }}></i>
+                                    <strong>15,200+</strong> Verified Rider Reviews
+                                </span>
+                            </div>
+
+                            {/* MARQUEE STREAM STATUS & PAUSE / RESUME TOGGLE */}
+                            <div className="review-marquee-controls">
+                                <div className="review-live-pulse-badge">
+                                    <span className="review-pulse-dot"></span>
+                                    <span>Continuous Stream</span>
+                                </div>
+
+                                <button 
+                                    className={`review-marquee-toggle-btn ${isReviewPaused ? 'is-paused' : ''}`}
+                                    onClick={() => setIsReviewPaused(!isReviewPaused)}
+                                    title={isReviewPaused ? "Resume continuous scroll" : "Pause scroll"}
+                                    aria-label={isReviewPaused ? "Resume scroll" : "Pause scroll"}
+                                >
+                                    <i className={isReviewPaused ? "fas fa-play" : "fas fa-pause"}></i>
+                                    <span>{isReviewPaused ? 'Resume' : 'Pause'}</span>
+                                </button>
+                            </div>
+                        </div>
+
+                        {/* MARQUEE TRACK OVERFLOW CONTAINER WITH SEAMLESS EDGE FADES */}
+                        <div 
+                            className="review-marquee-container"
+                            onMouseEnter={() => setIsReviewPaused(true)}
+                            onMouseLeave={() => setIsReviewPaused(false)}
+                        >
+                            <div 
+                                className={`review-marquee-track ${isReviewPaused ? 'paused' : ''}`}
+                            >
+                                {marqueeReviews.map((review, idx) => (
+                                    <div 
+                                        key={`${review.id}-${idx}`} 
+                                        className="review-marquee-item"
+                                    >
+                                        <div className="review-card-modern">
+                                            {/* Card Top Row: Rating, Category Tag */}
+                                            <div className="review-card-top">
+                                                <div className="review-stars-row">
+                                                    {[...Array(review.rating)].map((_, i) => (
+                                                        <i key={i} className="fas fa-star"></i>
+                                                    ))}
+                                                    <span className="review-score-tag">5.0</span>
+                                                </div>
+
+                                                <span 
+                                                    className="review-category-pill"
+                                                    style={{ color: review.tagColor, background: review.tagBg }}
+                                                >
+                                                    {review.tag}
+                                                </span>
+                                            </div>
+
+                                            {/* Quote */}
+                                            <div className="review-quote-body">
+                                                <i className="fas fa-quote-left quote-icon-bg"></i>
+                                                <p className="review-quote-text">
+                                                    "{review.quote}"
+                                                </p>
+                                            </div>
+
+                                            {/* Vehicle & Trip Chip */}
+                                            <div className="review-trip-chip">
+                                                <i className={review.type === 'car' ? "fas fa-car" : "fas fa-motorcycle"}></i>
+                                                <span className="trip-vehicle-name">{review.vehicle}</span>
+                                                <span className="trip-type-desc">• {review.tripType}</span>
+                                            </div>
+
+                                            {/* Author Footer */}
+                                            <div className="review-author-footer">
+                                                <div className="author-avatar-badge" style={{ background: review.avatarBg }}>
+                                                    {review.avatar}
+                                                </div>
+                                                <div className="author-info-wrap">
+                                                    <div className="author-name-row">
+                                                        <h4 className="author-full-name">{review.name}</h4>
+                                                        <span className="author-verified-check" title="Verified Rider">
+                                                            <i className="fas fa-check-circle"></i>
+                                                        </span>
+                                                    </div>
+                                                    <div className="author-sub-detail">
+                                                        <span><i className="fas fa-map-marker-alt"></i> {review.location}</span>
+                                                        <span className="detail-dot">•</span>
+                                                        <span>{review.date}</span>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        </div>
+
+                        {/* BOTTOM STREAM STATUS BAR */}
+                        <div className="review-slider-bottom-bar">
+                            <div className="review-marquee-speed-info">
+                                <i className="fas fa-bolt" style={{ color: '#10b981' }}></i>
+                                <span>Always Moving Stream • Verified Community Stories</span>
+                            </div>
+
+                            <div className="review-slider-indicator-hint">
+                                <i className="fas fa-hand-pointer"></i> Hover on any card to pause and read
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+
+            {/* 7. INTERACTIVE FAQ ACCORDION */}
+            <section className="faq-section">
+                <FloatingBackground density={12} meterType="none" />
+                <div className="section-container">
+                    <div className="section-title-wrap">
+                        <span className="section-badge badge-indigo">
+                            <i className="fas fa-question-circle"></i> Got Questions?
+                        </span>
+                        <h2 className="section-heading">Frequently Asked Questions</h2>
+                        <p className="section-subtitle">
+                            Everything you need to know about booking, security deposits, and vehicle pickup.
+                        </p>
+                    </div>
+
+                    <div className="faq-accordion-list">
+                        {faqs.map((faq, idx) => (
+                            <div key={idx} className={`faq-accordion-item ${openFaqIndex === idx ? 'faq-open' : ''}`}>
+                                <button 
+                                    className="faq-trigger-btn"
+                                    onClick={() => setOpenFaqIndex(openFaqIndex === idx ? null : idx)}
+                                >
+                                    <span>{faq.q}</span>
+                                    <i className="fas fa-chevron-down"></i>
+                                </button>
+                                {openFaqIndex === idx && (
+                                    <div className="faq-answer-body">
+                                        {faq.a}
+                                    </div>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+            </section>
+
+
+            {/* 8. BOTTOM HIGH-CONVERSION CTA BANNER */}
+            <section className="bottom-cta-banner">
+                <div className="cta-banner-content">
+                    <h2 className="cta-banner-title">Ready To Hit The Open Road?</h2>
+                    <p className="cta-banner-desc">
+                        Lock in your vehicle in under 2 minutes with a 30% advance token and download your instant QR gate-pass.
+                    </p>
+                    <button 
+                        className="cta-action-btn"
+                        onClick={() => {
+                            window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }}
+                    >
+                        <span>Find Your Ride Now</span>
+                        <i className="fas fa-arrow-up"></i>
+                    </button>
+                </div>
+            </section>
+
+        </main>
     );
 };
 

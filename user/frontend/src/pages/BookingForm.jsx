@@ -441,7 +441,7 @@ const BookingForm = () => {
                 currency: orderData.currency,
                 name: "RentHub",
                 description: `Advance for ${vehicle.name}`,
-                image: "https://placehold.co/128x128.png?text=RentHub", // Use HTTPS placeholder to check if it fixes blocking
+                image: window.location.origin + "/renthub-logo.png",
                 order_id: orderData.id,
                 handler: async function (response) {
                     await confirmBooking(response, token);

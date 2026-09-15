@@ -446,7 +446,18 @@ const Chatbot = ({ isOpen, onClose }) => {
             <div className="chatbot-header">
                 <div className="chatbot-profile">
                     <div className="chatbot-avatar">
-                        <img src={chatbotImg} alt="Bot" />
+                        <img 
+                            src="/renthub-logo.png" 
+                            alt="RentHub Bot" 
+                            style={{ 
+                                width: '100%', 
+                                height: '100%', 
+                                borderRadius: '50%', 
+                                objectFit: 'cover',
+                                border: '2px solid #00D8FF',
+                                boxShadow: '0 0 10px rgba(0, 195, 255, 0.6)'
+                            }} 
+                        />
                     </div>
                     <div className="chatbot-info">
                         <h3>RentHub Support</h3>

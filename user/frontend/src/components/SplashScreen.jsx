@@ -344,7 +344,7 @@ const SplashScreen = ({ onComplete }) => {
             {/* Scene 4 - 6: Premium Logo Reveal & Assembly */}
             <motion.div
               className="premium-logo-container"
-              style={{ position: 'absolute', top: '35%', y: '-50%', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              style={{ position: 'absolute', top: '35%', y: '-50%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}
               initial={{ opacity: 0, scale: 0.9 }}
               animate={{ 
                 opacity: scene >= 4 && scene < 6 ? 1 : 0,
@@ -376,6 +376,36 @@ const SplashScreen = ({ onComplete }) => {
                   </motion.div>
                 )}
               </AnimatePresence>
+
+              {/* Official Brand Emblem */}
+              <motion.div
+                initial={{ opacity: 0, scale: 0.4, rotate: -25 }}
+                animate={{ 
+                  opacity: scene >= 4 ? 1 : 0, 
+                  scale: scene >= 4.1 ? 1 : 0.6,
+                  rotate: scene >= 4 ? 0 : -25
+                }}
+                transition={{ duration: 0.8, ease: "easeOut" }}
+                style={{
+                  marginBottom: '16px',
+                  display: 'flex',
+                  justifyContent: 'center',
+                  alignItems: 'center'
+                }}
+              >
+                <img 
+                  src="/renthub-logo.png" 
+                  alt="RentHub Official Emblem" 
+                  style={{
+                    width: '85px',
+                    height: '85px',
+                    borderRadius: '50%',
+                    objectFit: 'cover',
+                    boxShadow: '0 0 35px rgba(0, 195, 255, 0.75), 0 0 70px rgba(0, 150, 255, 0.45)',
+                    border: '2.5px solid rgba(0, 195, 255, 0.85)'
+                  }}
+                />
+              </motion.div>
 
               <div className={`logo-flex-wrapper ${scene >= 4.1 ? 'energy-pulse-active' : ''}`}>
                 {[

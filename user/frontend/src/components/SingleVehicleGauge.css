@@ -1,0 +1,198 @@
+/* ==========================================================================
+   Single Dedicated Vehicle Gauge Styling (Bike, Scooty, Car)
+   ========================================================================== */
+
+.single-vehicle-gauge {
+    position: relative;
+    width: 148px;
+    height: 148px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    filter: drop-shadow(0 8px 18px rgba(0, 0, 0, 0.08));
+}
+
+.single-vehicle-gauge:hover {
+    transform: scale(1.05);
+}
+
+.single-gauge-svg {
+    width: 100%;
+    height: 100%;
+    overflow: visible;
+}
+
+/* Specific category halo glows */
+.gauge-bike {
+    filter: drop-shadow(0 10px 22px rgba(249, 115, 22, 0.22)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.06));
+}
+
+.gauge-scooty {
+    filter: drop-shadow(0 10px 22px rgba(16, 185, 129, 0.22)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.06));
+}
+
+.gauge-car {
+    filter: drop-shadow(0 10px 22px rgba(59, 130, 246, 0.22)) drop-shadow(0 4px 10px rgba(0, 0, 0, 0.06));
+}
+
+/* Category Cockpit Header Banner in Fleet Section */
+.fleet-section-header-cockpit {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 24px;
+    background: #ffffff;
+    border-radius: 20px;
+    padding: 20px 26px;
+    margin-bottom: 26px;
+    border: 1.5px solid #e2e8f0;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.04);
+    position: relative;
+    overflow: hidden;
+    transition: all 0.3s ease;
+}
+
+.fleet-section-header-cockpit:hover {
+    border-color: #cbd5e1;
+    box-shadow: 0 8px 28px rgba(0, 0, 0, 0.07);
+}
+
+/* Header Banner Left Accent Strip */
+.fleet-section-header-cockpit::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 6px;
+    height: 100%;
+    background: #cbd5e1;
+}
+
+#bikes-section .fleet-section-header-cockpit::before {
+    background: linear-gradient(to bottom, #f97316, #ea580c);
+}
+
+#scooters-section .fleet-section-header-cockpit::before {
+    background: linear-gradient(to bottom, #10b981, #059669);
+}
+
+#cars-section .fleet-section-header-cockpit::before {
+    background: linear-gradient(to bottom, #3b82f6, #2563eb);
+}
+
+.header-cockpit-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.header-category-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    font-size: 0.76rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.6px;
+    padding: 4px 12px;
+    border-radius: 999px;
+    margin-bottom: 8px;
+}
+
+.badge-bike {
+    background: #fff7ed;
+    color: #ea580c;
+    border: 1px solid #ffedd5;
+}
+
+.badge-scooty {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #d1fae5;
+}
+
+.badge-car {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #dbeafe;
+}
+
+.fleet-section-header-cockpit .fleet-section-title {
+    font-size: 1.55rem;
+    font-weight: 850;
+    color: #0f172a;
+    margin: 0 0 6px 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: -0.3px;
+}
+
+.fleet-section-desc {
+    font-size: 0.92rem;
+    color: #64748b;
+    margin: 0 0 14px 0;
+    line-height: 1.45;
+}
+
+.header-meta-strip {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.meta-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #475569;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    padding: 3.5px 11px;
+    border-radius: 999px;
+}
+
+.tag-emerald {
+    color: #059669 !important;
+    background: #ecfdf5 !important;
+    border-color: #a7f3d0 !important;
+}
+
+.tag-blue {
+    color: #2563eb !important;
+    background: #eff6ff !important;
+    border-color: #bfdbfe !important;
+}
+
+.header-cockpit-meter-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    padding: 6px 12px;
+    background: #f8fafc;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+}
+
+@media (max-width: 768px) {
+    .fleet-section-header-cockpit {
+        flex-direction: column;
+        align-items: flex-start;
+        padding: 16px 18px;
+    }
+
+    .header-cockpit-meter-wrap {
+        align-self: center;
+        margin-top: 10px;
+    }
+
+    .single-vehicle-gauge {
+        width: 125px;
+        height: 125px;
+    }
+}

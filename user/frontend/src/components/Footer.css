@@ -1,0 +1,842 @@
+/* ==========================================================================
+   RentHub Light & Colorful Modern Footer
+   Clean, vibrant, high-contrast, state-of-the-art mobility aesthetic
+   ========================================================================== */
+
+.renthub-modern-footer {
+    background: linear-gradient(180deg, #f8fafc 0%, #ffffff 40%, #f1f5f9 100%);
+    color: #475569;
+    position: relative;
+    overflow: hidden;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    border-top: 3px solid;
+    border-image: linear-gradient(90deg, #10b981 0%, #00D8FF 35%, #3b82f6 70%, #8b5cf6 100%) 1;
+    box-shadow: 0 -15px 35px rgba(0, 0, 0, 0.04);
+}
+
+/* Ambient Colorful Background Glows (Light & Subtle) */
+.footer-ambient-pod {
+    position: absolute;
+    border-radius: 50%;
+    filter: blur(120px);
+    pointer-events: none;
+    opacity: 0.12;
+    z-index: 0;
+}
+
+.footer-glow-cyan {
+    width: 500px;
+    height: 500px;
+    background: radial-gradient(circle, #00D8FF 0%, transparent 70%);
+    top: -120px;
+    left: 8%;
+}
+
+.footer-glow-emerald {
+    width: 550px;
+    height: 550px;
+    background: radial-gradient(circle, #10b981 0%, transparent 70%);
+    bottom: -150px;
+    right: 10%;
+}
+
+.footer-container {
+    max-width: 1720px;
+    width: 95%;
+    margin: 0 auto;
+    padding: 0 36px;
+    position: relative;
+    z-index: 2;
+    box-sizing: border-box;
+}
+
+/* --------------------------------------------------------------------------
+   1. Colorful Value Proposition & Trust Strip
+   -------------------------------------------------------------------------- */
+.footer-trust-strip {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 28px;
+    padding: 40px 0;
+    border-bottom: 1px solid #e2e8f0;
+}
+
+.trust-pillar-card {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    padding: 20px 22px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 18px;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.03);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.trust-pillar-card:hover {
+    border-color: #38bdf8;
+    box-shadow: 0 10px 25px rgba(2, 132, 199, 0.1);
+    transform: translateY(-3px);
+}
+
+.trust-icon-box {
+    width: 52px;
+    height: 52px;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.35rem;
+    flex-shrink: 0;
+    transition: transform 0.2s ease;
+}
+
+.trust-pillar-card:hover .trust-icon-box {
+    transform: scale(1.08);
+}
+
+.trust-icon-box.icon-cyan {
+    background: #e0f2fe;
+    color: #0284c7;
+    border: 1.5px solid #bae6fd;
+}
+
+.trust-icon-box.icon-emerald {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1.5px solid #a7f3d0;
+}
+
+.trust-icon-box.icon-amber {
+    background: #fffbeb;
+    color: #d97706;
+    border: 1.5px solid #fde68a;
+}
+
+.trust-icon-box.icon-purple {
+    background: #f5f3ff;
+    color: #7c3aed;
+    border: 1.5px solid #ddd6fe;
+}
+
+.trust-info h4 {
+    margin: 0 0 4px 0;
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0f172a;
+    letter-spacing: -0.2px;
+}
+
+.trust-info p {
+    margin: 0;
+    font-size: 0.84rem;
+    color: #64748b;
+    line-height: 1.4;
+}
+
+/* --------------------------------------------------------------------------
+   2. Vibrant Colorful Newsletter & Perks Banner
+   -------------------------------------------------------------------------- */
+.footer-newsletter-banner {
+    margin: 36px 0 48px 0;
+    padding: 32px 48px;
+    background: linear-gradient(135deg, #059669 0%, #0284c7 50%, #6366f1 100%);
+    border-radius: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 28px;
+    box-shadow: 0 14px 40px rgba(2, 132, 199, 0.22);
+    position: relative;
+    overflow: hidden;
+    box-sizing: border-box;
+}
+
+.footer-newsletter-banner::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    right: -10%;
+    width: 300px;
+    height: 300px;
+    background: radial-gradient(circle, rgba(255, 255, 255, 0.18) 0%, transparent 70%);
+    pointer-events: none;
+}
+
+.newsletter-intro {
+    display: flex;
+    align-items: center;
+    gap: 18px;
+    position: relative;
+    z-index: 2;
+}
+
+.newsletter-badge {
+    width: 52px;
+    height: 52px;
+    border-radius: 16px;
+    background: rgba(255, 255, 255, 0.22);
+    border: 1px solid rgba(255, 255, 255, 0.35);
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.4rem;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+}
+
+.newsletter-text h3 {
+    margin: 0 0 4px 0;
+    font-size: 1.25rem;
+    font-weight: 900;
+    color: #ffffff;
+    letter-spacing: -0.3px;
+}
+
+.newsletter-text p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.92);
+}
+
+.newsletter-text .highlight-perk {
+    background: #fef08a;
+    color: #854d0e;
+    padding: 2px 8px;
+    border-radius: 6px;
+    font-weight: 800;
+}
+
+.newsletter-form-dock {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    flex: 1;
+    max-width: 560px;
+    position: relative;
+    z-index: 2;
+}
+
+.newsletter-input-wrap {
+    position: relative;
+    flex: 1;
+}
+
+.newsletter-input-wrap i {
+    position: absolute;
+    left: 18px;
+    top: 50%;
+    transform: translateY(-50%);
+    color: #94a3b8;
+    font-size: 1rem;
+}
+
+.newsletter-email-input {
+    width: 100%;
+    padding: 14px 20px 14px 48px;
+    background: #ffffff;
+    border: 1.5px solid transparent;
+    border-radius: 14px;
+    color: #0f172a;
+    font-size: 0.95rem;
+    font-weight: 600;
+    outline: none;
+    transition: all 0.2s ease;
+    box-sizing: border-box;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.08);
+}
+
+.newsletter-email-input:focus {
+    border-color: #00D8FF;
+    box-shadow: 0 0 0 4px rgba(255, 255, 255, 0.35);
+}
+
+.newsletter-email-input::placeholder {
+    color: #94a3b8;
+    font-weight: 500;
+}
+
+.newsletter-submit-btn {
+    padding: 14px 26px;
+    background: #0f172a;
+    color: #ffffff;
+    border: none;
+    border-radius: 14px;
+    font-size: 0.95rem;
+    font-weight: 800;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    transition: all 0.22s ease;
+    white-space: nowrap;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+}
+
+.newsletter-submit-btn:hover {
+    background: #047857;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.3);
+}
+
+/* --------------------------------------------------------------------------
+   3. Main 5-Column Navigation Grid (Light Colorful Theme)
+   -------------------------------------------------------------------------- */
+.footer-main-grid {
+    display: grid;
+    grid-template-columns: 2.2fr 1.35fr 1.45fr 1.35fr 1.85fr;
+    gap: 52px;
+    padding: 44px 0 56px 0;
+}
+
+/* Brand Column */
+.footer-brand-col {
+    display: flex;
+    flex-direction: column;
+}
+
+.brand-emblem-lockup {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 16px;
+    text-decoration: none;
+}
+
+.footer-brand-logo {
+    width: 62px;
+    height: 62px;
+    border-radius: 50%;
+    object-fit: cover;
+    box-shadow: 0 0 20px rgba(0, 195, 255, 0.6), 0 0 40px rgba(0, 150, 255, 0.25);
+    border: 2.5px solid #00D8FF;
+    transition: transform 0.3s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease;
+    flex-shrink: 0;
+}
+
+.brand-emblem-lockup:hover .footer-brand-logo {
+    transform: scale(1.08) rotate(-3deg);
+    box-shadow: 0 0 30px rgba(0, 216, 255, 0.8), 0 0 55px rgba(0, 150, 255, 0.4);
+}
+
+.brand-title-group h3 {
+    margin: 0;
+    font-size: 1.75rem;
+    font-weight: 900;
+    letter-spacing: -0.8px;
+    color: #0f172a;
+    line-height: 1.1;
+}
+
+.brand-title-group .logo-hub {
+    background: linear-gradient(135deg, #059669 0%, #0284c7 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+}
+
+.brand-subtitle-tag {
+    margin: 3px 0 0 0;
+    font-size: 0.68rem;
+    color: #0284c7;
+    letter-spacing: 1.8px;
+    text-transform: uppercase;
+    font-weight: 800;
+}
+
+.brand-mission-desc {
+    font-size: 0.93rem;
+    color: #475569;
+    line-height: 1.7;
+    margin: 0 0 20px 0;
+    max-width: 440px;
+}
+
+.footer-live-status-pill {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 14px;
+    background: #ecfdf5;
+    border: 1px solid #a7f3d0;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: #047857;
+    width: fit-content;
+    margin-bottom: 22px;
+}
+
+.footer-status-pulse {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: #10b981;
+    box-shadow: 0 0 10px #10b981;
+    animation: footerDotPulse 2s infinite;
+}
+
+@keyframes footerDotPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(0.85); }
+}
+
+/* Colorful Social Icons */
+.footer-social-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+
+.footer-social-icon {
+    width: 42px;
+    height: 42px;
+    border-radius: 13px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.12rem;
+    text-decoration: none;
+    transition: all 0.22s ease;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.04);
+}
+
+.footer-social-icon.whatsapp-link {
+    background: #ecfdf5;
+    color: #16a34a;
+    border: 1px solid #bbf7d0;
+}
+
+.footer-social-icon.whatsapp-link:hover {
+    background: #16a34a;
+    color: #ffffff;
+    border-color: #16a34a;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(22, 163, 74, 0.35);
+}
+
+.footer-social-icon.instagram-link {
+    background: #fdf2f8;
+    color: #db2777;
+    border: 1px solid #fbcfe8;
+}
+
+.footer-social-icon.instagram-link:hover {
+    background: #db2777;
+    color: #ffffff;
+    border-color: #db2777;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(219, 39, 119, 0.35);
+}
+
+.footer-social-icon.twitter-link {
+    background: #f8fafc;
+    color: #0f172a;
+    border: 1px solid #e2e8f0;
+}
+
+.footer-social-icon.twitter-link:hover {
+    background: #0f172a;
+    color: #ffffff;
+    border-color: #0f172a;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(15, 23, 42, 0.25);
+}
+
+.footer-social-icon.youtube-link {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.footer-social-icon.youtube-link:hover {
+    background: #dc2626;
+    color: #ffffff;
+    border-color: #dc2626;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(220, 38, 38, 0.35);
+}
+
+.footer-social-icon.linkedin-link {
+    background: #eff6ff;
+    color: #2563eb;
+    border: 1px solid #bfdbfe;
+}
+
+.footer-social-icon.linkedin-link:hover {
+    background: #2563eb;
+    color: #ffffff;
+    border-color: #2563eb;
+    transform: translateY(-3px);
+    box-shadow: 0 6px 16px rgba(37, 99, 235, 0.35);
+}
+
+/* Nav Columns */
+.footer-col-title {
+    font-size: 1rem;
+    font-weight: 800;
+    color: #0f172a;
+    margin: 0 0 18px 0;
+    letter-spacing: -0.2px;
+    position: relative;
+    padding-bottom: 8px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.footer-col-title::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    width: 28px;
+    height: 3px;
+    background: linear-gradient(90deg, #059669, #0284c7);
+    border-radius: 3px;
+}
+
+.footer-nav-list {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 11px;
+}
+
+.footer-nav-link {
+    color: #475569;
+    text-decoration: none;
+    font-size: 0.9rem;
+    font-weight: 600;
+    display: inline-flex;
+    align-items: center;
+    gap: 7px;
+    transition: all 0.2s ease;
+}
+
+.footer-nav-link i {
+    font-size: 0.72rem;
+    color: #94a3b8;
+    transition: transform 0.2s ease, color 0.2s ease;
+}
+
+.footer-nav-link:hover {
+    color: #0284c7;
+    transform: translateX(4px);
+}
+
+.footer-nav-link:hover i {
+    color: #059669;
+    transform: translateX(2px);
+}
+
+.nav-tag-badge {
+    font-size: 0.65rem;
+    padding: 2px 7px;
+    border-radius: 6px;
+    font-weight: 800;
+    text-transform: uppercase;
+}
+
+.tag-hot {
+    background: #fef2f2;
+    color: #dc2626;
+    border: 1px solid #fecaca;
+}
+
+.tag-new {
+    background: #ecfdf5;
+    color: #059669;
+    border: 1px solid #a7f3d0;
+}
+
+/* Contact Details Column */
+.footer-contact-details {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+}
+
+.footer-contact-item {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.contact-item-icon {
+    width: 36px;
+    height: 36px;
+    border-radius: 10px;
+    background: #eff6ff;
+    border: 1px solid #dbeafe;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 0.92rem;
+    color: #0284c7;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.contact-item-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.contact-label {
+    font-size: 0.72rem;
+    color: #64748b;
+    text-transform: uppercase;
+    font-weight: 700;
+    letter-spacing: 0.5px;
+}
+
+.contact-value {
+    font-size: 0.9rem;
+    color: #0f172a;
+    text-decoration: none;
+    font-weight: 700;
+    transition: color 0.2s ease;
+}
+
+.contact-value:hover {
+    color: #0284c7;
+}
+
+/* Emergency Roadside SOS Card */
+.footer-sos-hotline-card {
+    background: linear-gradient(135deg, #fef2f2 0%, #fff1f2 100%);
+    border: 1.5px solid #fecaca;
+    border-radius: 16px;
+    padding: 13px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-top: 8px;
+    text-decoration: none;
+    transition: all 0.25s ease;
+    box-shadow: 0 4px 14px rgba(239, 68, 68, 0.08);
+}
+
+.footer-sos-hotline-card:hover {
+    background: #fee2e2;
+    border-color: #f87171;
+    transform: translateY(-2px);
+    box-shadow: 0 8px 24px rgba(239, 68, 68, 0.2);
+}
+
+.sos-card-icon {
+    width: 38px;
+    height: 38px;
+    border-radius: 50%;
+    background: #ef4444;
+    color: #ffffff;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1rem;
+    flex-shrink: 0;
+    box-shadow: 0 0 12px rgba(239, 68, 68, 0.45);
+}
+
+.sos-card-content {
+    display: flex;
+    flex-direction: column;
+}
+
+.sos-card-title {
+    font-size: 0.85rem;
+    font-weight: 800;
+    color: #991b1b;
+    letter-spacing: 0.2px;
+}
+
+.sos-card-number {
+    font-size: 0.76rem;
+    color: #b91c1c;
+    font-weight: 600;
+}
+
+/* --------------------------------------------------------------------------
+   4. Security & Payment Badges Strip (Light Theme)
+   -------------------------------------------------------------------------- */
+.footer-security-strip {
+    padding: 24px 0;
+    border-top: 1px solid #e2e8f0;
+    border-bottom: 1px solid #e2e8f0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 20px;
+    background: rgba(255, 255, 255, 0.6);
+}
+
+.security-badges-group {
+    display: flex;
+    align-items: center;
+    gap: 28px;
+    flex-wrap: wrap;
+}
+
+.security-badge-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.86rem;
+    font-weight: 700;
+    color: #334155;
+}
+
+.security-badge-item i {
+    color: #059669;
+    font-size: 1rem;
+}
+
+.payment-gateways-group {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    font-size: 0.84rem;
+    font-weight: 600;
+    color: #64748b;
+}
+
+.payment-chips {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    flex-wrap: wrap;
+}
+
+.payment-chip {
+    padding: 5px 12px;
+    background: #ffffff;
+    border: 1px solid #cbd5e1;
+    border-radius: 8px;
+    font-size: 0.78rem;
+    font-weight: 800;
+    color: #0f172a;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+/* --------------------------------------------------------------------------
+   5. Bottom Legal & Copyright Bar (Light Theme)
+   -------------------------------------------------------------------------- */
+.footer-bottom-bar {
+    padding: 28px 0 36px 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 18px;
+}
+
+.copyright-text {
+    font-size: 0.88rem;
+    color: #64748b;
+    margin: 0;
+}
+
+.copyright-text strong {
+    color: #0f172a;
+    font-weight: 800;
+}
+
+.footer-legal-links {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.legal-link-item {
+    font-size: 0.82rem;
+    color: #64748b;
+    text-decoration: none;
+    font-weight: 600;
+    transition: color 0.2s ease;
+}
+
+.legal-link-item:hover {
+    color: #0284c7;
+    text-decoration: underline;
+}
+
+.admin-portal-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    color: #0284c7 !important;
+    font-weight: 800;
+}
+
+.admin-portal-link:hover {
+    color: #0369a1 !important;
+}
+
+/* --------------------------------------------------------------------------
+   Responsive Layout Overrides
+   -------------------------------------------------------------------------- */
+@media (max-width: 1380px) {
+    .footer-main-grid {
+        gap: 36px;
+    }
+    .footer-trust-strip {
+        gap: 18px;
+    }
+    .footer-newsletter-banner {
+        padding: 28px 36px;
+    }
+}
+
+@media (max-width: 1100px) {
+    .footer-main-grid {
+        grid-template-columns: 1fr 1fr 1fr;
+        gap: 32px;
+    }
+    .footer-brand-col {
+        grid-column: span 3;
+    }
+    .footer-trust-strip {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+
+@media (max-width: 768px) {
+    .footer-trust-strip {
+        grid-template-columns: 1fr;
+        gap: 12px;
+    }
+    .footer-newsletter-banner {
+        flex-direction: column;
+        align-items: stretch;
+        padding: 22px;
+    }
+    .newsletter-form-dock {
+        max-width: 100%;
+        flex-direction: column;
+    }
+    .newsletter-submit-btn {
+        width: 100%;
+        justify-content: center;
+    }
+    .footer-main-grid {
+        grid-template-columns: 1fr;
+        gap: 28px;
+    }
+    .footer-brand-col {
+        grid-column: span 1;
+    }
+    .footer-security-strip {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    .footer-bottom-bar {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+    }
+}

@@ -251,9 +251,31 @@ const RegisterUser = () => {
                 gap: '20px',
                 textAlign: 'left'
             }}>
-                <div className="auth-header" style={{ textAlign: 'center', marginBottom: '10px' }}>
-                    <h2 style={{ fontSize: '28px', color: '#2c3e50', fontWeight: 'bold', margin: '0 0 8px 0' }}>Create Account</h2>
-                    <p style={{ color: '#7f8c8d', margin: 0 }}>Join RentHub today</p>
+                <div className="auth-header" style={{ textAlign: 'center', marginBottom: '20px' }}>
+                    <img 
+                        src="/renthub-logo.png" 
+                        alt="RentHub" 
+                        style={{ 
+                            width: '110px', 
+                            height: '110px', 
+                            borderRadius: '50%', 
+                            objectFit: 'cover',
+                            margin: '0 auto 14px auto',
+                            display: 'block',
+                            boxShadow: '0 0 32px rgba(0, 195, 255, 0.8), 0 0 60px rgba(0, 150, 255, 0.4)',
+                            border: '3.5px solid #00D8FF',
+                            transition: 'transform 0.3s ease, box-shadow 0.3s ease'
+                        }} 
+                        onMouseOver={e => {
+                            e.currentTarget.style.transform = 'scale(1.05)';
+                            e.currentTarget.style.boxShadow = '0 0 42px rgba(0, 216, 255, 0.95), 0 0 70px rgba(0, 150, 255, 0.55)';
+                        }}
+                        onMouseOut={e => {
+                            e.currentTarget.style.transform = 'scale(1)';
+                            e.currentTarget.style.boxShadow = '0 0 32px rgba(0, 195, 255, 0.8), 0 0 60px rgba(0, 150, 255, 0.4)';
+                        }}
+                    />
+                    <p style={{ color: '#64748b', margin: 0, fontSize: '15px', fontWeight: '600' }}>Create your rider account</p>
                 </div>
 
                 <form onSubmit={handleSubmit} style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '24px' }}>

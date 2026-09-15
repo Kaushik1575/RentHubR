@@ -89,10 +89,69 @@ const Navbar = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between'
                 }}>
-                    {/* Logo - Left Side */}
-                    <div onClick={() => navigate('/')} style={{ cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '10px' }}>
-                        <div style={{ width: '40px', height: '40px', background: 'linear-gradient(135deg, #2ecc71 0%, #27ae60 100%)', borderRadius: '10px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'white', fontWeight: 'bold', fontSize: '20px' }}>R</div>
-                        <h1 style={{ fontSize: '28px', fontWeight: '800', color: '#2c3e50', margin: 0, letterSpacing: '-0.5px' }}>RentHub</h1>
+                    {/* Logo & Website Name - Left Side */}
+                    <div 
+                        onClick={() => navigate('/')} 
+                        style={{ 
+                            cursor: 'pointer', 
+                            display: 'flex', 
+                            alignItems: 'center',
+                            gap: '14px',
+                            padding: '2px 0'
+                        }}
+                        title="RentHub - Smart Mobility, Delivered To Your Door"
+                    >
+                        <img 
+                            src="/renthub-logo.png" 
+                            alt="RentHub" 
+                            className="renthub-brand-emblem-navbar"
+                            style={{ 
+                                width: '58px', 
+                                height: '58px', 
+                                borderRadius: '50%', 
+                                objectFit: 'cover',
+                                boxShadow: '0 0 22px rgba(0, 195, 255, 0.75), 0 0 45px rgba(0, 150, 255, 0.35)',
+                                border: '2.5px solid #00D8FF',
+                                transition: 'transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.35s ease',
+                                filter: 'drop-shadow(0 4px 10px rgba(0, 0, 0, 0.2))',
+                                flexShrink: 0
+                            }} 
+                            onMouseOver={e => {
+                                e.currentTarget.style.transform = 'scale(1.1) rotate(3deg)';
+                                e.currentTarget.style.boxShadow = '0 0 32px rgba(0, 216, 255, 0.95), 0 0 55px rgba(0, 150, 255, 0.55)';
+                            }}
+                            onMouseOut={e => {
+                                e.currentTarget.style.transform = 'scale(1) rotate(0deg)';
+                                e.currentTarget.style.boxShadow = '0 0 22px rgba(0, 195, 255, 0.75), 0 0 45px rgba(0, 150, 255, 0.35)';
+                            }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <div style={{ 
+                                fontSize: '28px', 
+                                fontWeight: '900', 
+                                letterSpacing: '-0.8px', 
+                                lineHeight: '1.05',
+                                fontFamily: "'Outfit', 'Plus Jakarta Sans', sans-serif"
+                            }}>
+                                <span style={{ color: '#0f172a' }}>Rent</span>
+                                <span style={{ 
+                                    background: 'linear-gradient(135deg, #00D8FF 0%, #0284c7 100%)',
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                    filter: 'drop-shadow(0 2px 8px rgba(0, 216, 255, 0.3))'
+                                }}>Hub</span>
+                            </div>
+                            <span style={{ 
+                                fontSize: '10.5px', 
+                                fontWeight: '700', 
+                                color: '#64748b', 
+                                letterSpacing: '1.2px', 
+                                textTransform: 'uppercase',
+                                marginTop: '2px'
+                            }}>
+                                Smart Mobility
+                            </span>
+                        </div>
                     </div>
 
                     {/* Desktop Links - Center/Right Offset */}

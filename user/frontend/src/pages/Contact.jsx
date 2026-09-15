@@ -27,12 +27,26 @@ const Contact = () => {
     return (
         <main>
             <section className="contact-header" style={{
-                padding: '8rem 5% 2rem',
+                padding: '8rem 5% 2.5rem',
                 backgroundColor: '#f8f9fa',
                 textAlign: 'center'
             }}>
-                <h1>Contact Us</h1>
-                <p>We're here to help and answer any questions you might have</p>
+                <img 
+                    src="/renthub-logo.png" 
+                    alt="RentHub" 
+                    style={{ 
+                        width: '110px', 
+                        height: '110px', 
+                        borderRadius: '50%', 
+                        objectFit: 'cover',
+                        margin: '0 auto 18px auto',
+                        display: 'block',
+                        boxShadow: '0 0 30px rgba(0, 195, 255, 0.75), 0 0 60px rgba(0, 150, 255, 0.35)',
+                        border: '3.5px solid #00D8FF'
+                    }} 
+                />
+                <h1 style={{ fontSize: '36px', fontWeight: '800', color: '#0f172a', margin: '0 0 8px 0' }}>Contact Us</h1>
+                <p style={{ color: '#64748b', fontSize: '16px', margin: 0 }}>We're here to help and answer any questions you might have</p>
             </section>
 
             <section className="contact-content" style={{
