@@ -13,11 +13,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 30px 16px;
+    padding: 95px 16px 45px 16px;
     font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
     color: #0f172a;
     position: relative;
-    overflow: hidden;
+    overflow-x: hidden;
 }
 
 /* Ambient Floating Decorative Glow Orbs */
@@ -49,9 +49,17 @@
 }
 
 @keyframes floatBlob {
-    0% { transform: translate(0, 0) scale(1); }
-    50% { transform: translate(25px, -20px) scale(1.08); }
-    100% { transform: translate(-18px, 18px) scale(0.95); }
+    0% {
+        transform: translate(0, 0) scale(1);
+    }
+
+    50% {
+        transform: translate(25px, -20px) scale(1.08);
+    }
+
+    100% {
+        transform: translate(-18px, 18px) scale(0.95);
+    }
 }
 
 /* Master Booking Card with Radiant Multi-Color Top Edge */
@@ -61,12 +69,12 @@
     margin: 0 auto;
     background: #ffffff;
     border-radius: 24px;
-    box-shadow: 0 12px 35px -5px rgba(15, 23, 42, 0.09), 
-                0 0 0 1.5px rgba(226, 232, 240, 0.9);
+    box-shadow: 0 12px 35px -5px rgba(15, 23, 42, 0.09),
+        0 0 0 1.5px rgba(226, 232, 240, 0.9);
     display: flex;
     overflow: hidden;
     position: relative;
-    z-index: 1;
+    z-index: 10;
     transition: all 0.3s ease;
 }
 
@@ -85,8 +93,13 @@
 }
 
 @keyframes rainbowBorder {
-    0% { background-position: 0% 50%; }
-    100% { background-position: 200% 50%; }
+    0% {
+        background-position: 0% 50%;
+    }
+
+    100% {
+        background-position: 200% 50%;
+    }
 }
 
 /* ==========================================================================
@@ -120,10 +133,13 @@
 }
 
 @keyframes floatVehicle {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: translateY(0);
         box-shadow: 0 4px 14px rgba(99, 102, 241, 0.08);
     }
+
     50% {
         transform: translateY(-4px);
         box-shadow: 0 10px 20px rgba(16, 185, 129, 0.15), 0 2px 6px rgba(0, 0, 0, 0.03);
@@ -273,9 +289,17 @@
 }
 
 @keyframes pulseDot {
-    0% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8); }
-    70% { box-shadow: 0 0 0 7px rgba(16, 185, 129, 0); }
-    100% { box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    0% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.8);
+    }
+
+    70% {
+        box-shadow: 0 0 0 7px rgba(16, 185, 129, 0);
+    }
+
+    100% {
+        box-shadow: 0 0 0 0 rgba(16, 185, 129, 0);
+    }
 }
 
 /* ==========================================================================
@@ -462,10 +486,13 @@
 }
 
 @keyframes activeNodePulse {
-    0%, 100% {
+
+    0%,
+    100% {
         transform: scale(1.06);
         box-shadow: 0 0 0 3px #ffffff, 0 0 0 7px rgba(16, 185, 129, 0.3), 0 6px 14px rgba(16, 185, 129, 0.4);
     }
+
     50% {
         transform: scale(1);
         box-shadow: 0 0 0 3px #ffffff, 0 0 0 12px rgba(16, 185, 129, 0), 0 3px 8px rgba(16, 185, 129, 0.2);
@@ -485,11 +512,25 @@
     margin-bottom: 2px;
 }
 
-.tag-emerald { color: #059669; }
-.tag-amber   { color: #d97706; }
-.tag-blue    { color: #2563eb; }
-.tag-purple  { color: #7c3aed; }
-.tag-gray    { color: #94a3b8; }
+.tag-emerald {
+    color: #059669;
+}
+
+.tag-amber {
+    color: #d97706;
+}
+
+.tag-blue {
+    color: #2563eb;
+}
+
+.tag-purple {
+    color: #7c3aed;
+}
+
+.tag-gray {
+    color: #94a3b8;
+}
 
 .timeline-node-title {
     font-size: 0.94rem;
@@ -520,7 +561,9 @@
     transition: all 0.2s ease;
 }
 
-.badge-emerald, .badge-active, .badge-completed {
+.badge-emerald,
+.badge-active,
+.badge-completed {
     background: #ecfdf5;
     color: #047857;
     border: 1px solid #a7f3d0;
@@ -868,21 +911,27 @@
     left: -70%;
     width: 45%;
     height: 200%;
-    background: linear-gradient(
-        60deg,
-        rgba(255, 255, 255, 0) 0%,
-        rgba(255, 255, 255, 0.38) 50%,
-        rgba(255, 255, 255, 0) 100%
-    );
+    background: linear-gradient(60deg,
+            rgba(255, 255, 255, 0) 0%,
+            rgba(255, 255, 255, 0.38) 50%,
+            rgba(255, 255, 255, 0) 100%);
     transform: rotate(25deg);
     animation: shimmerBtn 3.8s infinite;
     pointer-events: none;
 }
 
 @keyframes shimmerBtn {
-    0% { left: -70%; }
-    28% { left: 140%; }
-    100% { left: 140%; }
+    0% {
+        left: -70%;
+    }
+
+    28% {
+        left: 140%;
+    }
+
+    100% {
+        left: 140%;
+    }
 }
 
 .btn-primary-action:hover:not(:disabled) {
@@ -902,7 +951,7 @@
    ========================================================================== */
 @media (max-width: 860px) {
     .booking-page-wrapper {
-        padding: 10px 8px;
+        padding: 85px 12px 35px 12px;
         align-items: flex-start;
     }
 
@@ -973,7 +1022,8 @@
         box-shadow: 0 0 0 2.5px #f8fafc;
     }
 
-    .timeline-track-base, .timeline-track-fill {
+    .timeline-track-base,
+    .timeline-track-fill {
         left: 21px;
         top: 12px;
         width: 2.5px;
@@ -983,9 +1033,17 @@
         bottom: 12px;
     }
 
-    .progress-step-1 .timeline-track-fill { height: 18%; }
-    .progress-step-2 .timeline-track-fill { height: 60%; }
-    .progress-step-3 .timeline-track-fill { height: calc(100% - 24px); }
+    .progress-step-1 .timeline-track-fill {
+        height: 18%;
+    }
+
+    .progress-step-2 .timeline-track-fill {
+        height: 60%;
+    }
+
+    .progress-step-3 .timeline-track-fill {
+        height: calc(100% - 24px);
+    }
 
     .timeline-node-content {
         display: flex;

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import StatusPopup from './StatusPopup';
 import NavbarProfile from './NavbarProfile';
 import LanguageSelector from './LanguageSelector';
@@ -15,11 +15,12 @@ const Navbar = () => {
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
     const [supportDropdownOpen, setSupportDropdownOpen] = useState(false);
 
-
     // Scroll state for shadow effect
     const [scrolled, setScrolled] = useState(false);
 
     const navigate = useNavigate();
+    const location = useLocation();
+    const isRegisterPage = location.pathname === '/register-user';
 
     useEffect(() => {
         const handleScroll = () => {
@@ -75,9 +76,13 @@ const Navbar = () => {
                 left: 0,
                 right: 0,
                 zIndex: 1000,
-                backgroundColor: 'rgba(255, 255, 255, 0.85)',
-                backdropFilter: 'blur(12px)',
-                boxShadow: scrolled ? '0 4px 30px rgba(0,0,0,0.1)' : '0 1px 0 rgba(0,0,0,0.05)',
+                backgroundColor: isRegisterPage
+                    ? (scrolled ? 'rgba(255, 255, 255, 0.85)' : 'rgba(255, 255, 255, 0.25)')
+                    : 'rgba(255, 255, 255, 0.85)',
+                backdropFilter: 'blur(16px)',
+                WebkitBackdropFilter: 'blur(16px)',
+                boxShadow: scrolled ? '0 4px 30px rgba(0,0,0,0.1)' : (isRegisterPage ? 'none' : '0 1px 0 rgba(0,0,0,0.05)'),
+                borderBottom: isRegisterPage && !scrolled ? '1px solid rgba(255, 255, 255, 0.25)' : '1px solid rgba(0,0,0,0.05)',
                 transition: 'all 0.3s ease',
                 padding: '0 5%'
             }}>

@@ -2,9 +2,9 @@ import React, { useState } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 import FloatingBackground from '../components/FloatingBackground';
+import './Login.css';
 
 const Login = () => {
-    const [activeTab, setActiveTab] = useState('user');
     const navigate = useNavigate();
     const location = useLocation();
     const from = location.state?.from?.pathname ? (location.state.from.pathname + location.state.from.search) : null;
@@ -12,40 +12,50 @@ const Login = () => {
     // User Form State
     const [userEmail, setUserEmail] = useState('');
     const [userPassword, setUserPassword] = useState('');
-
-    // Admin Form State
-    const [adminEmail, setAdminEmail] = useState('');
-    const [adminPassword, setAdminPassword] = useState('');
-    const [adminId, setAdminId] = useState('');
-
     const [showUserPassword, setShowUserPassword] = useState(false);
-    const [showAdminPassword, setShowAdminPassword] = useState(false);
+    const [isLoading, setIsLoading] = useState(false);
 
     // Audio for click sound
     const playClickSound = () => {
-        // Using a short, reliable pop/click sound from a public CDN
-        const audio = new Audio("https://codeskulptor-demos.commondatastorage.googleapis.com/pang/pop.mp3");
-        audio.volume = 0.5; // Set volume to 50%
-        audio.play().catch(e => console.log('Audio play failed', e));
+        try {
+            const audio = new Audio("https://codeskulptor-demos.commondatastorage.googleapis.com/pang/pop.mp3");
+            audio.volume = 0.5;
+            audio.play().catch(e => console.log('Audio play failed', e));
+        } catch (e) {
+            console.log('Audio init failed', e);
+        }
     };
 
-    // Robot Check State
+    // Robot Check / CAPTCHA State (Preserved)
     const [isUserRobotChecked, setIsUserRobotChecked] = useState(false);
-    const [isAdminRobotChecked, setIsAdminRobotChecked] = useState(false);
 
+    // Modal Status Popup State
     const [popup, setPopup] = useState({
         isOpen: false,
         type: 'error',
         title: '',
-        message: ''
+        message: '',
+        onConfirm: null,
+        confirmText: '',
+        cancelText: ''
     });
 
     const handleUserLogin = async (e, forceLogin = false) => {
         if (e && e.preventDefault) e.preventDefault();
+
+        // Validate Robot Check / CAPTCHA
         if (!isUserRobotChecked) {
-            setPopup({ isOpen: true, type: 'error', title: 'Verification Required', message: 'Please confirm you are not a robot' });
+            setPopup({
+                isOpen: true,
+                type: 'error',
+                title: 'Verification Required',
+                message: 'Please confirm you are not a robot'
+            });
             return;
         }
+
+        setIsLoading(true);
+
         try {
             const response = await fetch('/api/login', {
                 method: 'POST',
@@ -56,6 +66,7 @@ const Login = () => {
 
             if (response.status === 409) {
                 // Concurrent session detected
+                setIsLoading(false);
                 setPopup({
                     isOpen: true,
                     type: 'confirm',
@@ -64,14 +75,10 @@ const Login = () => {
                     confirmText: 'Yes, Login',
                     cancelText: 'No, Cancel',
                     onConfirm: () => {
-                        setPopup({ ...popup, isOpen: false });
+                        setPopup(prev => ({ ...prev, isOpen: false }));
                         handleUserLogin(null, true); // Retrying with forceLogin = true
                     }
                 });
-                // Optional: Clear password for security if you want them to re-type, 
-                // but the current request flow re-uses the state.
-                // If you want them to re-type, you'd need to close popup and ask for input again.
-                // For now, "Yes, Login" uses the current state credentials for convenience/UX.
                 return;
             }
 
@@ -99,232 +106,275 @@ const Login = () => {
                 title: 'Network Error',
                 message: 'An error occurred. Please check your connection.'
             });
+        } finally {
+            setIsLoading(false);
         }
     };
-
-    const handleAdminLogin = async (e) => {
-        e.preventDefault();
-        if (!isAdminRobotChecked) {
-            setPopup({ isOpen: true, type: 'error', title: 'Verification Required', message: 'Please confirm you are not a robot' });
-            return;
-        }
-        try {
-            const response = await fetch('/api/login/admin', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ email: adminEmail, password: adminPassword, adminId })
-            });
-            const data = await response.json();
-            if (response.ok) {
-                localStorage.setItem('token', data.token);
-                localStorage.setItem('user', JSON.stringify({ ...data.admin, isAdmin: true }));
-                setPopup({
-                    isOpen: true,
-                    type: 'success',
-                    title: 'Admin Login Successful',
-                    message: 'Welcome Admin! Redirecting to panel...'
-                });
-            } else {
-                setPopup({
-                    isOpen: true,
-                    type: 'error',
-                    title: 'Login Failed',
-                    message: data.error || 'Invalid credentials'
-                });
-            }
-        } catch (error) {
-            setPopup({
-                isOpen: true,
-                type: 'error',
-                title: 'Network Error',
-                message: 'An error occurred during login.'
-            });
-        }
-    };
-
-    const isUser = activeTab === 'user';
-    const primaryColor = isUser ? '#2ecc71' : '#0097a7';
-    const bgGradient = isUser
-        ? 'linear-gradient(135deg, #e8f5e9 0%, #c8e6c9 100%)'
-        : 'linear-gradient(135deg, #e0f2f1 0%, #b2dfdb 100%)';
 
     return (
-        <div className="login-container" style={{
-            minHeight: '100vh',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            background: bgGradient,
-            transition: 'background 0.5s ease',
-            padding: '20px',
-            fontFamily: "'Segoe UI', sans-serif"
-        }}>
-            <div className="login-box" style={{
-                background: 'white',
-                padding: '40px',
-                borderRadius: '16px',
-                boxShadow: '0 4px 20px rgba(0,0,0,0.08)',
-                width: '100%',
-                maxWidth: '480px',
-                transition: 'all 0.3s ease'
-            }}>
-                <div style={{ marginBottom: '26px', textAlign: 'center' }}>
-                    <img 
-                        src="/renthub-logo.png" 
-                        alt="RentHub" 
-                        style={{ 
-                            width: '115px', 
-                            height: '115px', 
-                            borderRadius: '50%', 
-                            objectFit: 'cover',
-                            margin: '0 auto 16px auto',
-                            display: 'block',
-                            boxShadow: '0 0 32px rgba(0, 195, 255, 0.8), 0 0 60px rgba(0, 150, 255, 0.4)',
-                            border: '3.5px solid #00D8FF',
-                            transition: 'transform 0.3s ease, box-shadow 0.3s ease'
-                        }} 
-                        onMouseOver={e => {
-                            e.currentTarget.style.transform = 'scale(1.05)';
-                            e.currentTarget.style.boxShadow = '0 0 42px rgba(0, 216, 255, 0.95), 0 0 70px rgba(0, 150, 255, 0.55)';
-                        }}
-                        onMouseOut={e => {
-                            e.currentTarget.style.transform = 'scale(1)';
-                            e.currentTarget.style.boxShadow = '0 0 32px rgba(0, 195, 255, 0.8), 0 0 60px rgba(0, 150, 255, 0.4)';
+        <div className="renthub-login-page">
+            {/* Quick Return to Home Link */}
+            <Link to="/" className="login-back-home" title="Back to Home">
+                <i className="fas fa-arrow-left"></i>
+                <span>Home</span>
+            </Link>
+
+            {/* ==================================================
+                DESKTOP HERO SECTION (LEFT 53%)
+                Features user-selected artwork with signature organic wave cut
+            ================================================== */}
+            <aside className="renthub-hero-section" aria-label="RentHub Hero Showcase">
+                <div className="renthub-hero-artwork-wrapper">
+                    <img
+                        src="/renthub_user_hero_2x.jpg"
+                        alt="RentHub - Your Next Ride Is Just a Login Away. Safe & Trusted, Quick Booking, Multiple Locations, 24/7 Support."
+                        className="renthub-hero-img"
+                        onError={(e) => {
+                            // Fallback to 1024x1024 version
+                            e.currentTarget.src = '/renthub_user_hero.jpg';
                         }}
                     />
-                    <p style={{ textAlign: 'center', color: '#64748b', margin: 0, fontSize: '15px', fontWeight: '600' }}>
-                        Sign in to your account
-                    </p>
+
+                    {/* Signature Organic Wave Cut carving into the photo edge with gold accent line */}
+                    <div className="hero-wave-divider" aria-hidden="true">
+                        <svg viewBox="0 0 100 1000" preserveAspectRatio="none">
+                            <defs>
+                                <linearGradient id="waveGoldStroke" x1="0%" y1="0%" x2="0%" y2="100%">
+                                    <stop offset="0%" stopColor="#F5B82E" stopOpacity="0.1" />
+                                    <stop offset="45%" stopColor="#F5B82E" stopOpacity="0.85" />
+                                    <stop offset="80%" stopColor="#F5B82E" stopOpacity="1" />
+                                    <stop offset="100%" stopColor="#EDB026" stopOpacity="0.4" />
+                                </linearGradient>
+                            </defs>
+                            {/* Wave body filled with login background */}
+                            <path d="M 100,0 L 45,0 C 95,220 15,480 65,700 C 90,840 35,940 100,1000 L 100,1000 Z" fill="#F4F7FC" />
+                            {/* Gold curve accent stroke */}
+                            <path d="M 45,0 C 95,220 15,480 65,700 C 90,840 35,940 100,1000" fill="none" stroke="url(#waveGoldStroke)" strokeWidth="3.5" />
+                        </svg>
+                    </div>
+                </div>
+            </aside>
+
+            {/* ==================================================
+                LOGIN FORM SECTION (RIGHT 47%)
+            ================================================== */}
+            <main className="renthub-login-section">
+                {/* Interactive Physics & Floating Particles Animation Layer */}
+                <FloatingBackground density={14} meterType="none" enableRipples={true} />
+
+                {/* Ambient Radial Glow */}
+                <div className="login-ambient-glow" aria-hidden="true" />
+
+                {/* Decorative Bottom Golden Wave */}
+                <div className="login-ambient-wave-bottom" aria-hidden="true">
+                    <svg viewBox="0 0 520 160" fill="none" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none">
+                        <path d="M0,120 C150,155 300,80 520,130 L520,160 L0,160 Z" fill="url(#goldWaveGradFinal)" />
+                        <path d="M70,135 C220,160 340,110 520,145 L520,160 L70,160 Z" fill="rgba(245, 184, 46, 0.14)" />
+                        <defs>
+                            <linearGradient id="goldWaveGradFinal" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" stopColor="#F5B82E" stopOpacity="0.28" />
+                                <stop offset="60%" stopColor="#EDB026" stopOpacity="0.14" />
+                                <stop offset="100%" stopColor="#F5B82E" stopOpacity="0.04" />
+                            </linearGradient>
+                        </defs>
+                    </svg>
                 </div>
 
-                {/* User Login Form */}
-                <form onSubmit={handleUserLogin} style={{ animation: 'fadeIn 0.4s' }}>
-                    <div className="form-group" style={{ marginBottom: '20px' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontSize: '16px', fontWeight: '700' }}>Email Address</label>
-                        <input
-                            type="email" value={userEmail} onChange={(e) => setUserEmail(e.target.value)} required placeholder="name@example.com"
-                            style={{
-                                width: '100%', padding: '14px', border: '1px solid #e0e0e0', borderRadius: '10px', fontSize: '16px', fontWeight: '500', outline: 'none', transition: 'border-color 0.2s'
-                            }}
-                            onFocus={(e) => e.target.style.borderColor = primaryColor}
-                            onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
+                {/* Mobile Brand Header (Visible only on <= 768px screens) */}
+                <div className="mobile-brand-header">
+                    <Link to="/" style={{ textDecoration: 'none' }}>
+                        <img
+                            src="/renthub-logo.png"
+                            alt="RentHub"
+                            className="mobile-brand-logo-img"
+                            onError={(e) => { e.currentTarget.style.display = 'none'; }}
                         />
-                    </div>
-                    <div className="form-group" style={{ marginBottom: '20px', position: 'relative' }}>
-                        <label style={{ display: 'block', marginBottom: '8px', color: '#2c3e50', fontSize: '16px', fontWeight: '700' }}>Password</label>
-                        <div style={{ position: 'relative' }}>
-                            <input
-                                type={showUserPassword ? "text" : "password"}
-                                value={userPassword} onChange={(e) => setUserPassword(e.target.value)} required placeholder="Enter password"
-                                style={{
-                                    width: '100%', padding: '14px', border: '1px solid #e0e0e0', borderRadius: '10px', fontSize: '16px', fontWeight: '500', outline: 'none'
-                                }}
-                                onFocus={(e) => e.target.style.borderColor = primaryColor}
-                                onBlur={(e) => e.target.style.borderColor = '#e0e0e0'}
-                            />
-                            <i
-                                className={`fas ${showUserPassword ? 'fa-eye-slash' : 'fa-eye'}`}
-                                onClick={() => setShowUserPassword(!showUserPassword)}
-                                style={{ position: 'absolute', right: '14px', top: '50%', transform: 'translateY(-50%)', cursor: 'pointer', color: '#bdc3c7', fontSize: '18px' }}
-                            ></i>
+                        <div className="mobile-brand-name">
+                            Rent<span>Hub</span>
                         </div>
-                    </div>
+                        <div className="mobile-brand-tagline">
+                            Ride • Drive • Explore
+                        </div>
+                    </Link>
+                </div>
 
-                    {/* Robot Check - Professional Style */}
-                    <div style={{
-                        margin: '0 auto 24px',
-                        width: '100%',
-                        maxWidth: '304px',
-                        height: '78px',
-                        background: '#f9f9f9',
-                        border: '1px solid #d3d3d3',
-                        borderRadius: '3px',
-                        boxShadow: '0 0 4px 1px rgba(0,0,0,0.08)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'space-between',
-                        padding: '0 12px'
-                    }}>
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-                            <div
-                                onClick={() => {
-                                    playClickSound();
-                                    setIsUserRobotChecked(!isUserRobotChecked);
-                                }}
-                                style={{
-                                    position: 'relative',
-                                    width: '24px',
-                                    height: '24px',
-                                    background: '#fff',
-                                    border: '2px solid #c1c1c1',
-                                    borderRadius: '2px',
-                                    cursor: 'pointer',
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    justifyContent: 'center'
-                                }}
-                            >
-                                {isUserRobotChecked && (
-                                    <svg width="30" height="30" viewBox="0 0 48 48" fill="none" style={{ position: 'absolute', top: '-6px', left: '-2px' }}>
-                                        <path d="M20 34L10 24L12.83 21.17L20 28.34L37.17 11.17L40 14L20 34Z" fill="#0F9D58" />
-                                    </svg>
-                                )}
+                {/* Floating White Login Card (Slightly larger & more spacious) */}
+                <div className="renthub-login-card">
+                    {/* Top Accent Gold Bar */}
+                    <div className="card-top-accent" aria-hidden="true" />
+
+                    <div className="card-inner-padding">
+                        {/* Card Header */}
+                        <div className="login-card-header">
+                            <div className="welcome-badge">
+                                <span>Welcome Back 👋</span>
                             </div>
-                            <label onClick={() => {
-                                playClickSound();
-                                setIsUserRobotChecked(!isUserRobotChecked);
-                            }} style={{ color: '#000', fontFamily: 'Roboto, helvetica, arial, sans-serif', fontSize: '14px', fontWeight: '400', cursor: 'pointer', userSelect: 'none' }}>I'm not a robot</label>
+                            <h1 className="login-card-title">
+                                Login to Rent<span className="gold-accent">Hub</span>
+                            </h1>
+                            <p className="login-card-subtitle">
+                                Enter your details to continue your journey.
+                            </p>
                         </div>
-                        <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', marginTop: '2px' }}>
-                            <img src="https://www.gstatic.com/recaptcha/api2/logo_48.png" alt="reCAPTCHA" style={{ width: '32px', height: '32px', opacity: '0.55' }} />
-                            <div style={{ fontSize: '10px', color: '#555', marginTop: '2px', transform: 'scale(0.8)', whiteSpace: 'nowrap' }}>reCAPTCHA</div>
-                            <div style={{ fontSize: '8px', color: '#555', transform: 'scale(0.8)', whiteSpace: 'nowrap', marginTop: '-2px' }}>Privacy - Terms</div>
-                        </div>
-                    </div>
-                    <div style={{ textAlign: 'right', marginBottom: '24px' }}>
-                        <Link to="/forgot-password" style={{ color: '#7f8c8d', fontSize: '14px', textDecoration: 'none', fontWeight: '500' }}>Forgot Password?</Link>
-                    </div>
-                    <button type="submit" style={{
-                        width: '100%', padding: '16px', background: '#2ecc71', color: 'white', border: 'none', borderRadius: '10px', fontSize: '16px', fontWeight: '700', cursor: 'pointer',
-                        boxShadow: '0 4px 12px rgba(46, 204, 113, 0.3)', transition: 'transform 0.2s'
-                    }}
-                        onMouseOver={(e) => e.target.style.transform = 'translateY(-2px)'}
-                        onMouseOut={(e) => e.target.style.transform = 'translateY(0)'}
-                    >Login as User</button>
-                    <div style={{ textAlign: 'center', marginTop: '24px', fontSize: '15px', color: '#7f8c8d' }}>
-                        Don't have an account? <Link to="/register-user" style={{ color: '#2ecc71', fontWeight: '700', textDecoration: 'none' }}>Register</Link>
-                    </div>
-                </form>
-            </div >
 
+                        {/* Login Form */}
+                        <form onSubmit={handleUserLogin} noValidate>
+                            {/* Email Address Input */}
+                            <div className="renthub-form-group">
+                                <label htmlFor="user-email-input" className="renthub-label">
+                                    Email Address
+                                </label>
+                                <div className="renthub-input-wrapper">
+                                    <i className="fas fa-envelope input-icon-prefix" aria-hidden="true"></i>
+                                    <input
+                                        id="user-email-input"
+                                        type="email"
+                                        value={userEmail}
+                                        onChange={(e) => setUserEmail(e.target.value)}
+                                        required
+                                        placeholder="name@example.com"
+                                        autoComplete="email"
+                                        className="renthub-input"
+                                        disabled={isLoading}
+                                    />
+                                </div>
+                            </div>
+
+                            {/* Password Input */}
+                            <div className="renthub-form-group">
+                                <label htmlFor="user-password-input" className="renthub-label">
+                                    Password
+                                </label>
+                                <div className="renthub-input-wrapper">
+                                    <i className="fas fa-lock input-icon-prefix" aria-hidden="true"></i>
+                                    <input
+                                        id="user-password-input"
+                                        type={showUserPassword ? "text" : "password"}
+                                        value={userPassword}
+                                        onChange={(e) => setUserPassword(e.target.value)}
+                                        required
+                                        placeholder="Enter your password"
+                                        autoComplete="current-password"
+                                        className="renthub-input"
+                                        disabled={isLoading}
+                                    />
+                                    <button
+                                        type="button"
+                                        className="password-toggle-btn"
+                                        onClick={() => setShowUserPassword(!showUserPassword)}
+                                        aria-label={showUserPassword ? "Hide password" : "Show password"}
+                                        title={showUserPassword ? "Hide password" : "Show password"}
+                                    >
+                                        <i className={`fas ${showUserPassword ? 'fa-eye-slash' : 'fa-eye'}`} aria-hidden="true"></i>
+                                    </button>
+                                </div>
+
+                                {/* Forgot Password Link */}
+                                <div className="forgot-password-row">
+                                    <Link to="/forgot-password" className="forgot-password-link">
+                                        Forgot Password?
+                                    </Link>
+                                </div>
+                            </div>
+
+                            {/* Preserved Robot Check / CAPTCHA */}
+                            <div className="renthub-captcha-wrapper">
+                                <div
+                                    className="captcha-check-group"
+                                    onClick={() => {
+                                        playClickSound();
+                                        setIsUserRobotChecked(!isUserRobotChecked);
+                                    }}
+                                    role="checkbox"
+                                    aria-checked={isUserRobotChecked}
+                                    tabIndex={0}
+                                    onKeyDown={(e) => {
+                                        if (e.key === ' ' || e.key === 'Enter') {
+                                            e.preventDefault();
+                                            playClickSound();
+                                            setIsUserRobotChecked(!isUserRobotChecked);
+                                        }
+                                    }}
+                                >
+                                    <div className={`captcha-checkbox ${isUserRobotChecked ? 'checked' : ''}`}>
+                                        {isUserRobotChecked && (
+                                            <svg width="28" height="28" viewBox="0 0 48 48" fill="none" style={{ position: 'absolute', top: '-5px', left: '-2px' }}>
+                                                <path d="M20 34L10 24L12.83 21.17L20 28.34L37.17 11.17L40 14L20 34Z" fill="#0F9D58" />
+                                            </svg>
+                                        )}
+                                    </div>
+                                    <span className="captcha-text">I'm not a robot</span>
+                                </div>
+
+                                <div className="captcha-badge">
+                                    <img
+                                        src="https://www.gstatic.com/recaptcha/api2/logo_48.png"
+                                        alt="reCAPTCHA"
+                                        className="captcha-badge-logo"
+                                    />
+                                    <div className="captcha-badge-text">reCAPTCHA</div>
+                                    <div className="captcha-badge-links">Privacy - Terms</div>
+                                </div>
+                            </div>
+
+                            {/* Submit Button (56px) */}
+                            <button
+                                type="submit"
+                                className="renthub-login-btn"
+                                disabled={isLoading}
+                            >
+                                {isLoading ? (
+                                    <>
+                                        <span className="btn-spinner" aria-hidden="true"></span>
+                                        <span>Logging in...</span>
+                                    </>
+                                ) : (
+                                    <>
+                                        <span>Login</span>
+                                        <i className="fas fa-arrow-right btn-arrow-icon" aria-hidden="true"></i>
+                                    </>
+                                )}
+                            </button>
+
+                            {/* Registration Link */}
+                            <div className="login-card-footer">
+                                <span>Don't have an account?</span>
+                                <Link to="/register-user" className="signup-link">
+                                    Sign Up
+                                </Link>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+
+                {/* Security Trust Badge */}
+                <div className="login-trust-badge">
+                    <i className="fas fa-shield-alt" aria-hidden="true"></i>
+                    <span>256-Bit SSL Encrypted &amp; Verified Vehicle Fleet</span>
+                </div>
+            </main>
+
+            {/* Preserved Status Popup Modal */}
             <StatusPopup
                 isOpen={popup.isOpen}
                 onClose={() => {
-                    setPopup({ ...popup, isOpen: false });
+                    setPopup(prev => ({ ...prev, isOpen: false }));
                     if (popup.type === 'success') {
-                        if (activeTab === 'user') {
-                            // Check for sessionStorage redirect (from home page banners)
-                            const sessionRedirect = sessionStorage.getItem('redirectAfterLogin');
+                        const sessionRedirect = sessionStorage.getItem('redirectAfterLogin');
+                        const params = new URLSearchParams(window.location.search);
+                        const redirectUrl = params.get('redirect');
 
-                            // Check for 'redirect' query param
-                            const params = new URLSearchParams(window.location.search);
-                            const redirectUrl = params.get('redirect');
-
-                            if (sessionRedirect) {
-                                // Clear the session storage
-                                sessionStorage.removeItem('redirectAfterLogin');
-                                navigate(sessionRedirect);
-                            } else if (from) {
-                                navigate(from, { replace: true });
-                            } else if (redirectUrl) {
-                                navigate(redirectUrl);
-                            } else {
-                                navigate('/');
-                            }
-                            window.dispatchEvent(new Event('storage'));
+                        if (sessionRedirect) {
+                            sessionStorage.removeItem('redirectAfterLogin');
+                            navigate(sessionRedirect);
+                        } else if (from) {
+                            navigate(from, { replace: true });
+                        } else if (redirectUrl) {
+                            navigate(redirectUrl);
                         } else {
-                            navigate('/admin');
+                            navigate('/');
                         }
+                        window.dispatchEvent(new Event('storage'));
                     }
                 }}
                 type={popup.type}
@@ -334,10 +384,7 @@ const Login = () => {
                 confirmText={popup.confirmText}
                 cancelText={popup.cancelText}
             />
-            <style>{`
-                @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-            `}</style>
-        </div >
+        </div>
     );
 };
 

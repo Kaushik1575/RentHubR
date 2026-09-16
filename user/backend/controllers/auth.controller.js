@@ -12,19 +12,21 @@ const registerSendOtp = async (req, res) => {
         const { email } = req.body;
         if (!email) return res.status(400).json({ error: 'Email is required' });
 
+        const cleanEmail = email.trim().toLowerCase();
+
         // If user already exists, don't send OTP
-        const existingUser = await SupabaseDB.getUserByEmail(email);
-        if (existingUser) return res.status(400).json({ error: 'Email already registered' });
+        const existingUser = await SupabaseDB.getUserByEmail(cleanEmail);
+        if (existingUser) return res.status(400).json({ error: 'Email already registered. Please login instead.' });
 
         // Generate OTP
         const otp = generateOTP();
         const otpExpiry = new Date(Date.now() + 10 * 60 * 1000).toISOString();
 
         // Remove any previous OTPs for this email and insert the new OTP
-        await supabase.from('password_reset_otps').delete().eq('email', email);
+        await supabase.from('password_reset_otps').delete().eq('email', cleanEmail);
         const { error: otpError } = await supabase.from('password_reset_otps').insert({
             user_id: null,
-            email: email,
+            email: cleanEmail,
             otp: otp,
             expires_at: otpExpiry,
             created_at: new Date().toISOString()
@@ -35,14 +37,14 @@ const registerSendOtp = async (req, res) => {
             return res.status(500).json({ error: 'Error generating OTP' });
         }
 
-        // Send OTP email
-        const emailResult = await sendRegistrationOTP(email, '', otp);
+        // Send OTP email via Resend
+        const emailResult = await sendRegistrationOTP(cleanEmail, '', otp);
         if (!emailResult.success) {
-            console.error('Failed to send registration OTP:', emailResult.error);
-            return res.status(500).json({ error: 'Failed to send OTP email' });
+            console.error('Email sending failed:', emailResult.error);
+            return res.status(500).json({ error: 'Failed to send OTP to your email. Please check your email address.' });
         }
 
-        res.json({ message: 'OTP sent successfully to your email' });
+        res.json({ success: true, message: 'OTP sent successfully to your email address' });
     } catch (error) {
         console.error('Error in /api/register/send-otp:', error);
         res.status(500).json({ error: 'Error sending OTP' });
@@ -54,15 +56,24 @@ const registerSendMobileOtp = async (req, res) => {
         const { phoneNumber } = req.body;
         if (!phoneNumber) return res.status(400).json({ error: 'Phone number is required' });
 
-        // Check if phone number already exists
-        const { data: existingUser, error: checkError } = await supabase
-            .from('users')
-            .select('phone_number')
-            .eq('phone_number', phoneNumber)
-            .single();
+        let cleanPhone = phoneNumber.toString().trim().replace(/\D/g, '');
+        if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+            cleanPhone = cleanPhone.slice(2);
+        }
 
-        if (existingUser) {
-            return res.status(400).json({ error: 'Mobile number already registered' });
+        if (cleanPhone.length !== 10) {
+            return res.status(400).json({ error: 'Please provide a valid 10-digit mobile number' });
+        }
+
+        // Check if phone number already exists
+        const { data: existingUser } = await supabase
+            .from('users')
+            .select('id, phone_number')
+            .or(`phone_number.eq.${cleanPhone}`)
+            .limit(1);
+
+        if (existingUser && existingUser.length > 0) {
+            return res.status(400).json({ error: 'Mobile number already registered. Please login instead.' });
         }
 
         // Generate OTP
@@ -70,9 +81,9 @@ const registerSendMobileOtp = async (req, res) => {
         const otpExpiry = new Date(Date.now() + 5 * 60 * 1000).toISOString(); // 5 minutes
 
         // Remove any previous OTPs for this phone and insert new one
-        await supabase.from('mobile_otps').delete().eq('phone_number', phoneNumber);
+        await supabase.from('mobile_otps').delete().eq('phone_number', cleanPhone);
         const { error: otpError } = await supabase.from('mobile_otps').insert({
-            phone_number: phoneNumber,
+            phone_number: cleanPhone,
             otp: otp,
             expires_at: otpExpiry,
             created_at: new Date().toISOString()
@@ -83,15 +94,15 @@ const registerSendMobileOtp = async (req, res) => {
             return res.status(500).json({ error: 'Error generating OTP' });
         }
 
-        // Send SMS
-        const smsResult = await sendSMS(phoneNumber, `Your RentHub verification code is: ${otp}. Valid for 5 minutes.`);
+        // Send SMS via Twilio
+        const smsResult = await sendSMS(cleanPhone, `Your RentHub verification code is: ${otp}. Valid for 5 minutes.`);
 
         if (!smsResult.success) {
-            console.error('Failed to send mobile OTP:', smsResult.error);
-            return res.status(500).json({ error: 'Failed to send OTP via SMS. Please check the number.' });
+            console.error('Twilio SMS failed:', smsResult.error);
+            return res.status(500).json({ error: 'Failed to send SMS OTP. ' + (smsResult.error || 'Please check your mobile number.') });
         }
 
-        res.json({ message: 'OTP sent successfully to your mobile number' });
+        res.json({ success: true, message: 'OTP sent successfully to your mobile number via SMS' });
     } catch (error) {
         console.error('Error in /api/register/send-mobile-otp:', error);
         res.status(500).json({ error: 'Error sending mobile OTP' });
@@ -104,14 +115,24 @@ const verifyOtp = async (req, res) => {
 
         if (!identifier || !otp) return res.status(400).json({ error: 'Missing details' });
 
+        let cleanIdentifier = identifier.trim();
+        if (type === 'mobile') {
+            cleanIdentifier = cleanIdentifier.replace(/\D/g, '');
+            if (cleanIdentifier.length === 12 && cleanIdentifier.startsWith('91')) {
+                cleanIdentifier = cleanIdentifier.slice(2);
+            }
+        } else {
+            cleanIdentifier = cleanIdentifier.toLowerCase();
+        }
+
         const table = type === 'email' ? 'password_reset_otps' : 'mobile_otps';
         const column = type === 'email' ? 'email' : 'phone_number';
 
         const { data: record, error } = await supabase
             .from(table)
             .select('*')
-            .eq(column, identifier)
-            .eq('otp', otp)
+            .eq(column, cleanIdentifier)
+            .eq('otp', otp.trim())
             .gte('expires_at', new Date().toISOString())
             .single();
 
@@ -126,22 +147,26 @@ const verifyOtp = async (req, res) => {
 
 const registerUser = async (req, res) => {
     try {
-        const { fullName, email, phoneNumber, password, confirmPassword, otp } = req.body;
+        const { fullName, email, phoneNumber, password, confirmPassword, otp, mobileOtp } = req.body;
+
+        const cleanEmail = (email || '').trim().toLowerCase();
+        let cleanPhone = (phoneNumber || '').toString().trim().replace(/\D/g, '');
+        if (cleanPhone.length === 12 && cleanPhone.startsWith('91')) {
+            cleanPhone = cleanPhone.slice(2);
+        }
 
         // Check if user exists
-        const existingUser = await SupabaseDB.getUserByEmail(email);
+        const existingUser = await SupabaseDB.getUserByEmail(cleanEmail);
         if (existingUser) {
             return res.status(400).json({ error: 'Email already exists' });
         }
 
-        // Verify OTP exists and not expired
-        // Verify OTPs exists and not expired
+        // Verify Email OTP
         if (!otp) {
             return res.status(400).json({ error: 'Email OTP required to complete registration' });
         }
 
-        // Check Mobile OTP (assuming passed as mobileOtp in body)
-        const { mobileOtp } = req.body;
+        // Verify Mobile OTP
         if (!mobileOtp) {
             return res.status(400).json({ error: 'Mobile OTP required to complete registration' });
         }
@@ -149,8 +174,8 @@ const registerUser = async (req, res) => {
         const { data: otpRecord, error: otpError } = await supabase
             .from('password_reset_otps')
             .select('*')
-            .eq('email', email)
-            .eq('otp', otp)
+            .eq('email', cleanEmail)
+            .eq('otp', otp.trim())
             .gte('expires_at', new Date().toISOString())
             .single();
 
@@ -162,8 +187,8 @@ const registerUser = async (req, res) => {
         const { data: mobileOtpRecord, error: mobileOtpError } = await supabase
             .from('mobile_otps')
             .select('*')
-            .eq('phone_number', phoneNumber)
-            .eq('otp', mobileOtp)
+            .eq('phone_number', cleanPhone)
+            .eq('otp', mobileOtp.trim())
             .gte('expires_at', new Date().toISOString())
             .single();
 

@@ -94,6 +94,34 @@
     }
 }
 
+@media (max-width: 1179px) and (min-width: 768px) {
+    .hero-booking-dock-section .twin-speedometer-left,
+    .hero-booking-dock-section .twin-speedometer-right {
+        top: 140px;
+    }
+}
+
+@media (max-width: 767px) {
+    .hero-booking-dock-section {
+        padding-top: 134px !important;
+    }
+    .hero-booking-dock-section .twin-speedometer-left {
+        top: 14px !important;
+        left: calc(50% - 110px) !important;
+        width: 104px !important;
+        height: 104px !important;
+        display: block !important;
+    }
+    .hero-booking-dock-section .twin-speedometer-right {
+        top: 14px !important;
+        left: calc(50% + 6px) !important;
+        right: auto !important;
+        width: 104px !important;
+        height: 104px !important;
+        display: block !important;
+    }
+}
+
 .hero-headline-wrap {
     text-align: center;
     max-width: 900px;
@@ -614,10 +642,45 @@
     }
 }
 
-@media (max-width: 1179px) {
-    .fleet-category-section .twin-speedometer-left,
+@media (max-width: 1179px) and (min-width: 768px) {
+    .fleet-category-section .twin-speedometer-left {
+        left: 12px;
+        width: 135px;
+        height: 135px;
+        top: 36px;
+        display: block !important;
+    }
     .fleet-category-section .twin-speedometer-right {
-        display: none !important;
+        right: 12px;
+        width: 135px;
+        height: 135px;
+        top: 36px;
+        display: block !important;
+    }
+}
+
+@media (max-width: 767px) {
+    .fleet-category-section {
+        padding-top: 128px !important;
+    }
+    .fleet-category-headline-wrap {
+        min-height: auto;
+        margin: 0 auto 24px auto;
+    }
+    .fleet-category-section .twin-speedometer-left {
+        top: 12px !important;
+        left: calc(50% - 110px) !important;
+        width: 104px !important;
+        height: 104px !important;
+        display: block !important;
+    }
+    .fleet-category-section .twin-speedometer-right {
+        top: 12px !important;
+        left: calc(50% + 6px) !important;
+        right: auto !important;
+        width: 104px !important;
+        height: 104px !important;
+        display: block !important;
     }
 }
 

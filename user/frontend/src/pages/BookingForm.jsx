@@ -2,6 +2,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 import TermsPopup from '../components/TermsPopup';
+import FloatingBackground from '../components/FloatingBackground';
 import './BookingTimeline.css';
 
 // Helper function to format schedule dates and calculate return time
@@ -554,6 +555,9 @@ const BookingForm = () => {
 
     return (
         <div className="booking-page-wrapper">
+            {/* Live Interactive Floating Physics & Particles Background */}
+            <FloatingBackground density={14} meterType="none" enableRipples={true} />
+
             {/* Ambient Floating Decorative Glows */}
             <div className="ambient-blob blob-emerald" aria-hidden="true"></div>
             <div className="ambient-blob blob-purple" aria-hidden="true"></div>

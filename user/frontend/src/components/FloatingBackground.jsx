@@ -1057,7 +1057,27 @@ const FloatingBackground = ({ density = 18, meterType = 'speedo', enableRipples 
                             <text x="120" y="174" textAnchor="middle" fill={configs.left.textColor} fontSize="9.5" fontWeight="900" letterSpacing="1.6">
                                 {configs.left.unit}
                             </text>
-                            <text x="120" y="188" textAnchor="middle" fill={configs.left.textColor} fontSize="7" fontWeight="800" letterSpacing="0.6" opacity="0.85">
+                            <rect 
+                                x="60" 
+                                y="179" 
+                                width="120" 
+                                height="15" 
+                                rx="4" 
+                                fill="#090d16" 
+                                stroke={configs.left.color} 
+                                strokeWidth="0.8" 
+                                strokeOpacity="0.4" 
+                            />
+                            <text 
+                                x="120" 
+                                y="190" 
+                                textAnchor="middle" 
+                                fill={configs.left.color} 
+                                fontSize="7.8" 
+                                fontWeight="900" 
+                                letterSpacing="0.8" 
+                                fontFamily="'Courier New', monospace"
+                            >
                                 {configs.left.sub}
                             </text>
 
@@ -1191,7 +1211,27 @@ const FloatingBackground = ({ density = 18, meterType = 'speedo', enableRipples 
                             <text ref={rightGearRef} x="120" y="174" textAnchor="middle" fill={configs.right.textColor} fontSize="9.5" fontWeight="900" letterSpacing="1.6">
                                 {configs.right.unit}
                             </text>
-                            <text x="120" y="188" textAnchor="middle" fill={configs.right.textColor} fontSize="7" fontWeight="800" letterSpacing="0.6" opacity="0.85">
+                            <rect 
+                                x="60" 
+                                y="179" 
+                                width="120" 
+                                height="15" 
+                                rx="4" 
+                                fill="#090d16" 
+                                stroke={configs.right.color} 
+                                strokeWidth="0.8" 
+                                strokeOpacity="0.4" 
+                            />
+                            <text 
+                                x="120" 
+                                y="190" 
+                                textAnchor="middle" 
+                                fill={configs.right.color} 
+                                fontSize="7.8" 
+                                fontWeight="900" 
+                                letterSpacing="0.8" 
+                                fontFamily="'Courier New', monospace"
+                            >
                                 {configs.right.sub}
                             </text>
 

@@ -1,0 +1,745 @@
+/* ==================================================
+   RentHub Luxury Login Page Styling
+   Wave Cut Boundary & Slightly Increased Sizing
+================================================== */
+
+:root {
+  --rh-navy: #0B2545;
+  --rh-dark-navy: #071A33;
+  --rh-gold: #F5B82E;
+  --rh-gold-hover: #E5A71F;
+  --rh-gold-light: #FFF8E7;
+  --rh-bg: #F4F7FC;
+  --rh-card-bg: #FFFFFF;
+  --rh-text-primary: #071A33;
+  --rh-text-secondary: #4E6077;
+  --rh-text-muted: #8E9BAE;
+  --rh-border: #DCE3EC;
+  --rh-border-focus: #F5B82E;
+  --rh-shadow: 0 24px 64px rgba(11, 37, 69, 0.08), 0 4px 18px rgba(11, 37, 69, 0.04);
+  --rh-radius-card: 24px;
+  --rh-radius-input: 13px;
+  --rh-radius-btn: 13px;
+}
+
+/* Base Page Wrapper */
+.renthub-login-page {
+  min-height: 100vh;
+  width: 100%;
+  display: flex;
+  background-color: var(--rh-bg);
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  color: var(--rh-text-primary);
+  overflow-x: hidden;
+  position: relative;
+  padding-top: 80px; /* Offsets fixed top navbar so NO part of the image is covered */
+  box-sizing: border-box;
+}
+
+/* Home Return Pill (hidden because full Navbar with logo and Home link is already at the top) */
+.login-back-home {
+  display: none !important;
+}
+
+/* ==================================================
+   DESKTOP HERO SECTION (LEFT 53%)
+   Spacious Photo Container with Signature Wave Cut
+================================================== */
+.renthub-hero-section {
+  flex: 0 0 53%;
+  width: 53%;
+  min-height: calc(100vh - 80px);
+  height: calc(100vh - 80px);
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background-color: #071A33;
+  overflow: hidden;
+  user-select: none;
+}
+
+.renthub-hero-artwork-wrapper {
+  width: 100%;
+  height: 100%;
+  position: absolute;
+  top: 0;
+  left: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0B2545;
+}
+
+/* High-res 2x Retina Hero Image */
+.renthub-hero-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  object-position: center top;
+  display: block;
+  pointer-events: none;
+  image-rendering: -webkit-optimize-contrast;
+  image-rendering: crisp-edges;
+  animation: heroFadeIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+}
+
+/* Signature Organic Wave Cut on Photo Edge */
+.hero-wave-divider {
+  position: absolute;
+  top: 0;
+  right: -2px;
+  height: 100%;
+  width: 90px;
+  pointer-events: none;
+  z-index: 10;
+}
+
+.hero-wave-divider svg {
+  height: 100%;
+  width: 100%;
+  display: block;
+}
+
+/* ==================================================
+   LOGIN SECTION (RIGHT 47%)
+   Spacious & Perfectly Proportioned
+================================================== */
+.renthub-login-section {
+  flex: 0 0 47%;
+  width: 47%;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 36px;
+  background: linear-gradient(145deg, #F8FAFD 0%, #EDF2F8 100%);
+  position: relative;
+  z-index: 10;
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+/* Ambient Radial Glow Behind Card */
+.login-ambient-glow {
+  position: absolute;
+  width: 680px;
+  height: 680px;
+  background: radial-gradient(circle, rgba(245, 184, 46, 0.10) 0%, rgba(11, 37, 69, 0.04) 55%, transparent 75%);
+  pointer-events: none;
+  z-index: 1;
+}
+
+/* Bottom Golden Wave Accent */
+.login-ambient-wave-bottom {
+  position: absolute;
+  bottom: 0;
+  right: 0;
+  width: 520px;
+  height: 160px;
+  pointer-events: none;
+  z-index: 2;
+  opacity: 0.9;
+}
+
+.login-ambient-wave-bottom svg {
+  width: 100%;
+  height: 100%;
+  display: block;
+}
+
+/* Mobile Brand Header (Visible only on <= 768px) */
+.mobile-brand-header {
+  display: none;
+  text-align: center;
+  margin-bottom: 24px;
+  z-index: 15;
+}
+
+.mobile-brand-logo-img {
+  width: 68px;
+  height: 68px;
+  border-radius: 50%;
+  object-fit: cover;
+  box-shadow: 0 4px 16px rgba(11, 37, 69, 0.12);
+  border: 2.5px solid var(--rh-gold);
+  margin-bottom: 10px;
+}
+
+.mobile-brand-name {
+  font-size: 26px;
+  font-weight: 900;
+  color: var(--rh-navy);
+  letter-spacing: -0.6px;
+}
+
+.mobile-brand-name span {
+  color: var(--rh-gold);
+}
+
+.mobile-brand-tagline {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--rh-text-secondary);
+  letter-spacing: 1px;
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+
+/* ==================================================
+   LUXURY FLOATING LOGIN CARD (SLIGHTLY LARGER)
+================================================== */
+.renthub-login-card {
+  width: 100%;
+  max-width: 470px;
+  /* Slightly increased width as requested */
+  background: rgba(255, 255, 255, 0.95);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+  border-radius: var(--rh-radius-card);
+  box-shadow: var(--rh-shadow);
+  border: 1px solid rgba(217, 224, 232, 0.88);
+  box-sizing: border-box;
+  animation: cardSlideUp 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+}
+
+/* Gold Gradient Top Accent Bar */
+.card-top-accent {
+  height: 4px;
+  width: 100%;
+  background: linear-gradient(90deg, var(--rh-gold) 0%, #EDB026 55%, var(--rh-navy) 100%);
+}
+
+.card-inner-padding {
+  padding: 40px 38px 34px 38px;
+  /* Slightly more spacious */
+}
+
+/* Card Header */
+.login-card-header {
+  margin-bottom: 24px;
+  text-align: left;
+}
+
+.welcome-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 15px;
+  background: var(--rh-gold-light);
+  border: 1px solid rgba(245, 184, 46, 0.4);
+  border-radius: 9999px;
+  font-size: 13px;
+  font-weight: 700;
+  color: #926600;
+  margin-bottom: 12px;
+  letter-spacing: 0.2px;
+}
+
+.login-card-title {
+  font-size: 30px;
+  /* Slightly increased */
+  font-weight: 900;
+  color: var(--rh-navy);
+  margin: 0 0 6px 0;
+  letter-spacing: -0.6px;
+  line-height: 1.22;
+}
+
+.login-card-title .gold-accent {
+  color: var(--rh-gold);
+}
+
+.login-card-subtitle {
+  font-size: 14.5px;
+  color: var(--rh-text-secondary);
+  margin: 0;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
+/* ==================================================
+   FORM INPUTS (SLIGHTLY LARGER 56PX)
+================================================== */
+.renthub-form-group {
+  margin-bottom: 19px;
+}
+
+.renthub-label {
+  display: block;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--rh-navy);
+  margin-bottom: 8px;
+  letter-spacing: -0.15px;
+}
+
+.renthub-input-wrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.input-icon-prefix {
+  position: absolute;
+  left: 18px;
+  color: var(--rh-text-muted);
+  font-size: 16px;
+  pointer-events: none;
+  transition: color 0.2s ease;
+  z-index: 2;
+}
+
+.renthub-input {
+  width: 100%;
+  height: 56px;
+  /* Slightly increased */
+  padding: 0 48px 0 48px;
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--rh-text-primary);
+  background: #F8FAFC;
+  border: 1.5px solid var(--rh-border);
+  border-radius: var(--rh-radius-input);
+  outline: none;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.renthub-input::placeholder {
+  color: #94A3B8;
+  font-weight: 400;
+}
+
+.renthub-input:focus {
+  background-color: #FFFFFF;
+  border-color: var(--rh-gold);
+  box-shadow: 0 0 0 4px rgba(245, 184, 46, 0.16);
+}
+
+.renthub-input-wrapper:focus-within .input-icon-prefix {
+  color: var(--rh-navy);
+}
+
+/* Password Toggle Eye Button */
+.password-toggle-btn {
+  position: absolute;
+  right: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: transparent;
+  border: none;
+  padding: 8px;
+  color: var(--rh-text-muted);
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 8px;
+  transition: all 0.2s ease;
+  z-index: 3;
+}
+
+.password-toggle-btn:hover {
+  color: var(--rh-navy);
+  background-color: rgba(11, 37, 69, 0.06);
+}
+
+.password-toggle-btn i {
+  font-size: 17px;
+}
+
+/* Forgot Password Link */
+.forgot-password-row {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 8px;
+  margin-bottom: 20px;
+}
+
+.forgot-password-link {
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--rh-navy);
+  text-decoration: none;
+  transition: all 0.2s ease;
+}
+
+.forgot-password-link:hover {
+  color: #B27B00;
+  text-decoration: underline;
+}
+
+/* ==================================================
+   CAPTCHA CONTAINER (PRESERVED)
+================================================== */
+.renthub-captcha-wrapper {
+  margin: 0 auto 20px auto;
+  width: 100%;
+  max-width: 320px;
+  min-height: 76px;
+  background: #F8FAFC;
+  border: 1px solid #D5DCE5;
+  border-radius: 8px;
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.05);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 14px;
+  box-sizing: border-box;
+  transition: all 0.2s ease;
+}
+
+.renthub-captcha-wrapper:hover {
+  border-color: #B2BDCC;
+  background: #FFFFFF;
+}
+
+.captcha-check-group {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  cursor: pointer;
+}
+
+.captcha-checkbox {
+  position: relative;
+  width: 26px;
+  height: 26px;
+  background: #FFFFFF;
+  border: 2px solid #C1C1C1;
+  border-radius: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.2s ease;
+}
+
+.captcha-checkbox:hover {
+  border-color: #9E9E9E;
+}
+
+.captcha-checkbox.checked {
+  border-color: #0F9D58;
+  background: #F4FDF8;
+}
+
+.captcha-text {
+  color: #1F2937;
+  font-family: Roboto, -apple-system, BlinkMacSystemFont, 'Segoe UI', Arial, sans-serif;
+  font-size: 14px;
+  font-weight: 500;
+  user-select: none;
+  cursor: pointer;
+}
+
+.captcha-badge {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+
+.captcha-badge-logo {
+  width: 30px;
+  height: 30px;
+  opacity: 0.65;
+}
+
+.captcha-badge-text {
+  font-size: 9px;
+  color: #6B7280;
+  margin-top: 2px;
+  white-space: nowrap;
+}
+
+.captcha-badge-links {
+  font-size: 8px;
+  color: #6B7280;
+  white-space: nowrap;
+  margin-top: -1px;
+}
+
+/* ==================================================
+   SUBMIT LOGIN BUTTON (56PX)
+================================================== */
+.renthub-login-btn {
+  width: 100%;
+  height: 56px;
+  /* Slightly increased */
+  background: linear-gradient(135deg, #F5B82E 0%, #EDB026 100%);
+  color: var(--rh-dark-navy);
+  border: none;
+  border-radius: var(--rh-radius-btn);
+  font-size: 16.5px;
+  font-weight: 800;
+  letter-spacing: -0.2px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 10px;
+  box-shadow: 0 8px 24px rgba(245, 184, 46, 0.32);
+  transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+  box-sizing: border-box;
+}
+
+.renthub-login-btn:hover:not(:disabled) {
+  background: linear-gradient(135deg, #F5BA35 0%, #E2A620 100%);
+  transform: translateY(-2px);
+  box-shadow: 0 12px 28px rgba(245, 184, 46, 0.45);
+}
+
+.renthub-login-btn:active:not(:disabled) {
+  transform: scale(0.985);
+  box-shadow: 0 4px 14px rgba(245, 184, 46, 0.3);
+}
+
+.renthub-login-btn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+  transform: none !important;
+}
+
+.btn-arrow-icon {
+  font-size: 15px;
+  transition: transform 0.25s ease;
+}
+
+.renthub-login-btn:hover:not(:disabled) .btn-arrow-icon {
+  transform: translateX(4px);
+}
+
+/* Loading Spinner */
+.btn-spinner {
+  width: 18px;
+  height: 18px;
+  border: 2.5px solid rgba(7, 26, 51, 0.25);
+  border-top-color: var(--rh-dark-navy);
+  border-radius: 50%;
+  animation: spin 0.75s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+/* ==================================================
+   REGISTRATION FOOTER & TRUST BADGE
+================================================== */
+.login-card-footer {
+  text-align: center;
+  margin-top: 22px;
+  font-size: 14.5px;
+  color: var(--rh-text-secondary);
+  font-weight: 500;
+}
+
+.signup-link {
+  color: var(--rh-navy);
+  font-weight: 800;
+  text-decoration: none;
+  margin-left: 5px;
+  transition: all 0.2s ease;
+}
+
+.signup-link:hover {
+  color: #B27B00;
+  text-decoration: underline;
+}
+
+/* Trust Badge */
+.login-trust-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  margin-top: 22px;
+  font-size: 12.5px;
+  color: var(--rh-text-muted);
+  font-weight: 600;
+  letter-spacing: 0.1px;
+  z-index: 10;
+}
+
+.login-trust-badge i {
+  color: #10B981;
+  font-size: 14px;
+}
+
+/* Keyframe Animations */
+@keyframes cardSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes heroFadeIn {
+  from {
+    opacity: 0;
+    transform: scale(1.02);
+  }
+
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+/* ==================================================
+   RESPONSIVE DESIGN (BREAKPOINTS)
+================================================== */
+
+@media (min-width: 1025px) {
+  .renthub-login-page {
+    height: 100vh;
+    overflow: hidden;
+  }
+}
+
+/* Tablet & Mobile (<= 1024px) - Like Register Page */
+@media (max-width: 1024px) {
+  .renthub-login-page {
+    flex-direction: column;
+    height: auto;
+    min-height: 100vh;
+    padding-top: 80px;
+    overflow-y: auto;
+  }
+
+  /* Show full 1:1 hero image stacked on top like register page without cropping */
+  .renthub-hero-section {
+    display: flex !important;
+    flex: 0 0 auto;
+    width: 100%;
+    max-width: 480px;
+    margin: 16px auto 0 auto;
+    aspect-ratio: 1 / 1;
+    height: auto;
+    min-height: unset;
+    position: relative;
+    background: transparent;
+    border-radius: 20px;
+    overflow: hidden;
+    box-shadow: 0 10px 30px rgba(11, 37, 69, 0.1);
+  }
+
+  .renthub-hero-artwork-wrapper {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    aspect-ratio: 1 / 1;
+  }
+
+  .renthub-hero-img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    object-position: center;
+    display: block;
+  }
+
+  .hero-wave-divider {
+    display: none;
+  }
+
+  .renthub-login-section {
+    flex: 0 0 auto;
+    width: 100%;
+    min-height: auto;
+    height: auto;
+    padding: 24px 20px 48px 20px;
+    box-sizing: border-box;
+  }
+
+  .login-ambient-glow,
+  .login-ambient-wave-bottom {
+    display: none;
+  }
+
+  .mobile-brand-header {
+    display: none;
+  }
+
+  /* Centered, comfortable card with mobile padding */
+  .renthub-login-card {
+    max-width: 520px;
+    width: 100%;
+    margin: 0 auto;
+    border-radius: 22px;
+  }
+
+  .card-inner-padding {
+    padding: 28px 24px;
+  }
+}
+
+/* Small Mobile Screen (<= 640px) */
+@media (max-width: 640px) {
+  .renthub-hero-section {
+    width: calc(100% - 32px);
+    max-width: 360px;
+    aspect-ratio: 1 / 1;
+    height: auto;
+    min-height: unset;
+    margin: 12px auto 0 auto;
+    border-radius: 16px;
+  }
+
+  .renthub-login-section {
+    padding: 16px 16px 36px 16px;
+  }
+
+  .card-inner-padding {
+    padding: 22px 18px;
+    border-radius: 18px;
+  }
+
+  .login-card-title {
+    font-size: 24px;
+  }
+
+  .renthub-captcha-wrapper {
+    min-height: 68px;
+    padding: 0 8px;
+  }
+
+  .captcha-text {
+    font-size: 13px;
+  }
+}
+
+/* Very Small Mobile (< 360px) */
+@media (max-width: 360px) {
+  .card-inner-padding {
+    padding: 18px 14px;
+  }
+
+  .captcha-text {
+    font-size: 12px;
+  }
+}
+
+/* Reduced Motion */
+@media (prefers-reduced-motion: reduce) {
+  .renthub-login-card,
+  .renthub-hero-img,
+  .renthub-login-btn,
+  .login-back-home {
+    animation: none !important;
+    transition: none !important;
+  }
+}

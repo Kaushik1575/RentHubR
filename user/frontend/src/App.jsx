@@ -30,6 +30,11 @@ import chatbotImg from './assets/chatbot_styled.png'; // Import Chatbot Image
 function Layout() {
   const location = useLocation();
   const isSOS = location.pathname === '/sos-activate';
+  const isLoginPage = location.pathname === '/login';
+  const isRegisterPage = location.pathname === '/register-user';
+  // Keep the home page Navbar for /register-user as requested by user
+  const hideNav = isSOS;
+  const hideFooter = isSOS || isLoginPage || isRegisterPage;
   const navigate = useNavigate();
   const [isChatOpen, setIsChatOpen] = useState(false);
 
@@ -54,7 +59,7 @@ function Layout() {
   return (
     <div className="App">
       <GoogleTranslateLoader />
-      {!isSOS && <Navbar />}
+      {!hideNav && <Navbar />}
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/about" element={<About />} />
@@ -87,8 +92,8 @@ function Layout() {
         </a>
       )}
 
-      {/* Chatbot Floating Button - Show on ALL pages EXCEPT SOS */}
-      {!isSOS && (
+      {/* Chatbot Floating Button - Show on ALL pages EXCEPT SOS and Login and Register */}
+      {!hideNav && !isRegisterPage && (
         <>
           <Chatbot isOpen={isChatOpen} onClose={() => setIsChatOpen(false)} />
           <div
@@ -108,7 +113,7 @@ function Layout() {
         </>
       )}
 
-      {!isSOS && <Footer />}
+      {!hideFooter && <Footer />}
 
       {/* Global authentication check - monitors user block status */}
       <GlobalAuthCheck />
@@ -119,6 +124,7 @@ function Layout() {
 function App() {
   const [showSplash, setShowSplash] = useState(() => {
     // Only show splash screen once per browser session
+    if (window.location.pathname === '/register-user') return false;
     return !sessionStorage.getItem('renthub_splash_shown');
   });
 

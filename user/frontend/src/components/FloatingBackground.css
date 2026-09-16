@@ -159,9 +159,42 @@
     }
 }
 
-@media (max-width: 1179px) {
-    .twin-speedometer-left,
+@media (max-width: 1179px) and (min-width: 768px) {
+    .twin-speedometer-left {
+        width: 135px;
+        height: 135px;
+        left: 12px;
+        top: 60px;
+        opacity: 0.85;
+    }
     .twin-speedometer-right {
-        display: none !important;
+        width: 135px;
+        height: 135px;
+        right: 12px;
+        top: 60px;
+        opacity: 0.85;
     }
 }
+
+@media (max-width: 767px) {
+    .twin-speedometer {
+        display: block !important;
+        opacity: 1 !important;
+    }
+    .twin-speedometer-left {
+        width: 104px;
+        height: 104px;
+        left: calc(50% - 110px);
+        top: 14px;
+        filter: drop-shadow(0 8px 18px rgba(16, 185, 129, 0.28)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.08));
+    }
+    .twin-speedometer-right {
+        width: 104px;
+        height: 104px;
+        left: calc(50% + 6px);
+        right: auto;
+        top: 14px;
+        filter: drop-shadow(0 8px 18px rgba(245, 158, 11, 0.28)) drop-shadow(0 2px 6px rgba(0, 0, 0, 0.08));
+    }
+}
+
