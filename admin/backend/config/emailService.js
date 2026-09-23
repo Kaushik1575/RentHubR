@@ -41,8 +41,39 @@ function generateOTP() {
 
 
 
-// Send booking confirmation email
-async function sendBookingConfirmationEmail(userEmail, userName, bookingDetails) {
+async function sendBookingConfirmationEmail(userEmail, userName, bookingDetails = {}) {
+    const bookingId = bookingDetails.bookingId || bookingDetails.booking_id || 'PRO-RH-' + Math.floor(Math.random() * 1000);
+    let vehicleName = bookingDetails.vehicleName || bookingDetails.vehicle_name;
+
+    // Safety net: Auto-resolve vehicle name from DB if missing or generic
+    if (!vehicleName || vehicleName === 'Vehicle' || vehicleName.startsWith('Vehicle ') || vehicleName.includes('#')) {
+        try {
+            const vId = bookingDetails.vehicle_id || bookingDetails.vehicleId;
+            let vType = (bookingDetails.vehicle_type || bookingDetails.vehicleType || '').toLowerCase().trim();
+            if (vType === 'car' || vType === 'cars') vType = 'cars';
+            else if (vType === 'bike' || vType === 'bikes') vType = 'bikes';
+            else if (vType === 'scooty' || vType === 'scooter') vType = 'scooty';
+
+            if (vType && vId) {
+                const supabaseClient = require('./supabase');
+                const { data: vData } = await supabaseClient.from(vType).select('name').eq('id', vId).single();
+                if (vData && vData.name) {
+                    vehicleName = vData.name;
+                }
+            }
+        } catch (vErr) {
+            console.warn('Could not auto-resolve vehicle name for email:', vErr.message);
+        }
+    }
+    if (!vehicleName) vehicleName = 'Vehicle';
+    const startDate = bookingDetails.startDate || bookingDetails.start_date || 'Scheduled Date';
+    const startTime = bookingDetails.startTime || bookingDetails.start_time || 'Scheduled Time';
+    const duration = bookingDetails.duration || 1;
+    const totalAmount = parseFloat(bookingDetails.totalAmount || bookingDetails.total_amount || 0);
+    const advancePayment = parseFloat(bookingDetails.advancePayment || bookingDetails.advance_payment || 0);
+    const remainingAmount = bookingDetails.remainingAmount !== undefined ? bookingDetails.remainingAmount : Math.max(0, totalAmount - advancePayment);
+    const confirmationTime = bookingDetails.confirmationTime || bookingDetails.confirmation_timestamp || new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' });
+
     const html = `
         <!DOCTYPE html>
         <html>
@@ -80,7 +111,7 @@ async function sendBookingConfirmationEmail(userEmail, userName, bookingDetails)
                                     <!-- Booking ID Badge -->
                                     <div style="text-align: center; margin-bottom: 40px;">
                                         <div style="display: inline-block; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 15px 30px; border-radius: 10px; font-size: 18px; font-weight: bold; box-shadow: 0 6px 15px rgba(102, 126, 234, 0.4);">
-                                            📋 Booking ID: ${bookingDetails.bookingId || bookingDetails.booking_id || 'PRO-RH-' + Math.floor(Math.random() * 1000)}
+                                            📋 Booking ID: ${bookingId}
                                         </div>
                                     </div>
 
@@ -93,23 +124,23 @@ async function sendBookingConfirmationEmail(userEmail, userName, bookingDetails)
                                         </tr>
                                         <tr>
                                             <td style="padding: 15px; color: #718096; border-bottom: 1px solid #edf2f7; width: 40%;">Vehicle Name</td>
-                                            <td style="padding: 15px; color: #2d3748; border-bottom: 1px solid #edf2f7; font-weight: 600;">${bookingDetails.vehicleName}</td>
+                                            <td style="padding: 15px; color: #2d3748; border-bottom: 1px solid #edf2f7; font-weight: 600;">${vehicleName}</td>
                                         </tr>
                                         <tr>
                                             <td style="padding: 15px; color: #718096; border-bottom: 1px solid #edf2f7;">Pickup Date</td>
-                                            <td style="padding: 15px; color: #2d3748; border-bottom: 1px solid #edf2f7; font-weight: 600;">${bookingDetails.startDate}</td>
+                                            <td style="padding: 15px; color: #2d3748; border-bottom: 1px solid #edf2f7; font-weight: 600;">${startDate}</td>
                                         </tr>
                                         <tr>
                                             <td style="padding: 15px; color: #718096; border-bottom: 1px solid #edf2f7;">Pickup Time</td>
-                                            <td style="padding: 15px; color: #2d3748; border-bottom: 1px solid #edf2f7; font-weight: 600;">${bookingDetails.startTime}</td>
+                                            <td style="padding: 15px; color: #2d3748; border-bottom: 1px solid #edf2f7; font-weight: 600;">${startTime}</td>
                                         </tr>
                                         <tr>
                                             <td style="padding: 15px; color: #718096; border-bottom: 1px solid #edf2f7;">Duration</td>
-                                            <td style="padding: 15px; color: #2d3748; border-bottom: 1px solid #edf2f7; font-weight: 600;">${bookingDetails.duration} Hours</td>
+                                            <td style="padding: 15px; color: #2d3748; border-bottom: 1px solid #edf2f7; font-weight: 600;">${duration} Hours</td>
                                         </tr>
                                         <tr>
                                             <td style="padding: 15px; color: #718096;">Confirmation Time</td>
-                                            <td style="padding: 15px; color: #2d3748; font-weight: 600;">${bookingDetails.confirmationTime || new Date().toLocaleString()}</td>
+                                            <td style="padding: 15px; color: #2d3748; font-weight: 600;">${confirmationTime}</td>
                                         </tr>
                                     </table>
 
@@ -122,15 +153,15 @@ async function sendBookingConfirmationEmail(userEmail, userName, bookingDetails)
                                         </tr>
                                         <tr>
                                             <td style="padding: 15px; color: #4a5568; border-bottom: 1px solid #e6fffa;">Total Ride Cost</td>
-                                            <td style="padding: 15px; color: #2d3748; border-bottom: 1px solid #e6fffa; font-weight: 700;">₹${bookingDetails.totalAmount}</td>
+                                            <td style="padding: 15px; color: #2d3748; border-bottom: 1px solid #e6fffa; font-weight: 700;">₹${totalAmount}</td>
                                         </tr>
                                         <tr style="background: #f0fff4;">
                                             <td style="padding: 15px; color: #4a5568; border-bottom: 1px solid #c6f6d5;">Advance Paid</td>
-                                            <td style="padding: 15px; color: #38a169; border-bottom: 1px solid #c6f6d5; font-weight: 800; font-size: 18px;">₹${bookingDetails.advancePayment} ✓</td>
+                                            <td style="padding: 15px; color: #38a169; border-bottom: 1px solid #c6f6d5; font-weight: 800; font-size: 18px;">₹${advancePayment} ✓</td>
                                         </tr>
                                         <tr>
                                             <td style="padding: 15px; color: #2d3748; font-weight: 800;">Payable at Pickup</td>
-                                            <td style="padding: 15px; color: #e53e3e; font-weight: 900; font-size: 20px;">₹${bookingDetails.remainingAmount}</td>
+                                            <td style="padding: 15px; color: #e53e3e; font-weight: 900; font-size: 20px;">₹${remainingAmount}</td>
                                         </tr>
                                     </table>
 
@@ -757,6 +788,36 @@ async function sendNewOfferEmail(userEmail, userName, offerDetails, isUpdate = f
 }
 
 async function sendBookingCancelledEmail(userEmail, userName, bookingId, vehicleName) {
+    if (!vehicleName || vehicleName === 'Vehicle' || vehicleName.startsWith('Vehicle ') || vehicleName.includes('#')) {
+        try {
+            if (bookingId) {
+                const supabaseClient = require('./supabase');
+                let query = supabaseClient.from('bookings').select('vehicle_id, vehicle_type');
+                const cleanId = String(bookingId).trim();
+                const numId = Number(cleanId);
+                if (!isNaN(numId) && String(numId) === cleanId) {
+                    query = query.or(`id.eq.${numId},booking_id.eq.${cleanId}`);
+                } else {
+                    query = query.eq('booking_id', cleanId);
+                }
+                const { data: bData } = await query.single();
+                if (bData && bData.vehicle_id) {
+                    let vTable = (bData.vehicle_type || '').toLowerCase().trim();
+                    if (vTable === 'car' || vTable === 'cars') vTable = 'cars';
+                    else if (vTable === 'bike' || vTable === 'bikes') vTable = 'bikes';
+                    else if (vTable === 'scooty' || vTable === 'scooter') vTable = 'scooty';
+                    if (vTable) {
+                        const { data: vData } = await supabaseClient.from(vTable).select('name').eq('id', bData.vehicle_id).single();
+                        if (vData?.name) vehicleName = vData.name;
+                    }
+                }
+            }
+        } catch (e) {
+            console.warn('Could not auto-resolve vehicle name for cancellation email:', e.message);
+        }
+    }
+    if (!vehicleName) vehicleName = 'Vehicle';
+
     const frontendUrl = process.env.FRONTEND_URL || 'https://rent-hub-r.vercel.app';
     const html = `
         <div style="font-family: Arial, sans-serif; color: #222; max-width: 600px; margin: 0 auto; border: 1px solid #eee; border-radius: 8px; overflow: hidden;">
@@ -765,7 +826,7 @@ async function sendBookingCancelledEmail(userEmail, userName, bookingId, vehicle
           </div>
           <div style="padding: 25px;">
             <p>Hello <b>${userName || 'Valued Customer'}</b>,</p>
-            <p>Your booking request <b>#${bookingId}</b> for <b>${vehicleName || 'Vehicle'}</b> has been cancelled as requested during the call verification.</p>
+            <p>Your booking request <b>#${bookingId}</b> for <b>${vehicleName}</b> has been cancelled as requested during the call verification.</p>
             <p>If an advance payment was made, you can submit your refund details (UPI ID / Bank Account) on RentHub to receive your refund immediately.</p>
             <p style="text-align: center; margin: 25px 0;">
               <a href="${frontendUrl}" style="background-color: #0b5cff; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px; font-weight: bold;">Submit Refund Details / Manage Booking</a>

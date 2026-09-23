@@ -135,10 +135,10 @@ const MyBookings = () => {
 
             // Enrich bookings with vehicle data
             const enrichedBookings = await Promise.all(bookingsData.map(async booking => {
-                let vehicleName = 'N/A';
-                let vehiclePrice = 0;
+                let vehicleName = booking.vehicle_name || booking.vehicleName || 'N/A';
+                let vehiclePrice = booking.vehiclePrice || (booking.vehicle ? booking.vehicle.price : 0);
 
-                if (booking.vehicle_id && booking.vehicle_type) {
+                if ((vehicleName === 'N/A' || vehicleName.startsWith('Vehicle ') || vehicleName.includes('#')) && booking.vehicle_id && booking.vehicle_type) {
                     try {
                         let typeTable = booking.vehicle_type;
                         if (booking.vehicle_type === 'car') typeTable = 'cars';
@@ -148,8 +148,8 @@ const MyBookings = () => {
                         const res = await fetch(`/api/vehicles/${typeTable}/${booking.vehicle_id}`);
                         if (res.ok) {
                             const vehicle = await res.json();
-                            vehicleName = vehicle.name || 'N/A';
-                            vehiclePrice = vehicle.price || 0;
+                            vehicleName = vehicle.name || vehicleName;
+                            vehiclePrice = vehicle.price || vehiclePrice;
                         }
                     } catch (e) {
                         console.error("Error fetching vehicle details", e);

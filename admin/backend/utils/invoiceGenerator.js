@@ -212,11 +212,10 @@ const generateInvoiceBuffer = async (bookingId, userName, userEmail, vehicleName
         doc.fillColor('#6b7280').fontSize(8).font('Helvetica').text('RentHub — Premium Bike & Scooty Rentals | renthub.otp@gmail.com | +91 9040757683 | www.renthub.in', margin, footerY + 5, { width: contentWidth });
         doc.fillColor('#9ca3af').fontSize(7).text('© 2024 RentHub. All rights reserved.', margin, footerY + 22);
 
-        doc.end();
-
         return new Promise((resolve, reject) => {
             doc.on('end', () => resolve(Buffer.concat(buffers)));
             doc.on('error', reject);
+            doc.end();
         });
     } catch (err) {
         console.error('Error generating invoice buffer:', err);

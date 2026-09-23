@@ -48,8 +48,19 @@ const getAllBookings = async (req, res) => {
             ...(scooty || []).map(v => ({ ...v, type: 'scooty' }))
         ];
 
+        const normalizeType = (t) => {
+            if (!t) return '';
+            const lower = t.toLowerCase().trim();
+            if (lower === 'bikes' || lower === 'bike') return 'bike';
+            if (lower === 'cars' || lower === 'car') return 'car';
+            if (lower === 'scooty' || lower === 'scooter') return 'scooty';
+            return lower;
+        };
+
         const enrichedBookings = bookings.map(booking => {
-            const vehicle = allVehicles.find(v => v.id === booking.vehicle_id);
+            const bType = normalizeType(booking.vehicle_type);
+            const vehicle = allVehicles.find(v => Number(v.id) === Number(booking.vehicle_id) && normalizeType(v.type) === bType)
+                || allVehicles.find(v => Number(v.id) === Number(booking.vehicle_id));
             const duration = parseInt(booking.duration) || 0;
             const vehiclePrice = vehicle ? parseFloat(vehicle.price) || 0 : 0;
             const totalAmount = duration * vehiclePrice;
@@ -63,7 +74,7 @@ const getAllBookings = async (req, res) => {
                 customerName: booking.users?.full_name || 'N/A',
                 customerEmail: booking.users?.email || 'N/A',
                 customerPhone: booking.users?.phone_number || 'N/A',
-                vehicleName: vehicle ? vehicle.name : 'N/A',
+                vehicleName: vehicle ? vehicle.name : (booking.vehicle_type ? `${booking.vehicle_type} #${booking.vehicle_id}` : 'Vehicle'),
                 vehicleType: vehicle ? vehicle.type : booking.vehicle_type || 'N/A',
                 vehicleCategory: vehicle ? vehicle.category : booking.vehicle_category || 'N/A',
                 start_date: booking.start_date || 'N/A',
@@ -139,15 +150,17 @@ const getBookingById = async (req, res) => {
         }
 
         let vehicle;
-        if (booking.vehicle_type === 'bike') {
-            const { data } = await supabase.from('bikes').select('*').eq('id', booking.vehicle_id).single();
+        const bType = (booking.vehicle_type || '').toLowerCase().trim();
+        let tableName = 'bikes';
+        if (bType === 'car' || bType === 'cars') tableName = 'cars';
+        else if (bType === 'scooty' || bType === 'scooter') tableName = 'scooty';
+        else tableName = 'bikes';
+
+        try {
+            const { data } = await supabase.from(tableName).select('*').eq('id', booking.vehicle_id).single();
             vehicle = data;
-        } else if (booking.vehicle_type === 'car') {
-            const { data } = await supabase.from('cars').select('*').eq('id', booking.vehicle_id).single();
-            vehicle = data;
-        } else if (booking.vehicle_type === 'scooty') {
-            const { data } = await supabase.from('scooty').select('*').eq('id', booking.vehicle_id).single();
-            vehicle = data;
+        } catch (vErr) {
+            console.warn('Could not fetch vehicle in getBookingById:', vErr.message);
         }
 
         const duration = parseInt(booking.duration) || 0;
@@ -263,15 +276,17 @@ const confirmBooking = async (req, res) => {
         if (!booking) return res.status(404).json({ error: 'Booking not found' });
 
         let vehicle;
-        if (booking.vehicle_type === 'bike') {
-            const { data } = await supabase.from('bikes').select('*').eq('id', booking.vehicle_id).single();
+        const bType = (booking.vehicle_type || '').toLowerCase().trim();
+        let tableName = 'bikes';
+        if (bType === 'car' || bType === 'cars') tableName = 'cars';
+        else if (bType === 'scooty' || bType === 'scooter') tableName = 'scooty';
+        else tableName = 'bikes';
+
+        try {
+            const { data } = await supabase.from(tableName).select('*').eq('id', booking.vehicle_id).single();
             vehicle = data;
-        } else if (booking.vehicle_type === 'car') {
-            const { data } = await supabase.from('cars').select('*').eq('id', booking.vehicle_id).single();
-            vehicle = data;
-        } else if (booking.vehicle_type === 'scooty') {
-            const { data } = await supabase.from('scooty').select('*').eq('id', booking.vehicle_id).single();
-            vehicle = data;
+        } catch (vErr) {
+            console.warn('Could not fetch vehicle in confirmBooking:', vErr.message);
         }
 
         const { data: updatedBooking, error: updateError } = await supabase
@@ -444,6 +459,7 @@ const confirmBooking = async (req, res) => {
 
                 const mailOptions = {
                     to: booking.users.email,
+                    subject: `Booking Confirmed – RentHub (ID: ${booking.booking_id || booking.id})`,
                     html: mailHtml,
                     attachments: [
                         { filename: 'booking_invoice.pdf', content: pdfBuffer }

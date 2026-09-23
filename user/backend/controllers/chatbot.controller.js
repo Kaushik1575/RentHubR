@@ -292,8 +292,7 @@ Do NOT wrap the output in markdown.`;
         }
 
         // Helper to try models in sequence
-        // Prioritize 'gemini-flash-latest' as it was verified to work (others hit 429 quota limits or 404)
-        const modelsToTry = ["gemini-flash-latest", "gemini-1.5-flash-latest", "gemini-2.0-flash"];
+        const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-flash-latest"];
         let model;
         let chat;
         let lastError;

@@ -493,6 +493,7 @@ const BookingForm = () => {
             const bookingPayload = {
                 vehicleId,
                 vehicleType: apiType,
+                vehicleName: vehicle?.name,
                 ...formData,
                 razorpayPaymentId: paymentResponse.razorpay_payment_id,
                 razorpayOrderId: paymentResponse.razorpay_order_id,

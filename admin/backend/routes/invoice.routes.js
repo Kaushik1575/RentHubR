@@ -29,19 +29,24 @@ router.get('/:bookingId/invoice', verifyToken, async (req, res) => {
         const user = await SupabaseDB.getUserById(booking.user_id);
 
         // Fetch vehicle details to get the name
-        let vehicleName = `${booking.vehicle_type} #${booking.vehicle_id}`;
-        try {
-            let type = booking.vehicle_type.toLowerCase();
-            if (type === 'car') type = 'cars';
-            if (type === 'bike') type = 'bikes';
-            if (type === 'scooty') type = 'scooty';
+        let vehicleName = booking.vehicle_name || booking.vehicleName;
+        if (!vehicleName || vehicleName.includes('#') || vehicleName === 'Vehicle') {
+            try {
+                let type = (booking.vehicle_type || '').toLowerCase().trim();
+                if (type === 'car' || type === 'cars') type = 'cars';
+                else if (type === 'bike' || type === 'bikes') type = 'bikes';
+                else if (type === 'scooty' || type === 'scooter') type = 'scooty';
 
-            const vehicle = await SupabaseDB.getVehicleById(type, booking.vehicle_id);
-            if (vehicle && vehicle.name) {
-                vehicleName = vehicle.name;
+                const vehicle = await SupabaseDB.getVehicleById(type, booking.vehicle_id);
+                if (vehicle && vehicle.name) {
+                    vehicleName = vehicle.name;
+                }
+            } catch (err) {
+                console.warn('Could not fetch vehicle details for invoice:', err);
             }
-        } catch (err) {
-            console.warn('Could not fetch vehicle details for invoice:', err);
+        }
+        if (!vehicleName) {
+            vehicleName = `${booking.vehicle_type || 'Vehicle'} #${booking.vehicle_id}`;
         }
 
         // Generate invoice PDF

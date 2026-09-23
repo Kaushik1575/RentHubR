@@ -123,7 +123,7 @@ const createBooking = async (req, res) => {
         console.log('--- Booking Request Received ---');
         console.log('User:', req.user);
         console.log('Body:', req.body);
-        let { vehicleId, startDate, startTime, duration, vehicleType, transactionId, couponCode, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
+        let { vehicleId, startDate, startTime, duration, vehicleType, vehicleName: bodyVehicleName, transactionId, couponCode, razorpayPaymentId, razorpayOrderId, razorpaySignature } = req.body;
 
         // Normalize vehicle type (ensure singular form 'car', 'bike', 'scooty')
         vehicleType = normalizeVehicleType(vehicleType);
@@ -337,17 +337,22 @@ const createBooking = async (req, res) => {
                 }
 
                 // 2. Fetch Vehicle Details (Name, etc.)
-                let vehicleName = `Vehicle ${vehicleId}`;
+                let vehicleName = bodyVehicleName || req.body.vehicleName;
                 try {
+                    let tableName = (vehicleType || '').toLowerCase().trim();
+                    if (tableName === 'bike' || tableName === 'bikes') tableName = 'bikes';
+                    else if (tableName === 'car' || tableName === 'cars') tableName = 'cars';
+                    else if (tableName === 'scooty' || tableName === 'scooter') tableName = 'scooty';
                     const { data: vehicleData } = await supabase
-                        .from(vehicleType) // 'bikes', 'cars', etc.
+                        .from(tableName) // 'bikes', 'cars', 'scooty'
                         .select('name')
                         .eq('id', vehicleId)
                         .single();
-                    if (vehicleData) vehicleName = vehicleData.name;
+                    if (vehicleData && vehicleData.name) vehicleName = vehicleData.name;
                 } catch (vError) {
                     console.log('Could not fetch vehicle name:', vError);
                 }
+                if (!vehicleName) vehicleName = `Vehicle ${vehicleId}`;
 
                 // 4. Send Rich Email with Invoice
                 try {
@@ -558,6 +563,11 @@ const createBooking = async (req, res) => {
             }
         })();
 
+        if (data) {
+            data.vehicle_name = bodyVehicleName || req.body.vehicleName || (vehicleType ? `${vehicleType} #${vehicleId}` : 'Vehicle');
+            data.vehicleName = data.vehicle_name;
+        }
+
         res.status(201).json(data);
     } catch (error) {
         console.error('Error creating booking:', error);
@@ -701,7 +711,22 @@ const cancelBooking = async (req, res) => {
             const { sendBookingCancelledEmail } = require('../config/emailService');
             const userEmail = (updatedBooking.users && updatedBooking.users.email) || updatedBooking.user_email;
             const userName = (updatedBooking.users && updatedBooking.users.full_name) || 'Customer';
-            const vehicleName = updatedBooking.vehicle_name || 'Vehicle';
+            let vehicleName = updatedBooking.vehicle_name;
+            if (!vehicleName) {
+                try {
+                    let tableName = (updatedBooking.vehicle_type || '').toLowerCase().trim();
+                    if (tableName === 'car' || tableName === 'cars') tableName = 'cars';
+                    else if (tableName === 'bike' || tableName === 'bikes') tableName = 'bikes';
+                    else if (tableName === 'scooty' || tableName === 'scooter') tableName = 'scooty';
+                    if (tableName && updatedBooking.vehicle_id) {
+                        const { data: vData } = await supabase.from(tableName).select('name').eq('id', updatedBooking.vehicle_id).single();
+                        if (vData?.name) vehicleName = vData.name;
+                    }
+                } catch (vErr) {}
+            }
+            if (!vehicleName) vehicleName = 'Vehicle';
+            updatedBooking.vehicle_name = vehicleName;
+            updatedBooking.vehicleName = vehicleName;
 
             if (userEmail) {
                 sendBookingCancelledEmail(userEmail, userName, updatedBooking.booking_id || updatedBooking.id, vehicleName)
@@ -818,6 +843,8 @@ const getBookingById = async (req, res) => {
             return res.status(403).json({ error: 'Unauthorized to view this booking.' });
         }
 
+        await SupabaseDB.enrichBookingWithVehicle(booking);
+
         res.json({ success: true, booking });
     } catch (error) {
         console.error('Error fetching booking by id:', error);
@@ -899,6 +926,8 @@ const reconfirmBooking = async (req, res) => {
                     const { data: vData } = await supabase.from(vehicleTable).select('name').eq('id', updatedBooking.vehicle_id).single();
                     if (vData) vehicleName = vData.name;
                 } catch (e) {}
+                updatedBooking.vehicle_name = vehicleName;
+                updatedBooking.vehicleName = vehicleName;
 
                 if (userEmail) {
                     const pdfBuffer = await generateInvoiceBuffer(

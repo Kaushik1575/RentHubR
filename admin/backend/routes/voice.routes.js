@@ -6,19 +6,59 @@ const { sendBookingConfirmationEmail, sendBookingCancelledEmail, sendNearestLoca
 const { findNearbyPlaces } = require('../services/nearbyPlacesService');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com'];
 
+// Helper to safely resolve vehicle name from DB if missing or generic
+async function resolveBookingVehicleName(bookingId, vehicleId, vehicleType, fallbackName) {
+    if (fallbackName && fallbackName !== 'Vehicle' && !fallbackName.startsWith('Vehicle ') && !fallbackName.includes('#')) {
+        return fallbackName;
+    }
+    try {
+        let vId = vehicleId;
+        let vType = vehicleType;
+        if ((!vId || !vType) && bookingId) {
+            let query = supabase.from('bookings').select('vehicle_id, vehicle_type');
+            const cleanId = String(bookingId).trim();
+            const numId = Number(cleanId);
+            if (!isNaN(numId) && String(numId) === cleanId) {
+                query = query.or(`id.eq.${numId},booking_id.eq.${cleanId}`);
+            } else {
+                query = query.eq('booking_id', cleanId);
+            }
+            const { data: b } = await query.single();
+            if (b) {
+                vId = b.vehicle_id;
+                vType = b.vehicle_type;
+            }
+        }
+        if (vId && vType) {
+            let t = (vType || '').toLowerCase().trim();
+            if (t === 'car' || t === 'cars') t = 'cars';
+            else if (t === 'bike' || t === 'bikes') t = 'bikes';
+            else if (t === 'scooty' || t === 'scooter') t = 'scooty';
+            const { data: v } = await supabase.from(t).select('name').eq('id', vId).single();
+            if (v?.name) return v.name;
+        }
+    } catch (e) {
+        console.warn('Error resolving vehicle name:', e.message);
+    }
+    return fallbackName || 'Vehicle';
+}
+
 // GET / POST /api/voice/welcome
 // Generates TwiML voice prompt asking customer to press 1 to confirm
-router.all('/welcome', (req, res) => {
+router.all('/welcome', async (req, res) => {
     const VoiceResponse = twilio.twiml.VoiceResponse;
     const twiml = new VoiceResponse();
 
     const bookingId = req.query.bookingId || req.body.bookingId || 'Your Booking';
     const userName = req.query.userName || req.body.userName || 'Customer';
-    const vehicleName = req.query.vehicleName || req.body.vehicleName || 'Vehicle';
+    let vehicleName = req.query.vehicleName || req.body.vehicleName;
     const vehicleType = req.query.vehicleType || req.body.vehicleType || 'Vehicle';
     const startDate = req.query.startDate || req.body.startDate || 'scheduled date';
     const startTime = req.query.startTime || req.body.startTime || 'scheduled time';
     const duration = req.query.duration || req.body.duration || '1';
+
+    // Auto-resolve vehicle name from DB if not already specific
+    vehicleName = await resolveBookingVehicleName(bookingId, null, vehicleType, vehicleName);
 
     const baseUrl = process.env.BASE_URL || process.env.BACKEND_URL || `${req.protocol}://${req.get('host')}`;
 
@@ -87,6 +127,9 @@ router.post('/process-keypress', async (req, res) => {
                     const booking = data[0];
                     const userEmail = booking.users?.email || booking.user_email;
                     const userName = booking.users?.full_name || userNameParam;
+                    const resolvedVehicle = await resolveBookingVehicleName(bookingId, booking.vehicle_id, booking.vehicle_type, vehicleNameParam);
+                    booking.vehicle_name = resolvedVehicle;
+                    booking.vehicleName = resolvedVehicle;
                     if (userEmail) {
                         await sendBookingConfirmationEmail(userEmail, userName, booking);
                     }
@@ -121,7 +164,7 @@ router.post('/process-keypress', async (req, res) => {
                     const booking = (data && data[0]) || {};
                     const userEmail = booking.users?.email || booking.user_email;
                     const userName = booking.users?.full_name || userNameParam;
-                    const vehicleName = booking.vehicle_name || vehicleNameParam;
+                    const vehicleName = await resolveBookingVehicleName(bookingId, booking.vehicle_id, booking.vehicle_type, vehicleNameParam);
 
                     if (userEmail) {
                         await sendBookingCancelledEmail(userEmail, userName, bookingId, vehicleName);
@@ -148,7 +191,7 @@ router.post('/process-keypress', async (req, res) => {
                 const booking = (data && data[0]) || {};
                 const userEmail = booking.users?.email || booking.user_email;
                 const userName = booking.users?.full_name || userNameParam;
-                const vehicleName = booking.vehicle_name || vehicleNameParam;
+                const vehicleName = await resolveBookingVehicleName(bookingId, booking.vehicle_id, booking.vehicle_type, vehicleNameParam);
 
                 const nearbyData = await findNearbyPlaces(booking?.pickup_location);
                 if (userEmail) {

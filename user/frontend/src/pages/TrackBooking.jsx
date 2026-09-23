@@ -79,8 +79,8 @@ const TrackBooking = () => {
                 const vehicle = await fetchVehicleDetails(finalBooking);
 
                 // Calculate details
-                const vehicleName = vehicle ? vehicle.name : 'Unknown Vehicle';
-                const vehiclePrice = vehicle ? vehicle.price : 0;
+                const vehicleName = vehicle ? vehicle.name : (finalBooking.vehicle_name || finalBooking.vehicleName || 'Unknown Vehicle');
+                const vehiclePrice = vehicle ? vehicle.price : (finalBooking.vehiclePrice || (finalBooking.vehicle ? finalBooking.vehicle.price : 0));
                 const duration = parseInt(finalBooking.duration) || 0;
                 const totalAmount = duration * vehiclePrice;
                 const advancePayment = finalBooking.advance_payment ? parseFloat(finalBooking.advance_payment) : 0;

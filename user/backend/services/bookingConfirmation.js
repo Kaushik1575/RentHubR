@@ -12,7 +12,21 @@ router.post('/confirmBooking', async (req, res) => {
         const bookingId = body.bookingId || `BK-${Date.now()}`;
         const userName = body.userName || 'Customer';
         const userEmail = body.userEmail;
-        const vehicleName = body.vehicleName || 'Vehicle';
+        let vehicleName = body.vehicleName;
+
+        if (!vehicleName || vehicleName === 'Vehicle' || vehicleName.startsWith('Vehicle ') || vehicleName.includes('#')) {
+            if (body.vehicleId && body.vehicleType) {
+                try {
+                    let typeTable = (body.vehicleType || '').toLowerCase().trim();
+                    if (typeTable === 'car' || typeTable === 'cars') typeTable = 'cars';
+                    else if (typeTable === 'bike' || typeTable === 'bikes') typeTable = 'bikes';
+                    else if (typeTable === 'scooty' || typeTable === 'scooter') typeTable = 'scooty';
+                    const { data: vData } = await supabase.from(typeTable).select('name').eq('id', body.vehicleId).single();
+                    if (vData?.name) vehicleName = vData.name;
+                } catch (e) {}
+            }
+        }
+        if (!vehicleName) vehicleName = 'Vehicle';
 
         if (!userEmail) return res.status(400).json({ error: 'userEmail required' });
 
@@ -130,6 +144,29 @@ router.get('/trackBooking', async (req, res) => {
             if (error || !data) {
                 return res.json({ id, status: 'unknown', message: 'Booking not found in DB (demo response)' });
             }
+
+            // Auto-enrich vehicle name and price
+            let typeTable = (data.vehicle_type || '').toLowerCase().trim();
+            if (typeTable === 'car' || typeTable === 'cars') typeTable = 'cars';
+            else if (typeTable === 'bike' || typeTable === 'bikes') typeTable = 'bikes';
+            else if (typeTable === 'scooty' || typeTable === 'scooter') typeTable = 'scooty';
+
+            if (typeTable && data.vehicle_id) {
+                try {
+                    const { data: vData } = await supabase.from(typeTable).select('id, name, price, image_url').eq('id', data.vehicle_id).single();
+                    if (vData) {
+                        data.vehicle = vData;
+                        data.vehicle_name = vData.name;
+                        data.vehicleName = vData.name;
+                        data.vehiclePrice = vData.price;
+                    }
+                } catch (ve) {}
+            }
+            if (!data.vehicle_name) {
+                data.vehicle_name = data.vehicle_type ? `${data.vehicle_type} #${data.vehicle_id}` : 'Vehicle';
+                data.vehicleName = data.vehicle_name;
+            }
+
             return res.json({ success: true, booking: data });
         } catch (e) {
             return res.json({ id, status: 'unknown', message: 'Unable to fetch booking' });

@@ -48,6 +48,41 @@ class SupabaseDB {
         return data;
     }
 
+    // Helper to enrich a booking with real vehicle name and info
+    static async enrichBookingWithVehicle(booking) {
+        if (!booking) return booking;
+        try {
+            let type = (booking.vehicle_type || '').toLowerCase().trim();
+            if (type === 'car' || type === 'cars') type = 'cars';
+            else if (type === 'bike' || type === 'bikes') type = 'bikes';
+            else if (type === 'scooty' || type === 'scooter') type = 'scooty';
+
+            if (type && booking.vehicle_id) {
+                const { data: vehicle, error } = await supabase
+                    .from(type)
+                    .select('id, name, price, image_url, fuel_type, engine')
+                    .eq('id', booking.vehicle_id)
+                    .single();
+
+                if (!error && vehicle) {
+                    booking.vehicle = vehicle;
+                    booking.vehicle_name = vehicle.name;
+                    booking.vehicleName = vehicle.name;
+                    booking.vehiclePrice = vehicle.price;
+                }
+            }
+        } catch (e) {
+            console.error(`Error enriching booking ${booking.id} with vehicle:`, e.message);
+        }
+
+        // Set safe fallback vehicle name if still empty
+        if (!booking.vehicle_name) {
+            booking.vehicle_name = booking.vehicle_type ? `${booking.vehicle_type} #${booking.vehicle_id}` : 'Vehicle';
+            booking.vehicleName = booking.vehicle_name;
+        }
+        return booking;
+    }
+
     static async getBookingsByUser(userId) {
         const { data, error } = await supabase
             .from('bookings')
@@ -84,11 +119,13 @@ class SupabaseDB {
             return booking;
         });
 
-        return updatedData;
+        // Enrich all bookings with vehicle details
+        const enrichedData = await Promise.all(updatedData.map(b => SupabaseDB.enrichBookingWithVehicle(b)));
+        return enrichedData;
     }
 
     static async getBookingById(bookingId) {
-        let query = supabase.from('bookings').select('*, users:user_id(full_name)');
+        let query = supabase.from('bookings').select('*, users:user_id(full_name, email, phone_number)');
 
         // If ID looks like BK-XXX or RHXXX, search by booking_id column
         // Otherwise assume numeric ID
@@ -103,6 +140,9 @@ class SupabaseDB {
         const { data, error } = await query.single();
 
         if (error && error.code !== 'PGRST116') throw error;
+        if (data) {
+            await SupabaseDB.enrichBookingWithVehicle(data);
+        }
         return data;
     }
 
@@ -120,12 +160,17 @@ class SupabaseDB {
     // Vehicle operations (bikes, cars, scooty)
     static async getVehicles(type) {
         try {
+            let tableName = (type || '').toLowerCase().trim();
+            if (tableName === 'car' || tableName === 'cars') tableName = 'cars';
+            else if (tableName === 'bike' || tableName === 'bikes') tableName = 'bikes';
+            else if (tableName === 'scooty' || tableName === 'scooter') tableName = 'scooty';
+
             const { data, error } = await supabase
-                .from(type) // 'bikes', 'cars', or 'scooty'
+                .from(tableName) // 'bikes', 'cars', or 'scooty'
                 .select('*');
 
             if (error) {
-                console.error(`Error fetching vehicles from ${type}:`, error.message);
+                console.error(`Error fetching vehicles from ${tableName}:`, error.message);
                 return [];
             }
             return data || [];
@@ -137,8 +182,13 @@ class SupabaseDB {
 
 
     static async getVehicleById(type, id) {
+        let tableName = (type || '').toLowerCase().trim();
+        if (tableName === 'car' || tableName === 'cars') tableName = 'cars';
+        else if (tableName === 'bike' || tableName === 'bikes') tableName = 'bikes';
+        else if (tableName === 'scooty' || tableName === 'scooter') tableName = 'scooty';
+
         const { data, error } = await supabase
-            .from(type)
+            .from(tableName)
             .select('*')
             .eq('id', id)
             .single();
