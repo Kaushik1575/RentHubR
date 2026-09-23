@@ -74,6 +74,30 @@ app.get('/api/dashboard-stats', verifyAdminToken, adminController.getDashboardSt
 const bookingConfirmationRouter = require('./services/bookingConfirmation');
 app.use('/api', bookingConfirmationRouter);
 
+// Email service diagnostic endpoint
+app.get('/api/health/email', async (req, res) => {
+    const key = process.env.RESEND_API_KEY;
+    const sender = process.env.SENDER_EMAIL || 'onboarding@jitus.app';
+    const keyInfo = key ? `${key.substring(0, 7)}... (length: ${key.length})` : 'MISSING';
+    
+    let testResult = null;
+    if (req.query.testTo) {
+        const { sendEmail } = require('./config/emailService');
+        testResult = await sendEmail({
+            to: req.query.testTo,
+            subject: 'RentHub Diagnostic Test Email',
+            html: '<p>This is a test email from the RentHub diagnostic endpoint.</p>'
+        });
+    }
+    
+    res.json({
+        success: true,
+        resendApiKey: keyInfo,
+        senderEmail: sender,
+        testResult
+    });
+});
+
 // Frontend Routes (SPA fallback)
 app.get('/sos-activate', (req, res) => {
     res.sendFile(path.join(__dirname, '../frontend/index.html'));

@@ -1,7 +1,10 @@
+const path = require('path');
+require('dotenv').config({ path: path.join(__dirname, '..', '.env') });
 const { Resend } = require('resend');
 
-// Initialize Resend
-const resend = new Resend(process.env.RESEND_API_KEY);
+// Initialize Resend safely
+const apiKey = process.env.RESEND_API_KEY;
+const resend = apiKey ? new Resend(apiKey) : null;
 
 // Default sender
 const SENDER_EMAIL = process.env.SENDER_EMAIL || 'onboarding@jitus.app';
@@ -10,7 +13,7 @@ const SENDER_NAME = 'RentHub';
 // Generic function to send email via Resend
 const sendEmail = async ({ to, subject, html, attachments }) => {
     try {
-        if (!process.env.RESEND_API_KEY) {
+        if (!resend) {
             console.error('RESEND_API_KEY is missing in env');
             return { success: false, error: 'RESEND_API_KEY missing' };
         }
