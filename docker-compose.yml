@@ -1,0 +1,64 @@
+services:
+  # 1. Local PostgreSQL Database Container (Offline Development)
+  postgres-db:
+    image: postgres:16-alpine
+    container_name: renthub-postgres
+    restart: unless-stopped
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: renthub
+      POSTGRES_PASSWORD: renthub_secure_password
+      POSTGRES_DB: renthub_db
+    volumes:
+      - postgres-data:/var/lib/postgresql/data
+    networks:
+      - renthub-network
+
+  # 2. Scalable RentHub Backend (Load Balanced)
+  user-backend:
+    build:
+      context: ./user/backend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    expose:
+      - "3005"
+    env_file:
+      - ./user/backend/.env
+    environment:
+      - PORT=3005
+      - NODE_ENV=production
+      - RENDER=true
+      - POSTGRES_HOST=postgres-db
+      - DATABASE_URL=postgresql://renthub:renthub_secure_password@postgres-db:5432/renthub_db
+    depends_on:
+      - postgres-db
+    networks:
+      - renthub-network
+
+  # 3. RentHub User Frontend (React + Nginx Load Balancer)
+  user-frontend:
+    build:
+      context: ./user/frontend
+      dockerfile: Dockerfile
+      args:
+        - VITE_API_URL=
+    container_name: renthub-user-frontend
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "3000:80"
+    depends_on:
+      - user-backend
+    extra_hosts:
+      - "user.renthub.qzz.io:127.0.0.1"
+    networks:
+      - renthub-network
+
+volumes:
+  postgres-data:
+    driver: local
+
+networks:
+  renthub-network:
+    driver: bridge

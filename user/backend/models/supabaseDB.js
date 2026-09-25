@@ -1,4 +1,14 @@
 const supabase = require('../config/supabase');
+const { Pool } = require('pg');
+
+const pgHost = process.env.POSTGRES_HOST || 'localhost';
+const localPgPool = new Pool({
+    connectionString: process.env.DATABASE_URL || `postgresql://renthub:renthub_secure_password@${pgHost}:5432/renthub_db`,
+    connectionTimeoutMillis: 2000
+});
+localPgPool.on('error', (err) => {
+    // Avoid unhandled rejection
+});
 
 class SupabaseDB {
     // User operations
@@ -169,15 +179,29 @@ class SupabaseDB {
                 .from(tableName) // 'bikes', 'cars', or 'scooty'
                 .select('*');
 
-            if (error) {
-                console.error(`Error fetching vehicles from ${tableName}:`, error.message);
-                return [];
+            if (!error && data && data.length > 0) {
+                return data;
             }
-            return data || [];
         } catch (err) {
-            console.error(`Exception fetching vehicles from ${type}:`, err);
-            return [];
+            console.warn(`Supabase offline/unreachable for ${type}. Checking local PostgreSQL...`);
         }
+
+        // Offline Fallback: Read from local Docker PostgreSQL
+        try {
+            let tableName = (type || '').toLowerCase().trim();
+            if (tableName === 'car' || tableName === 'cars') tableName = 'cars';
+            else if (tableName === 'bike' || tableName === 'bikes') tableName = 'bikes';
+            else if (tableName === 'scooty' || tableName === 'scooter') tableName = 'scooty';
+
+            const localResult = await localPgPool.query(`SELECT data FROM "${tableName}" ORDER BY id ASC`);
+            if (localResult && localResult.rows.length > 0) {
+                return localResult.rows.map(r => r.data);
+            }
+        } catch (pgErr) {
+            console.error(`Local PG fallback error for ${type}:`, pgErr.message);
+        }
+
+        return [];
     }
 
 
@@ -187,14 +211,29 @@ class SupabaseDB {
         else if (tableName === 'bike' || tableName === 'bikes') tableName = 'bikes';
         else if (tableName === 'scooty' || tableName === 'scooter') tableName = 'scooty';
 
-        const { data, error } = await supabase
-            .from(tableName)
-            .select('*')
-            .eq('id', id)
-            .single();
+        try {
+            const { data, error } = await supabase
+                .from(tableName)
+                .select('*')
+                .eq('id', id)
+                .single();
 
-        if (error && error.code !== 'PGRST116') throw error;
-        return data;
+            if (!error && data) return data;
+        } catch (err) {
+            console.warn(`Supabase offline/unreachable for ${tableName} #${id}. Checking local PostgreSQL...`);
+        }
+
+        // Offline Fallback: Read from local Docker PostgreSQL
+        try {
+            const localResult = await localPgPool.query(`SELECT data FROM "${tableName}" WHERE id = $1`, [String(id)]);
+            if (localResult && localResult.rows.length > 0) {
+                return localResult.rows[0].data;
+            }
+        } catch (pgErr) {
+            console.error(`Local PG fallback error for ${tableName} #${id}:`, pgErr.message);
+        }
+
+        return null;
     }
 
     static async updateVehicleAvailability(type, id, isAvailable) {
