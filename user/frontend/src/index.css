@@ -2847,7 +2847,7 @@ main.booking-page-main {
 }
 
 .chatbot-floating-btn.pulse-blue {
-    animation: none;
+    animation: robot-float 3s ease-in-out infinite, pulse-blue 2.2s infinite;
 }
 
 @keyframes robot-float {

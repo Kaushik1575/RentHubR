@@ -398,8 +398,19 @@
     padding: 6px 14px;
     border-radius: 10px;
     font-weight: 900;
-    font-size: 0.85rem;
     box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+    animation: rh-offer-glow 2.4s infinite ease-in-out;
+}
+
+@keyframes rh-offer-glow {
+    0%, 100% {
+        box-shadow: 0 4px 12px rgba(79, 70, 229, 0.4);
+        transform: scale(1);
+    }
+    50% {
+        box-shadow: 0 8px 24px rgba(99, 102, 241, 0.7), 0 0 0 3px rgba(99, 102, 241, 0.2);
+        transform: scale(1.03);
+    }
 }
 
 .offer-expiry-pill {
@@ -722,19 +733,29 @@
     font-size: 0.9rem;
     font-weight: 700;
     cursor: pointer;
-    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .category-pill-btn:hover {
     background: #e2e8f0;
     color: #0f172a;
-    transform: translateY(-1px);
+    transform: translateY(-2px) scale(1.03);
 }
 
 .category-pill-btn.active {
     background: linear-gradient(135deg, #059669 0%, #10b981 100%);
     color: #ffffff;
     box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    animation: rh-pill-pulse 2.4s infinite ease-in-out;
+}
+
+@keyframes rh-pill-pulse {
+    0%, 100% {
+        box-shadow: 0 4px 14px rgba(16, 185, 129, 0.35);
+    }
+    50% {
+        box-shadow: 0 6px 20px rgba(16, 185, 129, 0.55), 0 0 0 3px rgba(16, 185, 129, 0.15);
+    }
 }
 
 .pill-count-badge {
@@ -899,6 +920,30 @@
     overflow: hidden;
     padding: 8px 10px;
     border-bottom: 1px solid #f1f5f9;
+}
+
+/* Luminous shine sweep across the card on hover */
+.card-top-preview::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -150%;
+    width: 60%;
+    height: 100%;
+    background: linear-gradient(
+        115deg,
+        transparent 0%,
+        rgba(255, 255, 255, 0.45) 50%,
+        transparent 100%
+    );
+    transform: skewX(-25deg);
+    transition: left 0.7s cubic-bezier(0.4, 0, 0.2, 1);
+    pointer-events: none;
+    z-index: 5;
+}
+
+.industrial-vehicle-card:hover .card-top-preview::before {
+    left: 200%;
 }
 
 .card-vehicle-image {
@@ -1087,6 +1132,8 @@
 }
 
 .btn-card-rent {
+    position: relative;
+    overflow: hidden;
     padding: 8px 16px;
     border-radius: 10px;
     background: linear-gradient(135deg, #059669 0%, #10b981 100%);
@@ -1095,15 +1142,33 @@
     font-weight: 800;
     text-decoration: none;
     box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3);
-    transition: all 0.2s ease;
+    transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     display: inline-flex;
     align-items: center;
     gap: 6px;
 }
 
+.btn-card-rent::after {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -80%;
+    width: 40%;
+    height: 200%;
+    background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.35), transparent);
+    transform: rotate(25deg);
+    transition: none;
+    pointer-events: none;
+}
+
+.btn-card-rent:hover::after {
+    left: 150%;
+    transition: left 0.65s ease-in-out;
+}
+
 .btn-card-rent:hover {
-    transform: translateY(-1px);
-    box-shadow: 0 6px 16px rgba(16, 185, 129, 0.45);
+    transform: translateY(-2px) scale(1.03);
+    box-shadow: 0 8px 22px rgba(16, 185, 129, 0.5);
     background: linear-gradient(135deg, #047857 0%, #059669 100%);
     color: #ffffff;
 }
