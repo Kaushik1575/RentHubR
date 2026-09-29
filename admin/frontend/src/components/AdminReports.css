@@ -698,24 +698,489 @@
   padding: 20px;
 }
 
-.reports-modal-box {
-  background: #ffffff;
-  border-radius: 20px;
-  max-width: 900px;
-  width: 100%;
-  max-height: 90vh;
-  overflow-y: auto;
-  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
-  border: 1px solid #cbd5e1;
+/* ==========================================================================
+   Responsive Utilities & Layout Classes
+   ========================================================================== */
+.reports-search-wrapper {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  gap: 8px;
 }
 
-.corporate-report-sheet {
+.reports-search-input {
+  width: 250px;
+  transition: width 0.2s ease, border-color 0.2s;
+}
+
+.filter-hub-secondary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  padding-top: 12px;
+  border-top: 1px solid #f1f5f9;
+}
+
+.filter-hub-selects-group {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 16px;
+}
+
+.filter-field-group {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.filter-custom-date-form {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.filter-apply-btn {
+  padding: 6px 14px;
+  font-size: 12px;
+}
+
+.fleet-division-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+/* Corporate Sheet Presentation Classes */
+.corporate-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 3px solid #1e40af;
+  padding-bottom: 20px;
+  margin-bottom: 24px;
+}
+
+.corporate-sheet-brand {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.corporate-sheet-logo {
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+  padding: 4px;
   background: #ffffff;
-  padding: 40px;
-  color: #0f172a;
-  line-height: 1.5;
+}
+
+.corporate-sheet-title {
+  font-size: 24px;
+  font-weight: 900;
+  color: #1e3a8a;
+  line-height: 1.2;
+}
+
+.corporate-sheet-subtitle {
+  font-size: 13px;
+  color: #64748b;
+  margin-top: 2px;
+}
+
+.corporate-sheet-meta {
+  text-align: right;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.corporate-sheet-signoff {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.reports-inspection-modal {
+  max-width: 520px;
+  padding: 24px;
+  background: #ffffff;
+}
+
+/* ==========================================================================
+   Mobile & Tablet Responsive Breakpoints
+   ========================================================================== */
+
+/* 1. Tablets & Small Laptops (max-width: 1024px) */
+@media (max-width: 1024px) {
+  .admin-reports-wrapper {
+    padding: 20px 16px;
+  }
+
+  .charts-split-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .hero-kpi-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* 2. Standard Mobile & Phablets (max-width: 768px) */
+@media (max-width: 768px) {
+  .admin-reports-wrapper {
+    padding: 14px 12px;
+    border-radius: 14px;
+  }
+
+  /* Command Bar Mobile */
+  .reports-command-bar {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 14px;
+    margin-bottom: 16px;
+    padding-bottom: 14px;
+  }
+
+  .reports-heading {
+    font-size: 21px;
+    letter-spacing: -0.4px;
+  }
+
+  .reports-subheading {
+    font-size: 12px;
+    line-height: 1.4;
+  }
+
+  /* Action Buttons 2-Column Grid on Mobile */
+  .reports-action-group {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    width: 100%;
+  }
+
+  .rh-btn {
+    width: 100%;
+    justify-content: center;
+    padding: 9px 10px;
+    font-size: 11.5px;
+    border-radius: 8px;
+    box-sizing: border-box;
+  }
+
+  .rh-btn span {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  /* Filter Hub Mobile */
+  .filter-glass-hub {
+    padding: 14px 12px;
+    border-radius: 14px;
+    margin-bottom: 16px;
+  }
+
+  .filter-chip-button {
+    padding: 6px 11px;
+    font-size: 11px;
+  }
+
+  .filter-hub-secondary {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+  }
+
+  .filter-hub-selects-group {
+    flex-direction: column;
+    width: 100%;
+    gap: 10px;
+  }
+
+  .filter-field-group {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 4px;
+  }
+
+  .filter-select-modern {
+    width: 100%;
+    box-sizing: border-box;
+    font-size: 13px;
+    padding: 9px 12px;
+  }
+
+  .filter-custom-date-form {
+    flex-direction: column;
+    align-items: stretch;
+    width: 100%;
+    gap: 8px;
+  }
+
+  .filter-custom-date-form input {
+    width: 100%;
+    box-sizing: border-box;
+  }
+
+  .filter-apply-btn {
+    width: 100%;
+    padding: 9px;
+  }
+
+  /* Sub-Navigation Ribbon (Horizontal Swipe on Mobile) */
+  .analytics-tab-strip {
+    display: flex;
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 5px;
+    gap: 6px;
+    border-radius: 12px;
+    margin-bottom: 16px;
+  }
+
+  .analytics-tab-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab-strip-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+    padding: 8px 14px;
+    font-size: 12px;
+    border-radius: 8px;
+  }
+
+  /* Telemetry Ribbon Mobile Swipe */
+  .telemetry-ticker-bar {
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding: 8px 12px;
+    font-size: 11px;
+    gap: 12px;
+    margin-bottom: 14px;
+  }
+
+  .telemetry-ticker-bar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .telemetry-item {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+
+  /* Hero KPI Metric Cards (Single Column on Mobile) */
+  .hero-kpi-grid {
+    grid-template-columns: 1fr;
+    gap: 12px;
+    margin-bottom: 18px;
+  }
+
+  .hero-kpi-card {
+    padding: 16px 14px;
+    border-radius: 14px;
+  }
+
+  .kpi-mega-number {
+    font-size: 24px;
+  }
+
+  /* Fleet Division Grid */
+  .fleet-division-grid {
+    grid-template-columns: 1fr;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  /* Charts Mobile */
+  .charts-split-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+    margin-bottom: 16px;
+  }
+
+  .glass-chart-box {
+    padding: 16px 12px;
+    border-radius: 14px;
+  }
+
+  .chart-header-row {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 10px;
+    margin-bottom: 14px;
+  }
+
+  .chart-title-text {
+    font-size: 15px;
+  }
+
+  .reports-search-wrapper {
+    width: 100%;
+  }
+
+  .reports-search-input {
+    width: 100% !important;
+    box-sizing: border-box;
+  }
+
+  .ledger-filter-strip {
+    display: flex;
+    overflow-x: auto;
+    flex-wrap: nowrap;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    width: 100%;
+    gap: 6px;
+    padding-bottom: 4px;
+  }
+
+  .ledger-filter-strip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .ledger-filter-pill {
+    flex-shrink: 0;
+    white-space: nowrap;
+    font-size: 11px;
+    padding: 5px 11px;
+  }
+
+  /* Responsive Table Container with Touch Scroll */
+  .glass-table-container {
+    width: 100%;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    border-radius: 10px;
+    margin-top: 8px;
+  }
+
+  .glass-table {
+    min-width: 600px;
+    font-size: 12px;
+  }
+
+  .glass-table th,
+  .glass-table td {
+    padding: 9px 10px;
+  }
+
+  .svg-neon-container {
+    height: 190px;
+  }
+
+  .peak-matrix-row {
+    height: 140px;
+    gap: 6px;
+  }
+
+  /* Modals Mobile */
+  .reports-modal-overlay {
+    padding: 10px;
+  }
+
+  .reports-modal-box {
+    max-height: 94vh;
+    width: 100%;
+    border-radius: 14px;
+  }
+
+  .corporate-report-sheet {
+    padding: 16px 12px;
+  }
+
+  .corporate-sheet-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+    padding-bottom: 14px;
+    margin-bottom: 16px;
+  }
+
+  .corporate-sheet-brand {
+    gap: 10px;
+    align-items: center;
+  }
+
+  .corporate-sheet-logo {
+    width: 42px;
+    height: 42px;
+  }
+
+  .corporate-sheet-title {
+    font-size: 17px !important;
+  }
+
+  .corporate-sheet-subtitle {
+    font-size: 11px !important;
+  }
+
+  .corporate-sheet-meta {
+    text-align: left !important;
+    width: 100%;
+    border-top: 1px solid #f1f5f9;
+    padding-top: 8px;
+    font-size: 11px;
+  }
+
+  .corporate-sheet-signoff {
+    flex-direction: column;
+    align-items: stretch;
+    gap: 12px;
+    margin-top: 18px;
+    padding-top: 14px;
+  }
+
+  .reports-inspection-modal {
+    padding: 18px 14px !important;
+    width: 100%;
+    max-width: 100%;
+  }
+}
+
+/* 3. Extra Small Screens & Compact Phones (max-width: 480px) */
+@media (max-width: 480px) {
+  .admin-reports-wrapper {
+    padding: 10px 8px;
+    border-radius: 10px;
+  }
+
+  .reports-heading {
+    font-size: 19px;
+  }
+
+  .reports-action-group {
+    grid-template-columns: 1fr;
+  }
+
+  .kpi-mega-number {
+    font-size: 22px;
+  }
+
+  .tab-strip-btn {
+    padding: 7px 11px;
+    font-size: 11.5px;
+  }
+
+  .hero-kpi-card {
+    padding: 14px 12px;
+  }
 }
 
 /* Print Rules */

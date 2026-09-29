@@ -1027,10 +1027,10 @@ const AdminReports = ({ token }) => {
                     </div>
 
                     {/* Secondary Filters */}
-                    <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', justifyContent: 'space-between', gap: '14px', paddingTop: '12px', borderTop: '1px solid #f1f5f9' }}>
-                        <div style={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '16px' }}>
+                    <div className="filter-hub-secondary">
+                        <div className="filter-hub-selects-group">
                             {/* Category Filter */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div className="filter-field-group">
                                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Fleet:</label>
                                 <select
                                     className="filter-select-modern"
@@ -1045,7 +1045,7 @@ const AdminReports = ({ token }) => {
                             </div>
 
                             {/* Status Filter */}
-                            <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                            <div className="filter-field-group">
                                 <label style={{ fontSize: '12px', fontWeight: '700', color: '#64748b' }}>Status:</label>
                                 <select
                                     className="filter-select-modern"
@@ -1063,13 +1063,12 @@ const AdminReports = ({ token }) => {
 
                         {/* Custom Date Form */}
                         {timeframe === 'custom' && (
-                            <form onSubmit={handleCustomDateSubmit} style={{ display: 'flex', alignItems: 'center', gap: '8px', flexWrap: 'wrap' }}>
+                            <form onSubmit={handleCustomDateSubmit} className="filter-custom-date-form">
                                 <input
                                     type="date"
                                     value={startDate}
                                     onChange={e => setStartDate(e.target.value)}
                                     className="filter-select-modern"
-                                    style={{ padding: '6px 10px' }}
                                 />
                                 <span style={{ fontSize: '12px', color: '#94a3b8' }}>to</span>
                                 <input
@@ -1077,9 +1076,8 @@ const AdminReports = ({ token }) => {
                                     value={endDate}
                                     onChange={e => setEndDate(e.target.value)}
                                     className="filter-select-modern"
-                                    style={{ padding: '6px 10px' }}
                                 />
-                                <button type="submit" className="rh-btn rh-btn-neon-preview" style={{ padding: '6px 14px', fontSize: '12px' }}>
+                                <button type="submit" className="rh-btn rh-btn-neon-preview filter-apply-btn">
                                     Apply
                                 </button>
                             </form>
@@ -1697,12 +1695,7 @@ const AdminReports = ({ token }) => {
             {(activeView === 'overview' || activeView === 'fleet') && (
                 <div style={{ marginBottom: '24px' }}>
                     {/* Fleet Class Summary Cards (Bikes, Scooters, Cars) */}
-                    <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-                        gap: '14px',
-                        marginBottom: '18px'
-                    }}>
+                    <div className="fleet-division-grid">
                         {/* 1. Motorbikes Card */}
                         <div style={{
                             background: '#ffffff',
@@ -1780,7 +1773,7 @@ const AdminReports = ({ token }) => {
                     </div>
 
                     <div className="glass-chart-box">
-                        <div className="chart-header-row">
+                        <div className="chart-header-row fleet-header-row">
                             <div>
                                 <h3 className="chart-title-text">
                                     <i className="fas fa-warehouse" style={{ color: '#4f46e5' }}></i>{' '}
@@ -1795,14 +1788,13 @@ const AdminReports = ({ token }) => {
 
                             {/* Search bar in fleet view */}
                             {activeView === 'fleet' && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <div className="reports-search-wrapper">
                                     <input
                                         type="text"
                                         placeholder="Search vehicle model, ID..."
                                         value={fleetSearchTerm}
                                         onChange={e => setFleetSearchTerm(e.target.value)}
-                                        className="filter-select-modern"
-                                        style={{ width: '240px' }}
+                                        className="filter-select-modern reports-search-input"
                                     />
                                 </div>
                             )}
@@ -2010,7 +2002,7 @@ const AdminReports = ({ token }) => {
             {/* VIEW: FULL BOOKING LEDGER */}
             {activeView === 'ledger' && (
                 <div className="glass-chart-box">
-                    <div className="chart-header-row">
+                    <div className="chart-header-row ledger-header-row">
                         <div>
                             <h3 className="chart-title-text">
                                 <i className="fas fa-database" style={{ color: '#4f46e5' }}></i> Booking Audit Ledger
@@ -2019,14 +2011,13 @@ const AdminReports = ({ token }) => {
                         </div>
 
                         {/* Search Input */}
-                        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                        <div className="reports-search-wrapper">
                             <input
                                 type="text"
                                 placeholder="Search customer, booking ID, vehicle..."
                                 value={searchTerm}
                                 onChange={e => setSearchTerm(e.target.value)}
-                                className="filter-select-modern"
-                                style={{ width: '260px' }}
+                                className="filter-select-modern reports-search-input"
                             />
                         </div>
                     </div>
@@ -2215,19 +2206,19 @@ const AdminReports = ({ token }) => {
 
                         {/* Printable Sheet Presentation */}
                         <div className="corporate-report-sheet">
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderBottom: '3px solid #1e40af', paddingBottom: '20px', marginBottom: '24px' }}>
-                                <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+                            <div className="corporate-sheet-header">
+                                <div className="corporate-sheet-brand">
                                     <img 
                                         src="/renthub-logo.png" 
                                         alt="RentHub Logo" 
-                                        style={{ width: '56px', height: '56px', objectFit: 'contain', borderRadius: '12px', border: '1px solid #e2e8f0', padding: '4px', background: '#ffffff' }}
+                                        className="corporate-sheet-logo"
                                         onError={(e) => { e.target.style.display = 'none'; }}
                                     />
                                     <div>
-                                        <div style={{ fontSize: '24px', fontWeight: '900', color: '#1e3a8a' }}>
+                                        <div className="corporate-sheet-title">
                                             RentHub Mobility Solutions Pvt. Ltd.
                                         </div>
-                                        <div style={{ fontSize: '13px', color: '#64748b' }}>
+                                        <div className="corporate-sheet-subtitle">
                                             Fleet Operations & Urban Mobility Division • Reg. No. RH-2026-IND
                                         </div>
                                         <div style={{ marginTop: '6px' }}>
@@ -2237,7 +2228,7 @@ const AdminReports = ({ token }) => {
                                         </div>
                                     </div>
                                 </div>
-                                <div style={{ textAlign: 'right', fontSize: '12px', color: '#64748b' }}>
+                                <div className="corporate-sheet-meta">
                                     <div>Reference: <strong style={{ color: '#0f172a' }}>{reportRefId}</strong></div>
                                     <div>Date: <strong style={{ color: '#0f172a' }}>{new Date().toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}</strong></div>
                                     <div>Auditor: <strong style={{ color: '#0f172a' }}>{adminUser.adminName || 'System Administrator'}</strong></div>
@@ -2288,7 +2279,7 @@ const AdminReports = ({ token }) => {
                                 </tbody>
                             </table>
 
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginTop: '24px', paddingTop: '20px', borderTop: '1px dashed #cbd5e1' }}>
+                            <div className="corporate-sheet-signoff">
                                 <div>
                                     <div style={{ fontSize: '11px', color: '#64748b', fontWeight: '700', textTransform: 'uppercase' }}>Authorized Signatory</div>
                                     <div style={{ fontSize: '14px', fontWeight: '900', color: '#0f172a', marginTop: '4px' }}>{adminUser.adminName || 'Chief Operating Admin'}</div>
@@ -2308,7 +2299,7 @@ const AdminReports = ({ token }) => {
                ======================================================== */}
             {selectedBookingModal && (
                 <div className="reports-modal-overlay">
-                    <div className="reports-modal-box" style={{ maxWidth: '520px', padding: '24px', background: '#ffffff' }}>
+                    <div className="reports-modal-box reports-inspection-modal">
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '18px', borderBottom: '1px solid #e2e8f0', paddingBottom: '12px' }}>
                             <div>
                                 <span style={{ fontSize: '11px', fontWeight: '800', color: '#64748b', textTransform: 'uppercase' }}>Audited Record</span>

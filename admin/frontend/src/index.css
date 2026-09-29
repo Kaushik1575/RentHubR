@@ -873,6 +873,10 @@ code {
 }
 
 @media (max-width: 576px) {
+    .admin-content {
+        padding: 12px 8px;
+    }
+
     .dashboard-cards {
         grid-template-columns: 1fr;
         gap: 15px;
