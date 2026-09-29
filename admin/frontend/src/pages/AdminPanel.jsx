@@ -587,9 +587,17 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                 {isSidebarOpen && <div className="sidebar-overlay" onClick={() => setIsSidebarOpen(false)}></div>}
 
                 <aside className={`admin-sidebar ${isSidebarOpen ? 'open' : ''}`}>
-                    <div className="sidebar-header">
-                        <h2>Admin</h2>
-                        <span className="admin-name-sub">{adminUser.adminName}</span>
+                    <div className="sidebar-header" style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
+                        <img 
+                            src="/renthub-logo.png" 
+                            alt="RentHub Logo" 
+                            style={{ width: '38px', height: '38px', objectFit: 'contain', borderRadius: '8px', background: '#ffffff', padding: '3px', boxShadow: '0 2px 6px rgba(0,0,0,0.15)' }} 
+                            onError={(e) => { e.target.style.display = 'none'; }}
+                        />
+                        <div style={{ display: 'flex', flexDirection: 'column' }}>
+                            <h2 style={{ fontSize: '1.25rem', margin: 0, color: '#ffffff', fontWeight: '800', letterSpacing: '-0.3px' }}>RentHub</h2>
+                            <span className="admin-name-sub" style={{ marginTop: '3px' }}>{adminUser.adminName || 'Admin'}</span>
+                        </div>
                     </div>
                     <nav className="sidebar-nav">
                         <ul>
@@ -597,14 +605,46 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             <li><a className={`nav-link ${activeTab === 'reports' ? 'active' : ''}`} onClick={() => { setActiveTab('reports'); setIsSidebarOpen(false); }}><i className="fas fa-chart-pie"></i> Analytics & Reports</a></li>
                             <li><a className={`nav-link ${activeTab === 'users' ? 'active' : ''}`} onClick={() => { setActiveTab('users'); setIsSidebarOpen(false); }}><i className="fas fa-users"></i> User Management</a></li>
                             <li><a className={`nav-link ${activeTab === 'bookings' ? 'active' : ''}`} onClick={() => { setActiveTab('bookings'); setIsSidebarOpen(false); }}><i className="fas fa-calendar-check"></i> Bookings</a></li>
-                            <li><a className={`nav-link ${activeTab === 'vehicles' ? 'active' : ''}`} onClick={() => { setActiveTab('vehicles'); setIsSidebarOpen(false); }}><i className="fas fa-motorcycle"></i> Vehicles</a></li>
+                            <li><a className={`nav-link ${activeTab === 'vehicles' ? 'active' : ''}`} onClick={() => { setActiveTab('vehicles'); setIsSidebarOpen(false); }}><i className="fas fa-car-side"></i> Fleet Vehicles</a></li>
                             <li><a className={`nav-link ${activeTab === 'offers' ? 'active' : ''}`} onClick={() => { setActiveTab('offers'); setIsSidebarOpen(false); }}><i className="fas fa-gift"></i> Manage Offers</a></li>
-                            <li><a className={`nav-link ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => { setActiveTab('requests'); setIsSidebarOpen(false); }}><i className="fas fa-clipboard-list"></i> Requests {requests.length > 0 && <span className="badge">{requests.length}</span>}</a></li>
-                            <li><a className={`nav-link ${activeTab === 'policies' ? 'active' : ''}`} onClick={() => { setActiveTab('policies'); setIsSidebarOpen(false); }}><i className="fas fa-file-alt"></i> Policies</a></li>
-                            <li><a className={`nav-link ${activeTab === 'earnings' ? 'active' : ''}`} onClick={() => { setActiveTab('earnings'); setIsSidebarOpen(false); }}><i className="fas fa-chart-line"></i> Sponsor Reports</a></li>
-                            <li><a className={`nav-link ${activeTab === 'sponsorPortal' ? 'active' : ''}`} onClick={() => { setActiveTab('sponsorPortal'); setIsSidebarOpen(false); }}><i className="fas fa-handshake"></i> Sponsor Portal</a></li>
-                            <li><a className={`nav-link ${activeTab === 'withdrawals' ? 'active' : ''}`} onClick={() => { setActiveTab('withdrawals'); setIsSidebarOpen(false); }}><i className="fas fa-money-bill-wave"></i> Withdrawals</a></li>
                             <li><a className={`nav-link ${activeTab === 'issues' ? 'active' : ''}`} onClick={() => { setActiveTab('issues'); setIsSidebarOpen(false); }}><i className="fas fa-headset"></i> Support Issues</a></li>
+
+                            {/* SPONSOR & HOST HUB - WITH COMING SOON BANNER */}
+                            <li style={{ margin: '14px 0 6px 14px', fontSize: '10px', fontWeight: '800', color: '#94a3b8', textTransform: 'uppercase', letterSpacing: '0.8px', display: 'flex', alignItems: 'center', gap: '6px' }}>
+                                <span>Sponsor Hub</span>
+                                <span style={{ fontSize: '8.5px', background: 'rgba(245, 158, 11, 0.18)', color: '#d97706', padding: '1px 6px', borderRadius: '10px', border: '1px solid rgba(245, 158, 11, 0.35)', fontWeight: '800' }}>
+                                    COMING SOON
+                                </span>
+                            </li>
+                            <li>
+                                <a className={`nav-link ${activeTab === 'earnings' ? 'active' : ''}`} onClick={() => { setActiveTab('earnings'); setIsSidebarOpen(false); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span><i className="fas fa-chart-line"></i> Sponsor Reports</span>
+                                    <span style={{ fontSize: '9px', fontWeight: '800', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', padding: '2px 7px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)' }}>SOON</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a className={`nav-link ${activeTab === 'sponsorPortal' ? 'active' : ''}`} onClick={() => { setActiveTab('sponsorPortal'); setIsSidebarOpen(false); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span><i className="fas fa-handshake"></i> Sponsor Portal</span>
+                                    <span style={{ fontSize: '9px', fontWeight: '800', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', padding: '2px 7px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)' }}>SOON</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a className={`nav-link ${activeTab === 'withdrawals' ? 'active' : ''}`} onClick={() => { setActiveTab('withdrawals'); setIsSidebarOpen(false); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span><i className="fas fa-money-bill-wave"></i> Withdrawals</span>
+                                    <span style={{ fontSize: '9px', fontWeight: '800', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', padding: '2px 7px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)' }}>SOON</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a className={`nav-link ${activeTab === 'requests' ? 'active' : ''}`} onClick={() => { setActiveTab('requests'); setIsSidebarOpen(false); }} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                                    <span><i className="fas fa-clipboard-list"></i> Vehicle Requests</span>
+                                    <span style={{ fontSize: '9px', fontWeight: '800', background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)', color: '#ffffff', padding: '2px 7px', borderRadius: '10px', boxShadow: '0 2px 4px rgba(245, 158, 11, 0.3)' }}>SOON</span>
+                                </a>
+                            </li>
+                            <li>
+                                <a className={`nav-link ${activeTab === 'policies' ? 'active' : ''}`} onClick={() => { setActiveTab('policies'); setIsSidebarOpen(false); }}>
+                                    <i className="fas fa-file-alt"></i> Policies
+                                </a>
+                            </li>
                         </ul>
                     </nav>
                     <div className="sidebar-footer">
@@ -618,11 +658,18 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                         <div id="dashboard" className="content-section active">
                             <h3>Dashboard</h3>
                             <div className="dashboard-cards">
+                                <div className="card" onClick={() => setActiveTab('reports')} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, #ffffff 40%, #eff6ff 100%)', border: '1.5px solid #bfdbfe', boxShadow: '0 8px 20px rgba(37, 99, 235, 0.08)' }}>
+                                    <div className="card-icon" style={{ background: '#dbeafe', color: '#1d4ed8' }}><i className="fas fa-chart-line"></i></div>
+                                    <div className="card-info">
+                                        <h4 style={{ color: '#1e40af', fontWeight: '800' }}>Data Analytics</h4>
+                                        <p style={{ color: '#0f172a', fontSize: '1.25rem', fontWeight: '800' }}>View Reports →</p>
+                                    </div>
+                                </div>
                                 <div className="card"><div className="card-icon"><i className="fas fa-car"></i></div><div className="card-info"><h4>Total Vehicles</h4><p>{stats.totalVehicles}</p></div></div>
                                 <div className="card"><div className="card-icon"><i className="fas fa-clock"></i></div><div className="card-info"><h4>Pending Confirmations</h4><p>{stats.pendingBookings}</p></div></div>
                                 <div className="card"><div className="card-icon"><i className="fas fa-calendar-day"></i></div><div className="card-info"><h4>Today's Bookings</h4><p>{stats.todaysBookings}</p></div></div>
                                 <div className="card"><div className="card-icon"><i className="fas fa-users"></i></div><div className="card-info"><h4>Active Users</h4><p>{stats.activeUsers}</p></div></div>
-                                <div className="card"><div className="card-icon"><i className="fas fa-motorcycle"></i></div><div className="card-info"><h4>Confirmed Bookings</h4><p>{stats.confirmedBookings}</p></div></div>
+                                <div className="card"><div className="card-icon"><i className="fas fa-calendar-check"></i></div><div className="card-info"><h4>Confirmed Bookings</h4><p>{stats.confirmedBookings}</p></div></div>
                                 <div className="card"><div className="card-icon"><i className="fas fa-calendar-alt"></i></div><div className="card-info"><h4>Monthly Bookings</h4><p>{stats.totalBookingsMonth}</p></div></div>
                                 <div className="card" onClick={() => setActiveTab('offers')} style={{ cursor: 'pointer', background: 'linear-gradient(135deg, #fff 0%, #f5f3ff 100%)' }}><div className="card-icon" style={{ color: '#4f46e5' }}><i className="fas fa-gift"></i></div><div className="card-info"><h4>Active Offers</h4><p>{stats.activeOffers || 0}</p></div></div>
                                 <div className="card"><div className="card-icon"><i className="fas fa-ban"></i></div><div className="card-info"><h4>Cancelled Bookings</h4><p>{stats.cancelledBookings}</p></div></div>
@@ -1876,14 +1923,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     {/* ANALYTICS & REPORTS */}
                     {activeTab === 'reports' && (
                         <div id="reports" className="content-section active" style={{ padding: '24px' }}>
-                            <ComingSoonCard
-                                title="Analytics & Reports"
-                                subtitle="Advanced fleet performance, revenue insights, and booking metrics."
-                                icon="fas fa-chart-pie"
-                                onBack={() => setActiveTab('dashboard')}
-                            >
-                                <AdminReports token={token} />
-                            </ComingSoonCard>
+                            <AdminReports token={token} />
                         </div>
                     )}
                 </main>

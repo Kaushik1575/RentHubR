@@ -2005,12 +2005,16 @@ const getAnalyticsReport = async (req, res) => {
 
         const vehicleMap = {};
         allVehicles.forEach(v => {
-            vehicleMap[v.id] = v;
+            vehicleMap[`${v.category}-${v.id}`] = v;
+            if (!vehicleMap[v.id]) {
+                vehicleMap[v.id] = v;
+            }
         });
 
         // Enrich and Filter Bookings
         const enrichedBookings = (bookings || []).map(b => {
-            const v = vehicleMap[b.vehicle_id];
+            const rawType = normalizeVehicleType(b.vehicle_type) || 'bike';
+            const v = vehicleMap[`${rawType}-${b.vehicle_id}`] || vehicleMap[b.vehicle_id];
             const duration = parseInt(b.duration) || 0;
             const vehiclePrice = v ? parseFloat(v.price) || 0 : 0;
             const totalAmt = b.total_amount ? parseFloat(b.total_amount) : (duration * vehiclePrice);
@@ -2019,7 +2023,7 @@ const getAnalyticsReport = async (req, res) => {
 
             // Determine booking date (start_date or created_at)
             const bookingDate = b.start_date || (b.created_at ? b.created_at.slice(0, 10) : 'N/A');
-            const vCategory = v ? v.category : normalizeVehicleType(b.vehicle_type || 'bike');
+            const vCategory = v ? v.category : rawType;
 
             return {
                 id: b.id,
@@ -2147,11 +2151,11 @@ const getAnalyticsReport = async (req, res) => {
             .sort((a, b) => b.totalSpent - a.totalSpent)
             .slice(0, 10);
 
-        // 3. Vehicle & Category Breakdown
+        // 3. Vehicle & Category Breakdown across Entire Fleet
         const categoryStats = {
-            bike: { name: 'Bikes', count: 0, revenue: 0, completed: 0, cancelled: 0 },
-            scooty: { name: 'Scooty', count: 0, revenue: 0, completed: 0, cancelled: 0 },
-            car: { name: 'Cars', count: 0, revenue: 0, completed: 0, cancelled: 0 }
+            bike: { name: 'Bikes', count: 0, revenue: 0, completed: 0, cancelled: 0, totalFleet: (bikesRes.data || []).length },
+            scooty: { name: 'Scooty', count: 0, revenue: 0, completed: 0, cancelled: 0, totalFleet: (scootyRes.data || []).length },
+            car: { name: 'Cars', count: 0, revenue: 0, completed: 0, cancelled: 0, totalFleet: (carsRes.data || []).length }
         };
 
         const vehicleStatsMap = {};
@@ -2171,10 +2175,10 @@ const getAnalyticsReport = async (req, res) => {
                 }
             }
 
-            // Per-Vehicle performance
-            const vId = b.vehicleId || b.vehicleName;
-            if (!vehicleStatsMap[vId]) {
-                vehicleStatsMap[vId] = {
+            // Per-Vehicle performance (compound key to prevent ID collision between bikes, cars, scooty)
+            const vKey = `${b.vehicleCategory}-${b.vehicleId || b.vehicleName}`;
+            if (!vehicleStatsMap[vKey]) {
+                vehicleStatsMap[vKey] = {
                     id: b.vehicleId,
                     name: b.vehicleName,
                     category: b.vehicleCategory,
@@ -2184,19 +2188,38 @@ const getAnalyticsReport = async (req, res) => {
                     revenue: 0
                 };
             }
-            vehicleStatsMap[vId].bookingsCount += 1;
+            vehicleStatsMap[vKey].bookingsCount += 1;
             if (b.status !== 'cancelled') {
-                vehicleStatsMap[vId].revenue += b.totalAmount;
+                vehicleStatsMap[vKey].revenue += b.totalAmount;
             }
             if (['completed', 'ride_completed', 'ride_ended'].includes(b.status)) {
-                vehicleStatsMap[vId].completedCount += 1;
+                vehicleStatsMap[vKey].completedCount += 1;
             }
         });
 
-        // Top 5 Performing Vehicles
-        const topVehicles = Object.values(vehicleStatsMap)
-            .sort((a, b) => b.revenue - a.revenue)
-            .slice(0, 5);
+        // Full Fleet Inventory with Booking Stats (for ALL vehicles in fleet)
+        const allFleetVehicles = allVehicles.map(v => {
+            const vKey = `${v.category}-${v.id}`;
+            const stats = vehicleStatsMap[vKey] || {};
+            return {
+                id: v.id,
+                name: v.name,
+                category: v.category,
+                price: parseFloat(v.price) || 0,
+                image: v.image || v.image_url || null,
+                sponsor_name: v.sponsor_name || 'RentHub Fleet',
+                available: v.available !== undefined ? v.available : true,
+                bookingsCount: stats.bookingsCount || 0,
+                completedCount: stats.completedCount || 0,
+                revenue: stats.revenue || 0,
+                utilizationRate: stats.bookingsCount > 0 ? Math.min(100, Math.round((stats.bookingsCount / Math.max(totalBookings, 1)) * 100)) : 0
+            };
+        });
+
+        // Sort allFleetVehicles by revenue / bookings
+        allFleetVehicles.sort((a, b) => b.revenue - a.revenue || b.bookingsCount - a.bookingsCount);
+
+        const topVehicles = allFleetVehicles.filter(v => v.bookingsCount > 0).slice(0, 10);
 
         // 4. Daily Trend Series
         // Generate daily intervals between filterStartDate and filterEndDate
@@ -2277,8 +2300,12 @@ const getAnalyticsReport = async (req, res) => {
             },
             fleet: {
                 totalVehiclesInFleet: allVehicles.length,
+                totalBikes: (bikesRes.data || []).length,
+                totalCars: (carsRes.data || []).length,
+                totalScooty: (scootyRes.data || []).length,
                 categoryStats,
-                topVehicles
+                topVehicles: topVehicles.length > 0 ? topVehicles : allFleetVehicles.slice(0, 10),
+                allVehicles: allFleetVehicles
             },
             trends: dailyTrends,
             bookings: filteredBookings

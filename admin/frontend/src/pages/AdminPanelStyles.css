@@ -39,28 +39,29 @@
 }
 
 .modal-header-styled {
-    background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+    background: #ffffff;
+    border-bottom: 1px solid #e2e8f0;
     padding: 24px 32px;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    color: white;
+    color: #0f172a;
 }
 
 .modal-header-styled h2 {
     margin: 0;
-    font-size: 1.5rem;
-    font-weight: 600;
-    color: white;
+    font-size: 1.45rem;
+    font-weight: 700;
+    color: #0f172a;
     display: flex;
     align-items: center;
     gap: 12px;
 }
 
 .modal-close-btn-styled {
-    background: rgba(255, 255, 255, 0.1);
-    border: none;
-    color: white;
+    background: #f1f5f9;
+    border: 1px solid #e2e8f0;
+    color: #475569;
     width: 36px;
     height: 36px;
     border-radius: 50%;
@@ -72,7 +73,8 @@
 }
 
 .modal-close-btn-styled:hover {
-    background: rgba(255, 255, 255, 0.2);
+    background: #e2e8f0;
+    color: #0f172a;
     transform: rotate(90deg);
 }
 
