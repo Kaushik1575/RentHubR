@@ -252,7 +252,15 @@ const registerAdmin = async (req, res) => {
             return res.status(403).json({ error: 'Invalid Security Code. You are not authorized to register as admin.' });
         }
 
-        const existingUser = await SupabaseDB.getUserByEmail(email);
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const normalizedAdminId = String(adminId || '').trim();
+        const trimmedName = String(adminName || '').trim();
+
+        if (!normalizedEmail || !normalizedAdminId || !trimmedName) {
+            return res.status(400).json({ error: 'Admin name, email, and admin ID are required' });
+        }
+
+        const existingUser = await SupabaseDB.getUserByEmail(normalizedEmail);
         if (existingUser) {
             return res.status(400).json({ error: 'Email already exists' });
         }
@@ -265,7 +273,7 @@ const registerAdmin = async (req, res) => {
         const { data: otpRecord, error: otpError } = await supabase
             .from('password_reset_otps')
             .select('*')
-            .eq('email', email)
+            .eq('email', normalizedEmail)
             .eq('otp', otp)
             .gte('expires_at', new Date().toISOString())
             .single();
@@ -283,9 +291,10 @@ const registerAdmin = async (req, res) => {
 
         const hashedPassword = await bcrypt.hash(password, 10);
         const newAdmin = {
-            admin_name: adminName,
-            email,
-            admin_id: adminId,
+            admin_name: trimmedName,
+            full_name: trimmedName,
+            email: normalizedEmail,
+            admin_id: normalizedAdminId,
             password: hashedPassword,
             is_admin: true
         };
@@ -365,23 +374,24 @@ const loginUser = async (req, res) => {
 const loginAdmin = async (req, res) => {
     try {
         console.log('🔐 Admin login attempt started');
-        const { email, password, adminId } = req.body;
+        const normalizedEmail = String(email || '').trim().toLowerCase();
+        const normalizedAdminId = String(adminId || '').trim();
 
-        console.log('📧 Email:', email);
-        console.log('🆔 Admin ID:', adminId);
+        console.log('📧 Email:', normalizedEmail);
+        console.log('🆔 Admin ID:', normalizedAdminId);
 
-        if (!email || !password || !adminId) {
+        if (!normalizedEmail || !password || !normalizedAdminId) {
             console.log('❌ Missing required fields');
             return res.status(400).json({ error: 'Email, password, and admin ID are required' });
         }
 
         // Find the admin by email
         console.log('🔍 Fetching admin from database...');
-        const admin = await SupabaseDB.getUserByEmail(email);
+        const admin = await SupabaseDB.getUserByEmail(normalizedEmail);
         console.log('📊 Admin data retrieved:', admin ? 'Found' : 'Not found');
 
         if (!admin) {
-            console.log('❌ No user found with email:', email);
+            console.log('❌ No user found with email:', normalizedEmail);
             return res.status(401).json({ error: 'Invalid admin credentials' });
         }
 
@@ -393,8 +403,9 @@ const loginAdmin = async (req, res) => {
             return res.status(401).json({ error: 'Invalid admin credentials' });
         }
 
-        if (admin.admin_id !== adminId) {
-            console.log('❌ Admin ID mismatch. Expected:', admin.admin_id, 'Got:', adminId);
+        // Case-insensitive comparison for admin ID
+        if (String(admin.admin_id || '').trim().toLowerCase() !== normalizedAdminId.toLowerCase()) {
+            console.log('❌ Admin ID mismatch. Expected:', admin.admin_id, 'Got:', normalizedAdminId);
             return res.status(401).json({ error: 'Invalid admin credentials' });
         }
 
@@ -410,19 +421,19 @@ const loginAdmin = async (req, res) => {
         console.log('🎫 Generating JWT token...');
 
         const token = jwt.sign(
-            { id: admin.id, email: admin.email, isAdmin: admin.is_admin },
+            { id: admin.id, email: admin.email, isAdmin: true },
             JWT_SECRET
         );
 
         // Map snake_case to camelCase for frontend compatibility
         const adminResponse = {
             id: admin.id,
-            fullName: admin.full_name,
-            adminName: admin.admin_name,
+            fullName: admin.full_name || admin.admin_name,
+            adminName: admin.admin_name || admin.full_name,
             email: admin.email,
             phoneNumber: admin.phone_number,
             adminId: admin.admin_id,
-            isAdmin: admin.is_admin || false
+            isAdmin: true
         };
 
         console.log('✅ Admin login successful for:', admin.email);
