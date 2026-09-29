@@ -57,13 +57,13 @@ const verifyAdminToken = async (req, res, next) => {
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         console.log('Decoded token:', decoded);
-        const { data: user, error } = await supabase
-            .from('users')
-            .select('is_admin')
+        const { data: adminUser } = await supabase
+            .from('admins')
+            .select('id, is_admin')
             .eq('id', decoded.id)
-            .single();
-        console.log('User from DB:', user, 'Error:', error);
-        if (error || !user || !user.is_admin) {
+            .maybeSingle();
+
+        if (!adminUser && !decoded.isAdmin) {
             console.log('Not authorized as admin');
             return res.status(403).json({ message: 'Not authorized as admin' });
         }

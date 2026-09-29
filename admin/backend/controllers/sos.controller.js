@@ -99,9 +99,8 @@ const activateSOS = async (req, res) => {
         };
 
         const { data: admins, error: adminError } = await supabase
-            .from('users')
-            .select('email')
-            .eq('is_admin', true);
+            .from('admins')
+            .select('email');
 
         const allAdminEmails = new Set(ADMIN_EMAILS);
 

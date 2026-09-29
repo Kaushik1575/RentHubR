@@ -34,6 +34,28 @@ class SupabaseDB {
         return data;
     }
 
+    static async getAdminByEmail(email) {
+        const { data, error } = await supabase
+            .from('admins')
+            .select('*')
+            .eq('email', email)
+            .maybeSingle();
+
+        if (error && error.code !== 'PGRST116') throw error;
+        return data;
+    }
+
+    static async createAdmin(adminData) {
+        const { data, error } = await supabase
+            .from('admins')
+            .insert([adminData])
+            .select()
+            .single();
+
+        if (error) throw error;
+        return data;
+    }
+
     static async updateUser(id, userData) {
         const { data, error } = await supabase
             .from('users')

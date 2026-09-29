@@ -591,8 +591,8 @@ const markRefundComplete = async (req, res) => {
         const bookingId = parseInt(req.params.id);
         const adminId = req.user.id;
 
-        const { data: admin } = await supabase.from('users').select('is_admin').eq('id', adminId).single();
-        if (!admin || !admin.is_admin) return res.status(403).json({ error: 'Unauthorized' });
+        const { data: admin } = await supabase.from('admins').select('id').eq('id', adminId).maybeSingle();
+        if (!admin && !req.user?.isAdmin) return res.status(403).json({ error: 'Unauthorized' });
 
         const { data: booking, error: updateError } = await supabase.from('bookings').update({
             refund_status: 'completed',

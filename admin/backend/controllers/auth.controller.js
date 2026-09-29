@@ -235,9 +235,9 @@ const registerAdmin = async (req, res) => {
             return res.status(400).json({ error: 'Admin name, email, and admin ID are required' });
         }
 
-        const existingUser = await SupabaseDB.getUserByEmail(normalizedEmail);
-        if (existingUser) {
-            return res.status(400).json({ error: 'Email already exists' });
+        const existingAdmin = await SupabaseDB.getAdminByEmail(normalizedEmail);
+        if (existingAdmin) {
+            return res.status(400).json({ error: 'Admin already exists with this email' });
         }
 
         // Verify OTP exists and not expired
@@ -271,10 +271,11 @@ const registerAdmin = async (req, res) => {
             email: normalizedEmail,
             admin_id: normalizedAdminId,
             password: hashedPassword,
+            role: 'admin',
             is_admin: true
         };
 
-        const created = await SupabaseDB.createUser(newAdmin);
+        const created = await SupabaseDB.createAdmin(newAdmin);
 
         // Delete used OTP record
         await supabase.from('password_reset_otps').delete().eq('id', otpRecord.id);
@@ -360,23 +361,20 @@ const loginAdmin = async (req, res) => {
             return res.status(400).json({ error: 'Email, password, and admin ID are required' });
         }
 
-        // Find the admin by email
+        // Find the admin by email from admins table
         console.log('🔍 Fetching admin from database...');
-        const admin = await SupabaseDB.getUserByEmail(normalizedEmail);
+        let admin = await SupabaseDB.getAdminByEmail(normalizedEmail);
+        if (!admin) {
+            admin = await SupabaseDB.getUserByEmail(normalizedEmail);
+        }
         console.log('📊 Admin data retrieved:', admin ? 'Found' : 'Not found');
 
         if (!admin) {
-            console.log('❌ No user found with email:', normalizedEmail);
+            console.log('❌ No admin found with email:', normalizedEmail);
             return res.status(401).json({ error: 'Invalid admin credentials' });
         }
 
-        console.log('👤 User found - is_admin:', admin.is_admin);
-        console.log('🆔 Stored admin_id:', admin.admin_id);
-
-        if (!admin.is_admin) {
-            console.log('❌ User is not an admin');
-            return res.status(401).json({ error: 'Invalid admin credentials' });
-        }
+        console.log('👤 Admin found:', admin.email);
 
         // Case-insensitive comparison for admin ID
         if (String(admin.admin_id || '').trim().toLowerCase() !== normalizedAdminId.toLowerCase()) {

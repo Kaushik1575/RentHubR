@@ -110,9 +110,8 @@ const activateSOS = async (req, res) => {
 
         // Fetch all admins from database
         const { data: admins, error: adminError } = await supabase
-            .from('users')
-            .select('email')
-            .eq('is_admin', true);
+            .from('admins')
+            .select('email');
 
         // Always include the fallback admin email so the developer always receives it
         const allAdminEmails = new Set(ADMIN_EMAILS);
