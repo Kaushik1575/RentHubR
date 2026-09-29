@@ -1,5 +1,5 @@
 // API configuration
-const PROD_API_URL = 'https://renthub-user-backend.onrender.com';
+const PROD_API_URL = 'https://renthub-user-backend-uxpo.onrender.com';
 const API_BASE_URL = import.meta.env.VITE_API_URL !== undefined 
   ? import.meta.env.VITE_API_URL 
   : (import.meta.env.DEV ? '' : PROD_API_URL);

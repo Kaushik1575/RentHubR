@@ -397,7 +397,7 @@ const Navbar = () => {
                                 <div style={{ fontSize: '20px', opacity: 0.8 }}>→</div>
                             </button>
 
-                            {/* Sponsor Button */}
+                            {/* Sponsor Button with Coming Soon Banner */}
                             <button onClick={() => { setShowRegisterModal(false); window.open('http://localhost:5175', '_blank'); }} style={{
                                 width: '100%', padding: '15px 20px', border: 'none', borderRadius: '20px', cursor: 'pointer',
                                 background: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
@@ -412,8 +412,22 @@ const Navbar = () => {
                                     display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '24px'
                                 }}>🤝</div>
                                 <div style={{ textAlign: 'left', flex: 1 }}>
-                                    <div style={{ fontSize: '18px', fontWeight: '800' }}>Sponsor Account</div>
-                                    <div style={{ fontSize: '13px', opacity: 0.9, fontWeight: '500' }}>For listing vehicles & earning</div>
+                                    <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                        <div style={{ fontSize: '18px', fontWeight: '800' }}>Sponsor Account</div>
+                                        <span style={{
+                                            fontSize: '9.5px',
+                                            fontWeight: '800',
+                                            background: 'rgba(255,255,255,0.25)',
+                                            color: '#ffffff',
+                                            padding: '2px 8px',
+                                            borderRadius: '20px',
+                                            letterSpacing: '0.5px',
+                                            border: '1px solid rgba(255,255,255,0.4)'
+                                        }}>
+                                            COMING SOON
+                                        </span>
+                                    </div>
+                                    <div style={{ fontSize: '13px', opacity: 0.9, fontWeight: '500' }}>For vehicle hosts & fleet owners</div>
                                 </div>
                                 <div style={{ fontSize: '20px', opacity: 0.8 }}>→</div>
                             </button>
