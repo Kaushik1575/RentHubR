@@ -291,8 +291,12 @@ Do NOT wrap the output in markdown.`;
             });
         }
 
-        // Helper to try models in sequence
-        const modelsToTry = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-flash-latest"];
+        // Helper to try models in sequence (supports environment override)
+        const primaryModel = process.env.GEMINI_MODEL;
+        const defaultModels = ["gemini-1.5-flash", "gemini-2.0-flash", "gemini-1.5-flash-8b", "gemini-1.5-pro", "gemini-flash-latest"];
+        const modelsToTry = primaryModel 
+            ? [primaryModel, ...defaultModels.filter(m => m !== primaryModel)] 
+            : defaultModels;
         let model;
         let chat;
         let lastError;
