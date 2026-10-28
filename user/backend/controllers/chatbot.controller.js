@@ -297,41 +297,9 @@ Do NOT wrap the output in markdown.`;
         const modelsToTry = primaryModel 
             ? [primaryModel, ...defaultModels.filter(m => m !== primaryModel)] 
             : defaultModels;
-        let model;
-        let chat;
-        let lastError;
-
-        for (const modelName of modelsToTry) {
-            try {
-                console.log(`Trying to initialize model: ${modelName}`);
-                model = genAI.getGenerativeModel({ model: modelName });
-
-                // Start chat session
-                chat = model.startChat({
-                    history: formattedHistory,
-                    generationConfig: {
-                        maxOutputTokens: 400,
-                    },
-                });
-
-                // Test connection with a dummy generation (optional but safer)
-                // actually startChat doesn't validate until sendMessage is called.
-                // so we proceed to sendMessage.
-
-                break; // If startChat doesn't throw (it usually doesn't), we break and try sending.
-                // Re-attempting logic needs to be around sendMessage actually if we want to be robust,
-                // but usually getGenerativeModel is where the config might fail if invalid? 
-                // No, getGenerativeModel is synchronous config. The error happens at usage time.
-            } catch (e) {
-                console.log(`Failed to init ${modelName}:`, e.message);
-                lastError = e;
-            }
-        }
-
-        // We will wrap sendMessage in the retry logic actually, or better:
-        // iterate models AND send message.
 
         let text;
+        let lastError;
         let success = false;
 
         for (const modelName of modelsToTry) {
