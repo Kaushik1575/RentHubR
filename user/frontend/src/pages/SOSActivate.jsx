@@ -6,7 +6,12 @@ import './SOSActivate.css';
 const SOSActivate = () => {
     const [searchParams] = useSearchParams();
     const sosToken = searchParams.get('token');
-    const bookingId = searchParams.get('bookingId');
+    const bookingIdFromUrl = searchParams.get('bookingId');
+
+    const [activeBookingId, setActiveBookingId] = useState(bookingIdFromUrl || '');
+    const [activePhone, setActivePhone] = useState('');
+    const [inputVal, setInputVal] = useState(bookingIdFromUrl || '');
+    const [callInitiated, setCallInitiated] = useState(false);
 
     const [status, setStatus] = useState('loading'); // loading, ready, activating, active_sos, resolved, escalated, error
     const [message, setMessage] = useState('');
@@ -101,10 +106,49 @@ const SOSActivate = () => {
         }
     };
 
+    // Auto-detect booking and registered phone from URL or local storage
     useEffect(() => {
-        if (!sosToken || !bookingId) {
-            setStatus('error');
-            setMessage('Invalid link. Missing token or booking ID.');
+        if (bookingIdFromUrl) {
+            setActiveBookingId(bookingIdFromUrl);
+            setInputVal(bookingIdFromUrl);
+            setStatus('ready');
+            return;
+        }
+
+        // Try to read logged-in user profile
+        try {
+            const storedUser = localStorage.getItem('user');
+            if (storedUser) {
+                const parsed = JSON.parse(storedUser);
+                if (parsed.phone_number) {
+                    setActivePhone(String(parsed.phone_number));
+                    setInputVal(String(parsed.phone_number));
+                }
+            }
+        } catch (e) {
+            console.warn('Could not read user profile:', e);
+        }
+
+        // Try to fetch active bookings if user is authenticated
+        const authToken = localStorage.getItem('token');
+        if (authToken) {
+            fetch(getApiUrl('/api/bookings/my-bookings'), {
+                headers: { 'Authorization': `Bearer ${authToken}` }
+            })
+                .then(res => res.json())
+                .then(data => {
+                    const list = Array.isArray(data) ? data : (data?.bookings || []);
+                    const activeRide = list.find(b => b.status === 'ride_started' || b.status === 'confirmed');
+                    if (activeRide) {
+                        const detectedId = activeRide.booking_id || activeRide.id;
+                        setActiveBookingId(detectedId);
+                        setInputVal(detectedId);
+                    }
+                })
+                .catch(() => {})
+                .finally(() => {
+                    setStatus('ready');
+                });
         } else {
             setStatus('ready');
         }
@@ -114,11 +158,28 @@ const SOSActivate = () => {
                 window.speechSynthesis.cancel();
             }
         };
-    }, [sosToken, bookingId]);
+    }, [bookingIdFromUrl]);
 
     const activateSOS = async () => {
+        const trimmedInput = (inputVal || '').trim();
+        let targetBooking = activeBookingId;
+        let targetPhone = activePhone;
+
+        if (trimmedInput) {
+            if (/^\d{10}$/.test(trimmedInput) || trimmedInput.startsWith('+')) {
+                targetPhone = trimmedInput;
+            } else {
+                targetBooking = trimmedInput;
+            }
+        }
+
+        if (!targetBooking && !targetPhone) {
+            alert('Please enter your Booking ID (e.g. RH261101-230) or 10-digit registered phone number to activate SOS.');
+            return;
+        }
+
         setStatus('activating');
-        setMessage('Requesting location access for emergency dispatch... Please click "Allow".');
+        setMessage('Acquiring high-accuracy GPS coordinates for roadside dispatch...');
 
         try {
             if (navigator.geolocation) {
@@ -126,12 +187,12 @@ const SOSActivate = () => {
                     navigator.geolocation.getCurrentPosition(
                         (position) => resolve(position),
                         (error) => reject(error),
-                        { enableHighAccuracy: true, timeout: 15000, maximumAge: 0 }
+                        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
                     );
                 });
 
                 const safetyTimeout = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("Location request timed out")), 16000)
+                    setTimeout(() => reject(new Error("Location request timed out")), 13000)
                 );
 
                 const position = await Promise.race([getPosition, safetyTimeout]);
@@ -141,52 +202,52 @@ const SOSActivate = () => {
                     accuracy: position.coords.accuracy
                 };
                 setGpsData(gpsLocation);
-                setLocationStats(`Location acquired (Accuracy: ${Math.round(position.coords.accuracy)}m)`);
-                sendSOS(gpsLocation);
+                setLocationStats(`Live GPS acquired (Accuracy: ${Math.round(position.coords.accuracy)}m)`);
+                sendSOS(gpsLocation, targetBooking, targetPhone);
 
             } else {
                 throw new Error("Geolocation not supported by this browser.");
             }
         } catch (e) {
-            console.warn("GPS acquisition failed", e);
-            let errorMsg = "Could not access location.";
-            if (e.code === 1) errorMsg = "Location permission was denied.";
-            if (e.code === 2) errorMsg = "Location signal unavailable.";
-            if (e.code === 3 || (e.message && e.message.includes('time'))) errorMsg = "Location request timed out.";
-
-            setMessage(errorMsg);
-            setStatus('location_error');
+            console.warn("GPS acquisition failed or skipped:", e.message);
+            setLocationStats("Proceeding with pickup location fallback.");
+            sendSOS(null, targetBooking, targetPhone);
         }
     };
 
-    const sendSOS = async (gpsLocation) => {
+    const sendSOS = async (gpsLocation, targetBooking, targetPhone) => {
         setStatus('activating');
-        setMessage('Initiating AI Emergency Outbound Call & Alerting Response Team...');
+        setMessage('Triggering Retell AI Emergency Outbound Voice Call & Alerting Dispatch...');
         if (!gpsLocation) {
-            setLocationStats("User skipped location check.");
+            setLocationStats("GPS skipped. Using pickup location fallback.");
         }
+
+        const bId = targetBooking || activeBookingId || undefined;
+        const pNum = targetPhone || activePhone || undefined;
 
         try {
             const res = await fetch(getApiUrl('/api/sos-activate'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    token: sosToken,
-                    bookingId: bookingId,
+                    token: sosToken || 'web_direct',
+                    bookingId: bId,
+                    phoneNumber: pNum,
                     gpsLocation
                 })
             });
 
             const data = await res.json();
-            if (res.ok) {
+            if (res.ok && data.success) {
                 setSosDataInfo(data.sosData || null);
+                setCallInitiated(!!data.callInitiated);
                 setStatus('active_sos');
             } else {
                 throw new Error(data.error || 'Failed to activate SOS');
             }
         } catch (err) {
             setStatus('error');
-            setMessage(err.message);
+            setMessage(err.message || 'Could not connect to emergency dispatcher.');
         }
     };
 
@@ -204,7 +265,6 @@ const SOSActivate = () => {
 
         let liveGps = gpsData;
 
-        // Proactively fetch high-accuracy device location if not yet acquired
         if (!liveGps && navigator.geolocation) {
             try {
                 const pos = await new Promise((resolve, reject) => {
@@ -226,11 +286,12 @@ const SOSActivate = () => {
         }
 
         try {
+            const targetBId = activeBookingId || sosDataInfo?.bookingId || bookingIdFromUrl;
             const res = await fetch(getApiUrl('/api/sos-send-nearby'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    bookingId: bookingId,
+                    bookingId: targetBId,
                     gpsLocation: liveGps,
                     userEmail: sosDataInfo?.userEmail,
                     userName: sosDataInfo?.userName
@@ -251,18 +312,18 @@ const SOSActivate = () => {
         }
     };
 
-
     // Option 1: Problem Solved
     const handleResolve = async () => {
         setFeedbackLoading(true);
         if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 
         try {
+            const targetBId = activeBookingId || sosDataInfo?.bookingId || bookingIdFromUrl;
             const res = await fetch(getApiUrl('/api/sos-feedback'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    bookingId: bookingId,
+                    bookingId: targetBId,
                     status: 'resolved',
                     issueType: diagnosticGuides[activeIssue].title
                 })
@@ -286,11 +347,12 @@ const SOSActivate = () => {
         if ('speechSynthesis' in window) window.speechSynthesis.cancel();
 
         try {
+            const targetBId = activeBookingId || sosDataInfo?.bookingId || bookingIdFromUrl;
             const res = await fetch(getApiUrl('/api/sos-feedback'), {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
-                    bookingId: bookingId,
+                    bookingId: targetBId,
                     status: 'escalate_mechanic',
                     issueType: diagnosticGuides[activeIssue].title,
                     details: `Customer selected Option 2 (Unresolved) on SOS Dashboard for ${diagnosticGuides[activeIssue].title}`,
@@ -321,14 +383,14 @@ const SOSActivate = () => {
 
                 <h1 className="sos-title">RentHub AI SOS Center</h1>
                 <p className="sos-description">
-                    24x7 Real-Time Emergency Assistance & AI Diagnostic Troubleshooting
+                    24x7 Real-Time Emergency Assistance & AI Outbound Diagnostic Calling
                 </p>
 
                 {/* State: Loading */}
                 {status === 'loading' && (
                     <div className="loading-wrapper">
                         <div className="spinner"></div>
-                        <p className="loading-text">Verifying security token & booking details...</p>
+                        <p className="loading-text">Verifying ride details & preparing emergency channels...</p>
                     </div>
                 )}
 
@@ -337,22 +399,31 @@ const SOSActivate = () => {
                     <div className="status-box status-error">
                         <span className="status-title">⚠️ Error</span>
                         <p>{message}</p>
+                        <div style={{ marginTop: '16px' }}>
+                            <button
+                                className="sos-button"
+                                style={{ padding: '10px 20px', fontSize: '0.95rem' }}
+                                onClick={() => setStatus('ready')}
+                            >
+                                ⟳ Try Again
+                            </button>
+                        </div>
                     </div>
                 )}
 
                 {/* State: Location Permission Error */}
                 {status === 'location_error' && (
                     <div className="status-box status-warning">
-                        <span className="status-title">📍 Location Needed</span>
+                        <span className="status-title">📍 Location Notice</span>
                         <p>{message}</p>
-                        <p style={{ marginTop: '8px', opacity: 0.8 }}>For precise mechanic dispatch, please allow location access or proceed without GPS.</p>
+                        <p style={{ marginTop: '8px', opacity: 0.8 }}>Proceed without GPS or retry permission.</p>
 
                         <div className="secondary-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
                             <button className="btn-secondary" onClick={activateSOS} style={{ padding: '12px', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.5)', color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                ⟳ Retry Location
+                                ⟳ Retry GPS
                             </button>
-                            <button className="btn-secondary" onClick={() => sendSOS(null)} style={{ padding: '12px', background: 'rgba(255,0,0,0.4)', border: '1px solid rgba(255,0,0,0.8)', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>
-                                Send Without Location &rarr;
+                            <button className="btn-secondary" onClick={() => sendSOS(null, activeBookingId, activePhone)} style={{ padding: '12px', background: 'rgba(255,0,0,0.4)', border: '1px solid rgba(255,0,0,0.8)', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>
+                                Send Alert Without GPS &rarr;
                             </button>
                         </div>
                     </div>
@@ -361,25 +432,54 @@ const SOSActivate = () => {
                 {/* State: Ready (Initial Screen) */}
                 {status === 'ready' && (
                     <>
-                        {bookingId && (
-                            <div className="booking-info">
-                                <i className="fas fa-ticket-alt"></i>
-                                <span>Booking ID: <strong>{bookingId}</strong></span>
-                            </div>
-                        )}
+                        <div style={{ marginBottom: '1.25rem', textAlign: 'left' }}>
+                            <label style={{ display: 'block', fontSize: '0.9rem', fontWeight: 'bold', color: '#cbd5e1', marginBottom: '8px' }}>
+                                <i className="fas fa-id-card-alt" style={{ marginRight: '6px', color: '#ef4444' }}></i>
+                                Booking ID or Registered Mobile Number:
+                            </label>
+                            <input
+                                type="text"
+                                placeholder="e.g. RH261101-230 or 9040757683"
+                                value={inputVal}
+                                onChange={(e) => {
+                                    const val = e.target.value;
+                                    setInputVal(val);
+                                    const trimmed = val.trim();
+                                    if (/^\d{10}$/.test(trimmed) || trimmed.startsWith('+')) {
+                                        setActivePhone(trimmed);
+                                    } else {
+                                        setActiveBookingId(trimmed);
+                                    }
+                                }}
+                                style={{
+                                    width: '100%',
+                                    padding: '12px 14px',
+                                    fontSize: '1rem',
+                                    borderRadius: '10px',
+                                    border: '1px solid rgba(239, 68, 68, 0.6)',
+                                    outline: 'none',
+                                    background: 'rgba(255, 255, 255, 0.08)',
+                                    color: '#ffffff',
+                                    boxSizing: 'border-box'
+                                }}
+                            />
+                            <small style={{ color: '#94a3b8', fontSize: '0.8rem', display: 'block', marginTop: '6px' }}>
+                                Enter your active RentHub booking reference or 10-digit mobile number to receive the AI call.
+                            </small>
+                        </div>
 
                         <div className="status-box status-warning">
                             <span className="status-title">⚠️ Emergency Protocol</span>
                             <p>Tapping the button below will immediately:</p>
                             <ul style={{ textAlign: 'left', margin: '8px 0 0 15px', fontSize: '0.9rem', lineHeight: '1.5' }}>
-                                <li>Trigger an <strong>automated Retell AI call</strong> to your registered mobile.</li>
-                                <li>Send your <strong>live GPS coordinates</strong> to our roadside emergency team.</li>
-                                <li>Start <strong>instant step-by-step voice troubleshooting</strong>.</li>
+                                <li>Trigger an <strong>outbound Retell AI voice call</strong> directly to your mobile phone.</li>
+                                <li>Transmit your <strong>live GPS pin</strong> to our 24x7 roadside response team.</li>
+                                <li>Launch <strong>interactive step-by-step diagnostic assistance</strong>.</li>
                             </ul>
                         </div>
 
                         <button className="sos-button" onClick={activateSOS}>
-                            <i className="fas fa-phone-volume"></i> Initiate AI Emergency Alert
+                            <i className="fas fa-phone-volume"></i> Initiate AI Emergency Call & Alert
                         </button>
                     </>
                 )}
@@ -396,7 +496,7 @@ const SOSActivate = () => {
                 {/* State: ACTIVE SOS - Interactive AI Diagnostic Center */}
                 {status === 'active_sos' && (
                     <div className="ai-sos-active-panel">
-                        
+
                         {/* Live Call Banner */}
                         <div className="live-call-banner">
                             <div className="pulse-indicator">
@@ -405,7 +505,11 @@ const SOSActivate = () => {
                             </div>
                             <div className="call-banner-text">
                                 <strong>AI Emergency Call Dispatched</strong>
-                                <span>Calling your mobile & active on screen</span>
+                                <span>
+                                    {callInitiated
+                                        ? `Calling ${sosDataInfo?.phoneNumber || 'your registered phone'} via Retell AI (Aarohi)...`
+                                        : 'Calling your mobile & active on screen'}
+                                </span>
                             </div>
                             <button className={`voice-toggle-btn ${voiceActive ? 'active' : ''}`} onClick={toggleVoice} title="Toggle Voice Guidance">
                                 <i className={`fas ${voiceActive ? (isSpeaking ? 'fa-volume-up fa-beat' : 'fa-volume-up') : 'fa-volume-mute'}`}></i>

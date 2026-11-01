@@ -1,76 +1,124 @@
 const supabase = require('../config/supabase');
 const { sendSOSAlertEmail, sendNearestLocationsEmail, sendEmail } = require('../config/emailService');
+const { makeSOSOutboundCall } = require('../config/retellCallService');
 const { findNearbyPlaces } = require('../services/nearbyPlacesService');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com'];
 
 const activateSOS = async (req, res) => {
     try {
-        const { token, bookingId, gpsLocation } = req.body;
+        const { token, bookingId, gpsLocation, phoneNumber } = req.body;
 
-        if (!bookingId) {
-            return res.status(400).json({ error: 'Booking ID is required' });
+        // Basic validation: must have bookingId or phoneNumber
+        if (!bookingId && !phoneNumber) {
+            return res.status(400).json({ error: 'Booking ID or Registered Phone Number is required' });
         }
 
-        let query = supabase.from('bookings').select(`
-                *,
-                users:user_id (
-                    full_name,
-                    email,
-                    phone_number
-                )
-            `);
+        let booking = null;
 
-        if (bookingId.toString().startsWith('RH')) {
-            query = query.eq('booking_id', bookingId);
-        } else {
-            query = query.eq('id', bookingId);
+        // 1. Fetch booking details with user info if bookingId provided
+        if (bookingId) {
+            let query = supabase.from('bookings').select(`
+                    *,
+                    users:user_id (
+                        full_name,
+                        email,
+                        phone_number
+                    )
+                `);
+
+            if (bookingId.toString().startsWith('RH')) {
+                query = query.eq('booking_id', bookingId);
+            } else {
+                query = query.eq('id', bookingId);
+            }
+
+            const { data: fetchedBooking, error: bookingError } = await query.single();
+            if (fetchedBooking) {
+                booking = fetchedBooking;
+            } else if (bookingError) {
+                console.warn('Booking lookup warning for SOS:', bookingError.message);
+            }
         }
 
-        const { data: booking, error: bookingError } = await query.single();
+        // 2. If booking not found yet but phoneNumber is provided, lookup latest booking for that phone
+        if (!booking && phoneNumber) {
+            const clean10 = String(phoneNumber).replace(/\D/g, '').slice(-10);
+            try {
+                const { data: matchedUsers } = await supabase
+                    .from('users')
+                    .select('id, full_name, email, phone_number');
 
-        if (bookingError || !booking) {
-            console.error('Error fetching booking for SOS:', bookingError);
+                const matchedUser = matchedUsers?.find(u => {
+                    const uPhone = String(u.phone_number || '').replace(/\D/g, '').slice(-10);
+                    return uPhone === clean10;
+                });
+
+                if (matchedUser) {
+                    const { data: userBookings } = await supabase
+                        .from('bookings')
+                        .select('*, users:user_id(full_name, email, phone_number)')
+                        .eq('user_id', matchedUser.id)
+                        .order('created_at', { ascending: false })
+                        .limit(1);
+
+                    if (userBookings && userBookings.length > 0) {
+                        booking = userBookings[0];
+                    }
+                }
+            } catch (userLookupErr) {
+                console.warn('User lookup by phone failed:', userLookupErr.message);
+            }
+        }
+
+        if (!booking && !phoneNumber) {
             return res.status(404).json({ error: 'Booking not found' });
         }
 
+        // Get vehicle details
         let vehicleName = 'Unknown Vehicle';
 
-        if (booking.vehicle_name) {
-            vehicleName = booking.vehicle_name;
-        } else if (booking.vehicle_type && booking.vehicle_id) {
-            let tableName;
-            const typeLower = (booking.vehicle_type || '').toLowerCase().trim();
+        if (booking) {
+            console.log(`SOS Processing - ID: ${booking.id}, RH-ID: ${booking.booking_id}, Type: ${booking.vehicle_type}, VehicleID: ${booking.vehicle_id}`);
 
-            if (typeLower === 'scooty') {
-                tableName = 'scooty';
-            } else if (typeLower === 'bike') {
-                tableName = 'bikes';
-            } else if (typeLower === 'car') {
-                tableName = 'cars';
-            } else {
-                tableName = typeLower + 's';
-            }
+            if (booking.vehicle_name) {
+                vehicleName = booking.vehicle_name;
+            } else if (booking.vehicle_type && booking.vehicle_id) {
+                let tableName;
+                const typeLower = (booking.vehicle_type || '').toLowerCase().trim();
 
-            const { data: vehicle, error: vehicleError } = await supabase
-                .from(tableName)
-                .select('*')
-                .eq('id', booking.vehicle_id)
-                .single();
-
-            if (vehicleError) {
-                if (tableName === 'scooty') {
-                    const { data: altVehicle } = await supabase
-                        .from('scooties')
-                        .select('*')
-                        .eq('id', booking.vehicle_id)
-                        .single();
-                    if (altVehicle) {
-                        vehicleName = altVehicle.name || altVehicle.model || altVehicle.brand || 'Vehicle';
-                    }
+                if (typeLower === 'scooty') {
+                    tableName = 'scooty';
+                } else if (typeLower === 'bike') {
+                    tableName = 'bikes';
+                } else if (typeLower === 'car') {
+                    tableName = 'cars';
+                } else {
+                    tableName = typeLower + 's';
                 }
-            } else if (vehicle) {
-                vehicleName = vehicle.name || vehicle.model || vehicle.brand || 'Vehicle';
+
+                const { data: vehicle, error: vehicleError } = await supabase
+                    .from(tableName)
+                    .select('*')
+                    .eq('id', booking.vehicle_id)
+                    .single();
+
+                if (vehicleError) {
+                    if (tableName === 'scooty') {
+                        const { data: altVehicle } = await supabase
+                            .from('scooties')
+                            .select('*')
+                            .eq('id', booking.vehicle_id)
+                            .single();
+                        if (altVehicle) {
+                            vehicleName = altVehicle.name || altVehicle.model || altVehicle.brand || 'Vehicle';
+                        }
+                    }
+                } else if (vehicle) {
+                    vehicleName = vehicle.name || vehicle.model || vehicle.brand || 'Vehicle';
+                }
             }
+        } else {
+            vehicleName = 'Rented Vehicle (Roadside SOS)';
         }
 
         let gpsString = 'Not Provided';
@@ -84,20 +132,24 @@ const activateSOS = async (req, res) => {
             gpsString = gpsLocation;
         }
 
-        const userPhone = booking.users?.phone_number || booking.phone_number || null;
-        const userEmail = booking.users?.email || booking.user_email || null;
+        const userObj = Array.isArray(booking?.users) ? booking.users[0] : booking?.users;
+        const userPhone = phoneNumber || userObj?.phone_number || booking?.phone_number || null;
+        const userEmail = userObj?.email || booking?.user_email || 'jyoti2006@gmail.com';
+        const userName = userObj?.full_name || 'RentHub Customer';
+
         const sosData = {
-            bookingId: booking.booking_id || booking.id,
-            userName: booking.users?.full_name || 'Unknown User',
-            userEmail: userEmail || 'Unknown Email',
+            bookingId: booking?.booking_id || booking?.id || (bookingId || ('SOS-' + Date.now().toString().slice(-6))),
+            userName: userName,
+            userEmail: userEmail,
             phoneNumber: userPhone || 'Unknown Phone',
             bikeModel: vehicleName,
-            pickupLocation: booking.pickup_location || 'GITA Autonomous College BBSR',
+            pickupLocation: booking?.pickup_location || 'GITA Autonomous College BBSR',
             timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
             gpsLocation: gpsString,
             googleMapsLink: googleMapsLink
         };
 
+        // Fetch all admins from database
         const { data: admins, error: adminError } = await supabase
             .from('admins')
             .select('email');
@@ -113,11 +165,35 @@ const activateSOS = async (req, res) => {
         }
 
         const allAdminEmailsArray = Array.from(allAdminEmails);
-        await sendSOSAlertEmail(allAdminEmailsArray, sosData);
+        try {
+            await sendSOSAlertEmail(allAdminEmailsArray, sosData);
+        } catch (emailErr) {
+            console.error('Error sending SOS admin alert email:', emailErr.message);
+        }
+
+        // 2. Trigger Retell AI Automated Emergency Outbound Call to the User's Phone
+        let callResult = { success: false };
+        if (userPhone && String(userPhone).trim() !== '' && String(userPhone).toLowerCase() !== 'unknown phone') {
+            try {
+                console.log(`🎙️ Initiating Retell AI Emergency Call to user ${userPhone} for booking ${sosData.bookingId}...`);
+                callResult = await makeSOSOutboundCall(String(userPhone), sosData);
+                console.log('📞 Retell AI SOS Call Response:', callResult);
+            } catch (callErr) {
+                console.error('⚠️ Retell AI SOS Call Failed:', callErr.message);
+                callResult = { success: false, error: callErr.message };
+            }
+        } else {
+            console.warn('⚠️ No valid user phone number found for SOS voice call.');
+            callResult = { success: false, error: 'No phone number available for call dispatch' };
+        }
 
         res.json({
             success: true,
-            message: 'SOS alert sent successfully.',
+            message: callResult.success
+                ? 'SOS alert sent successfully. Emergency AI call connected.'
+                : 'SOS alert sent successfully. Emergency AI calling initiated.',
+            callInitiated: callResult.success,
+            callDetails: callResult,
             sosData: {
                 bookingId: sosData.bookingId,
                 userName: sosData.userName,
@@ -131,7 +207,7 @@ const activateSOS = async (req, res) => {
 
     } catch (error) {
         console.error('Error processing SOS request:', error);
-        res.status(500).json({ error: 'Internal server error processing SOS' });
+        res.status(500).json({ error: 'Internal server error processing SOS: ' + error.message });
     }
 };
 

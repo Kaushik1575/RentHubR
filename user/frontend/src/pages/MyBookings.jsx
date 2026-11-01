@@ -499,16 +499,30 @@ const MyBookings = () => {
                             <span className={`booking-status status-${booking.status}`} style={{
                                 fontWeight: 'bold', padding: '0.5rem 1rem', borderRadius: '5px', display: 'inline-block', marginTop: '0.5rem', color: 'white', textAlign: 'center', width: 'fit-content',
                                 backgroundColor: booking.status === 'confirmed' ? '#4CAF50' :
+                                    booking.status === 'ride_started' ? '#0284c7' :
                                     booking.status === 'pending' ? '#ffa726' :
                                         booking.status === 'cancelled' ? '#f44336' :
                                             booking.status === 'completed' ? '#2196F3' : '#9e9e9e'
                             }}>
-                                {booking.status ? booking.status.toUpperCase() : 'N/A'}
+                                {booking.status === 'ride_started' ? 'RIDE IN PROGRESS' : (booking.status ? booking.status.toUpperCase() : 'N/A')}
                             </span>
 
-                            {(booking.status === 'confirmed' || booking.status === 'pending' || booking.status === 'completed') && (
+                            {(booking.status === 'confirmed' || booking.status === 'ride_started' || booking.status === 'pending' || booking.status === 'completed') && (
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', flexWrap: 'wrap' }}>
-                                    {(booking.status === 'confirmed' || booking.status === 'completed') && (
+                                    {(booking.status === 'confirmed' || booking.status === 'ride_started') && (
+                                        <a
+                                            href={`/sos-activate?bookingId=${booking.booking_id || booking.id}&token=web_direct`}
+                                            style={{ textDecoration: 'none' }}
+                                        >
+                                            <button style={{
+                                                backgroundColor: '#dc2626', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold', boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)'
+                                            }}>
+                                                <span>🚨</span> Emergency SOS
+                                            </button>
+                                        </a>
+                                    )}
+
+                                    {(booking.status === 'confirmed' || booking.status === 'completed' || booking.status === 'ride_started') && (
                                         <button onClick={() => handleDownloadInvoice(booking.id)} style={{
                                             backgroundColor: '#2196F3', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem'
                                         }}>

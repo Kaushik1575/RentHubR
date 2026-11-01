@@ -397,6 +397,25 @@ const TrackBooking = () => {
                                 Invoice
                             </button>
 
+                            {(result.status === 'confirmed' || result.status === 'ride_started') && (
+                                <a
+                                    href={`/sos-activate?bookingId=${result.booking_id || result.id}&token=web_direct`}
+                                    style={{ textDecoration: 'none' }}
+                                >
+                                    <button
+                                        style={{
+                                            display: 'inline-flex', alignItems: 'center', padding: '10px 20px',
+                                            background: '#dc2626', color: 'white', border: 'none',
+                                            borderRadius: '5px', cursor: 'pointer', fontWeight: 'bold',
+                                            boxShadow: '0 2px 8px rgba(220, 38, 38, 0.4)'
+                                        }}
+                                    >
+                                        <i className="fas fa-satellite-dish" style={{ marginRight: '8px' }}></i>
+                                        Emergency SOS
+                                    </button>
+                                </a>
+                            )}
+
                             {/* Cancel Button if Confirmed */}
                             {result.status === 'confirmed' && (
                                 <button
