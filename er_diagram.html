@@ -1,0 +1,495 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>RentHub - ER Diagram (High Definition)</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background: #f8fafc;
+      color: #0f172a;
+      padding: 30px;
+      min-width: 1400px;
+    }
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 25px;
+      background: white;
+      padding: 18px 28px;
+      border-radius: 12px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.05);
+    }
+    .header-title h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+    .header-title p {
+      font-size: 13px;
+      color: #64748b;
+      margin-top: 4px;
+    }
+    .actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      transition: background 0.2s;
+    }
+    .btn:hover {
+      background: #1d4ed8;
+    }
+    .btn-secondary {
+      background: #f1f5f9;
+      color: #334155;
+      border: 1px solid #cbd5e1;
+    }
+    .btn-secondary:hover {
+      background: #e2e8f0;
+    }
+
+    /* Diagram Canvas */
+    .canvas {
+      position: relative;
+      background: white;
+      border-radius: 16px;
+      border: 1px solid #e2e8f0;
+      padding: 40px 30px;
+      box-shadow: 0 10px 15px -3px rgba(0,0,0,0.05);
+      min-height: 850px;
+    }
+
+    .grid-layout {
+      display: grid;
+      grid-template-columns: 320px 1fr 320px;
+      gap: 30px;
+      position: relative;
+      z-index: 2;
+    }
+
+    /* Column stacks */
+    .col-left, .col-right {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+    }
+    .col-center {
+      display: flex;
+      flex-direction: column;
+      gap: 25px;
+      align-items: center;
+    }
+
+    .fleet-row {
+      display: flex;
+      gap: 15px;
+      width: 100%;
+      justify-content: center;
+    }
+
+    /* Table Card */
+    .table-card {
+      background: white;
+      border-radius: 10px;
+      border: 1.5px solid #cbd5e1;
+      overflow: hidden;
+      box-shadow: 0 4px 6px -1px rgba(0,0,0,0.06);
+      width: 100%;
+      font-size: 12px;
+    }
+    .table-card.mini {
+      flex: 1;
+      max-width: 210px;
+    }
+    .table-card.main-booking {
+      width: 480px;
+    }
+
+    .table-header {
+      padding: 10px 14px;
+      font-weight: 700;
+      font-size: 13px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 1.5px solid;
+    }
+    .table-header span.count {
+      font-size: 11px;
+      font-weight: 500;
+      opacity: 0.8;
+    }
+
+    /* Theme headers */
+    .theme-user .table-header { background: #e0e7ff; color: #3730a3; border-color: #c7d2fe; }
+    .theme-user { border-color: #818cf8; }
+
+    .theme-admin .table-header { background: #fef3c7; color: #92400e; border-color: #fde68a; }
+    .theme-admin { border-color: #f59e0b; }
+
+    .theme-fleet .table-header { background: #dcfce7; color: #166534; border-color: #bbf7d0; }
+    .theme-fleet { border-color: #4ade80; }
+
+    .theme-booking .table-header { background: #e2e8f0; color: #1e293b; border-color: #cbd5e1; }
+    .theme-booking { border-color: #64748b; }
+
+    .theme-offers .table-header { background: #fce7f3; color: #9d174d; border-color: #fbcfe8; }
+    .theme-offers { border-color: #f472b6; }
+
+    .theme-rewards .table-header { background: #ede9fe; color: #5b21b6; border-color: #ddd6fe; }
+    .theme-rewards { border-color: #a78bfa; }
+
+    .theme-issues .table-header { background: #ffedd5; color: #9a3412; border-color: #fed7aa; }
+    .theme-issues { border-color: #fb923c; }
+
+    /* Rows */
+    .table-rows {
+      display: flex;
+      flex-direction: column;
+    }
+    .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 6px 12px;
+      border-bottom: 1px solid #f1f5f9;
+      font-size: 12px;
+    }
+    .row:last-child {
+      border-bottom: none;
+    }
+    .row:nth-child(even) {
+      background: #f8fafc;
+    }
+    .col-name {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 600;
+      color: #334155;
+    }
+    .col-type {
+      color: #64748b;
+      font-size: 11px;
+      font-family: monospace;
+    }
+
+    /* Badges */
+    .badge {
+      display: inline-block;
+      padding: 2px 5px;
+      border-radius: 4px;
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.5px;
+    }
+    .badge-pk { background: #fef08a; color: #854d0e; }
+    .badge-fk { background: #dbeafe; color: #1e40af; }
+    .badge-uk { background: #f3e8ff; color: #6b21a8; }
+
+    /* Relationship Legend */
+    .legend {
+      margin-top: 30px;
+      padding: 16px 20px;
+      background: #f8fafc;
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 20px;
+      font-size: 12px;
+      color: #475569;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .legend-line {
+      width: 25px;
+      height: 3px;
+      border-radius: 2px;
+    }
+
+    @media print {
+      body {
+        padding: 0;
+        background: white;
+      }
+      .header-bar, .actions {
+        display: none !important;
+      }
+      .canvas {
+        box-shadow: none;
+        border: none;
+        padding: 10px;
+      }
+      @page {
+        size: landscape;
+        margin: 10mm;
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="header-bar">
+    <div class="header-title">
+      <h1>RentHub - Database Entity Relationship (ER) Diagram</h1>
+      <p>Live PostgreSQL & Supabase Database Schema • User, Admin, Fleet, Bookings & Support Modules</p>
+    </div>
+    <div class="actions">
+      <button class="btn" style="background:#10b981;" onclick="downloadImage()">📥 Download HD Image (for PPT)</button>
+      <button class="btn btn-secondary" onclick="window.print()">🖨️ Print / Save as PDF</button>
+    </div>
+  </div>
+
+  <div class="canvas">
+    <div class="grid-layout">
+
+      <!-- ================= LEFT COLUMN: CUSTOMER DOMAIN ================= -->
+      <div class="col-left">
+
+        <!-- USERS TABLE -->
+        <div class="table-card theme-user">
+          <div class="table-header">
+            <span>USERS</span>
+            <span class="count">users</span>
+          </div>
+          <div class="table-rows">
+            <div class="row"><div class="col-name"><span class="badge badge-pk">PK</span> id</div><div class="col-type">bigint</div></div>
+            <div class="row"><div class="col-name">full_name</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-uk">UK</span> email</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">phone_number</div><div class="col-type">bigint</div></div>
+            <div class="row"><div class="col-name">password</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">aadhar_number</div><div class="col-type">bigint</div></div>
+            <div class="row"><div class="col-name">address</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">super_coins</div><div class="col-type">integer</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-uk">UK</span> referral_code</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-fk">FK</span> referred_by</div><div class="col-type">bigint</div></div>
+            <div class="row"><div class="col-name">is_blocked</div><div class="col-type">boolean</div></div>
+            <div class="row"><div class="col-name">created_at</div><div class="col-type">timestamp</div></div>
+          </div>
+        </div>
+
+        <!-- REWARDS TABLE -->
+        <div class="table-card theme-rewards">
+          <div class="table-header">
+            <span>REWARDS</span>
+            <span class="count">rewards</span>
+          </div>
+          <div class="table-rows">
+            <div class="row"><div class="col-name"><span class="badge badge-pk">PK</span> id</div><div class="col-type">bigint</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-fk">FK</span> user_id</div><div class="col-type">bigint</div></div>
+            <div class="row"><div class="col-name">reward_type</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-uk">UK</span> coupon_code</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">is_used</div><div class="col-type">boolean</div></div>
+            <div class="row"><div class="col-name">expires_at</div><div class="col-type">timestamptz</div></div>
+            <div class="row"><div class="col-name">created_at</div><div class="col-type">timestamptz</div></div>
+          </div>
+        </div>
+
+        <!-- ISSUES TABLE -->
+        <div class="table-card theme-issues">
+          <div class="table-header">
+            <span>ISSUES</span>
+            <span class="count">support tickets</span>
+          </div>
+          <div class="table-rows">
+            <div class="row"><div class="col-name"><span class="badge badge-pk">PK</span> id</div><div class="col-type">uuid</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-uk">UK</span> issue_id</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-fk">FK</span> user_id</div><div class="col-type">bigint</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-fk">FK</span> booking_id</div><div class="col-type">varchar(15)</div></div>
+            <div class="row"><div class="col-name">email</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">category</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">description</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">status</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">admin_reply</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">created_at</div><div class="col-type">timestamptz</div></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= CENTER COLUMN: FLEET & TRIPS ================= -->
+      <div class="col-center">
+
+        <!-- 3 VEHICLES (CARS, BIKES, SCOOTY) -->
+        <div class="fleet-row">
+          
+          <div class="table-card mini theme-fleet">
+            <div class="table-header"><span>CARS</span><span class="count">cars</span></div>
+            <div class="table-rows">
+              <div class="row"><div class="col-name"><span class="badge badge-pk">PK</span> id</div><div class="col-type">bigint</div></div>
+              <div class="row"><div class="col-name">name</div><div class="col-type">text</div></div>
+              <div class="row"><div class="col-name">engine</div><div class="col-type">text</div></div>
+              <div class="row"><div class="col-name">price</div><div class="col-type">numeric</div></div>
+              <div class="row"><div class="col-name">fuel_type</div><div class="col-type">text</div></div>
+              <div class="row"><div class="col-name">is_available</div><div class="col-type">bool</div></div>
+            </div>
+          </div>
+
+          <div class="table-card mini theme-fleet">
+            <div class="table-header"><span>BIKES</span><span class="count">bikes</span></div>
+            <div class="table-rows">
+              <div class="row"><div class="col-name"><span class="badge badge-pk">PK</span> id</div><div class="col-type">bigint</div></div>
+              <div class="row"><div class="col-name">name</div><div class="col-type">text</div></div>
+              <div class="row"><div class="col-name">engine</div><div class="col-type">text</div></div>
+              <div class="row"><div class="col-name">price</div><div class="col-type">numeric</div></div>
+              <div class="row"><div class="col-name">fuel_type</div><div class="col-type">text</div></div>
+              <div class="row"><div class="col-name">is_available</div><div class="col-type">bool</div></div>
+            </div>
+          </div>
+
+          <div class="table-card mini theme-fleet">
+            <div class="table-header"><span>SCOOTY</span><span class="count">scooty</span></div>
+            <div class="table-rows">
+              <div class="row"><div class="col-name"><span class="badge badge-pk">PK</span> id</div><div class="col-type">bigint</div></div>
+              <div class="row"><div class="col-name">name</div><div class="col-type">text</div></div>
+              <div class="row"><div class="col-name">engine</div><div class="col-type">text</div></div>
+              <div class="row"><div class="col-name">price</div><div class="col-type">numeric</div></div>
+              <div class="row"><div class="col-name">fuel_type</div><div class="col-type">text</div></div>
+              <div class="row"><div class="col-name">is_available</div><div class="col-type">bool</div></div>
+            </div>
+          </div>
+
+        </div>
+
+        <!-- MAIN BOOKINGS TABLE -->
+        <div class="table-card main-booking theme-booking">
+          <div class="table-header">
+            <span>BOOKINGS (Core Transactions)</span>
+            <span class="count">bookings</span>
+          </div>
+          <div class="table-rows">
+            <div class="row"><div class="col-name"><span class="badge badge-pk">PK</span> id</div><div class="col-type">bigint</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-uk">UK</span> booking_id</div><div class="col-type">varchar(15)</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-fk">FK</span> user_id</div><div class="col-type">bigint &rarr; users.id</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-fk">FK</span> vehicle_id</div><div class="col-type">bigint &rarr; cars/bikes/scooty.id</div></div>
+            <div class="row"><div class="col-name">vehicle_type</div><div class="col-type">text (car/bike/scooty)</div></div>
+            <div class="row"><div class="col-name">start_date / start_time</div><div class="col-type">date / text</div></div>
+            <div class="row"><div class="col-name">duration</div><div class="col-type">integer (hours)</div></div>
+            <div class="row"><div class="col-name">total_amount</div><div class="col-type">numeric(10,2)</div></div>
+            <div class="row"><div class="col-name">advance_payment</div><div class="col-type">numeric</div></div>
+            <div class="row"><div class="col-name">status</div><div class="col-type">text (confirmed/completed)</div></div>
+            <div class="row"><div class="col-name">refund_status</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-fk">FK</span> refund_completed_by</div><div class="col-type">bigint &rarr; admins.id</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-fk">FK</span> reward_id</div><div class="col-type">bigint &rarr; rewards.id</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-fk">FK</span> coupon_code</div><div class="col-type">text &rarr; offers.code</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-uk">UK</span> transaction_id</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">created_at</div><div class="col-type">timestamp</div></div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- ================= RIGHT COLUMN: ADMIN & PROMO ================= -->
+      <div class="col-right">
+
+        <!-- ADMINS TABLE -->
+        <div class="table-card theme-admin">
+          <div class="table-header">
+            <span>ADMINS</span>
+            <span class="count">admins</span>
+          </div>
+          <div class="table-rows">
+            <div class="row"><div class="col-name"><span class="badge badge-pk">PK</span> id</div><div class="col-type">bigint</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-uk">UK</span> admin_id</div><div class="col-type">varchar(100)</div></div>
+            <div class="row"><div class="col-name">full_name</div><div class="col-type">varchar(255)</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-uk">UK</span> email</div><div class="col-type">varchar(255)</div></div>
+            <div class="row"><div class="col-name">phone_number</div><div class="col-type">varchar(50)</div></div>
+            <div class="row"><div class="col-name">role</div><div class="col-type">varchar(50)</div></div>
+            <div class="row"><div class="col-name">is_admin</div><div class="col-type">boolean</div></div>
+            <div class="row"><div class="col-name">created_at</div><div class="col-type">timestamptz</div></div>
+          </div>
+        </div>
+
+        <!-- OFFERS TABLE -->
+        <div class="table-card theme-offers">
+          <div class="table-header">
+            <span>OFFERS / PROMO</span>
+            <span class="count">offers</span>
+          </div>
+          <div class="table-rows">
+            <div class="row"><div class="col-name"><span class="badge badge-pk">PK</span> id</div><div class="col-type">uuid</div></div>
+            <div class="row"><div class="col-name"><span class="badge badge-uk">UK</span> code</div><div class="col-type">text (e.g. FESTIVE20)</div></div>
+            <div class="row"><div class="col-name">title</div><div class="col-type">text</div></div>
+            <div class="row"><div class="col-name">offer_type</div><div class="col-type">text (GENERAL/HOURLY)</div></div>
+            <div class="row"><div class="col-name">discount_percentage</div><div class="col-type">numeric</div></div>
+            <div class="row"><div class="col-name">flat_discount</div><div class="col-type">numeric</div></div>
+            <div class="row"><div class="col-name">min_booking_amount</div><div class="col-type">numeric</div></div>
+            <div class="row"><div class="col-name">target_category</div><div class="col-type">text (ALL/bike/car)</div></div>
+            <div class="row"><div class="col-name">is_active</div><div class="col-type">boolean</div></div>
+            <div class="row"><div class="col-name">valid_until</div><div class="col-type">timestamptz</div></div>
+          </div>
+        </div>
+
+      </div>
+
+    </div>
+
+    <!-- Relationships Legend at bottom -->
+    <div class="legend">
+      <div class="legend-item"><span class="badge badge-pk">PK</span> Primary Key</div>
+      <div class="legend-item"><span class="badge badge-fk">FK</span> Foreign Key Relationship</div>
+      <div class="legend-item"><span class="badge badge-uk">UK</span> Unique Key Constraint</div>
+      <div class="legend-item"><span style="color:#2563eb; font-weight:700;">users &rarr; bookings</span> (1 : N Customer Bookings)</div>
+      <div class="legend-item"><span style="color:#16a34a; font-weight:700;">fleet &rarr; bookings</span> (1 : N Vehicle Reservations)</div>
+      <div class="legend-item"><span style="color:#d97706; font-weight:700;">admins &rarr; bookings</span> (1 : N Refund Authorizations)</div>
+      <div class="legend-item"><span style="color:#db2777; font-weight:700;">offers &rarr; bookings</span> (1 : N Promo Redemptions)</div>
+      <div class="legend-item"><span style="color:#ea580c; font-weight:700;">users &rarr; issues</span> (1 : N Support Inquiries)</div>
+    </div>
+  </div>
+
+  <!-- High-Res Image Export Engine -->
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+  <script>
+    function downloadImage() {
+      const btn = event.target;
+      const originalText = btn.innerHTML;
+      btn.innerHTML = "⏳ Generating HD Image...";
+      btn.disabled = true;
+
+      const element = document.querySelector('.canvas');
+      
+      html2canvas(element, {
+        scale: 2.5, // 2.5x High-Definition Retina Scale
+        useCORS: true,
+        backgroundColor: '#ffffff',
+        logging: false
+      }).then(canvas => {
+        const link = document.createElement('a');
+        link.download = 'RentHub_ER_Diagram_HD.png';
+        link.href = canvas.toDataURL('image/png', 1.0);
+        link.click();
+        
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      }).catch(err => {
+        alert("Export failed: " + err.message);
+        btn.innerHTML = originalText;
+        btn.disabled = false;
+      });
+    }
+  </script>
+</body>
+</html>

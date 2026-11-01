@@ -1,0 +1,493 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>RentHub - Data Flow Diagrams (DFD Level 0, 1, 2)</title>
+  <!-- Mermaid.js for rock-solid diagram rendering -->
+  <script src="https://cdn.jsdelivr.net/npm/mermaid@10/dist/mermaid.min.js"></script>
+  <!-- html2canvas for 1-click high-resolution PNG export for MS Word -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    }
+    body {
+      background: #0f172a;
+      color: #f8fafc;
+      padding: 24px;
+      min-height: 100vh;
+    }
+    .container {
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    /* Top Header Bar */
+    .header-bar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #1e293b;
+      padding: 20px 28px;
+      border-radius: 14px;
+      border: 1px solid #334155;
+      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      margin-bottom: 24px;
+    }
+    .header-title h1 {
+      font-size: 24px;
+      font-weight: 800;
+      color: #38bdf8;
+      letter-spacing: -0.5px;
+    }
+    .header-title p {
+      font-size: 14px;
+      color: #94a3b8;
+      margin-top: 4px;
+    }
+    .header-actions {
+      display: flex;
+      gap: 12px;
+    }
+    .btn {
+      background: #2563eb;
+      color: white;
+      border: none;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-weight: 600;
+      font-size: 14px;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.2s;
+    }
+    .btn:hover {
+      background: #1d4ed8;
+      transform: translateY(-1px);
+    }
+    .btn-green {
+      background: #059669;
+    }
+    .btn-green:hover {
+      background: #047857;
+    }
+
+    /* Tabs Bar */
+    .tab-bar {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 20px;
+      background: #1e293b;
+      padding: 6px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      width: fit-content;
+    }
+    .tab-btn {
+      background: transparent;
+      border: none;
+      color: #94a3b8;
+      padding: 10px 20px;
+      font-size: 14px;
+      font-weight: 600;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .tab-btn.active {
+      background: #38bdf8;
+      color: #0f172a;
+      box-shadow: 0 4px 12px rgba(56, 189, 248, 0.3);
+    }
+    .tab-btn:hover:not(.active) {
+      color: #f8fafc;
+      background: #334155;
+    }
+
+    /* Diagram Card */
+    .diagram-card {
+      background: #ffffff;
+      color: #0f172a;
+      border-radius: 16px;
+      padding: 32px;
+      border: 1px solid #e2e8f0;
+      box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+      position: relative;
+      min-height: 650px;
+    }
+    .card-meta {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-bottom: 2px solid #f1f5f9;
+      padding-bottom: 16px;
+      margin-bottom: 24px;
+    }
+    .card-meta h2 {
+      font-size: 20px;
+      font-weight: 800;
+      color: #1e293b;
+    }
+    .card-meta .badge {
+      background: #e0f2fe;
+      color: #0284c7;
+      font-size: 12px;
+      font-weight: 700;
+      padding: 4px 12px;
+      border-radius: 20px;
+      border: 1px solid #bae6fd;
+    }
+    .card-desc {
+      color: #64748b;
+      font-size: 14px;
+      margin-bottom: 24px;
+      line-height: 1.6;
+      background: #f8fafc;
+      padding: 12px 18px;
+      border-left: 4px solid #38bdf8;
+      border-radius: 4px;
+    }
+
+    /* Export Canvas Container */
+    .export-area {
+      background: #ffffff;
+      padding: 20px;
+      border-radius: 12px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      overflow-x: auto;
+    }
+
+    .mermaid {
+      width: 100%;
+      display: flex;
+      justify-content: center;
+    }
+
+    /* Tab Content Visibility */
+    .tab-pane {
+      display: none;
+    }
+    .tab-pane.active {
+      display: block;
+    }
+
+    /* Notation Legend */
+    .legend-bar {
+      margin-top: 24px;
+      background: #1e293b;
+      padding: 16px 24px;
+      border-radius: 12px;
+      border: 1px solid #334155;
+      display: flex;
+      gap: 32px;
+      align-items: center;
+      font-size: 13px;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .legend-box {
+      width: 24px;
+      height: 16px;
+      border-radius: 3px;
+    }
+    .leg-entity { background: #bae6fd; border: 2px solid #0284c7; }
+    .leg-process { background: #fef08a; border: 2px solid #ca8a04; border-radius: 12px; }
+    .leg-store { background: #bbf7d0; border: 2px solid #16a34a; border-radius: 0; }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <!-- Top Navigation -->
+  <div class="header-bar">
+    <div class="header-title">
+      <h1>RentHub - Data Flow Diagrams (DFDs)</h1>
+      <p>Official High-Resolution College Project Report Diagrams &bull; Gane-Sarson / Yourdon Standard</p>
+    </div>
+    <div class="header-actions">
+      <button class="btn btn-green" onclick="downloadCurrentPNG()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"></path></svg>
+        Download High-Res PNG (Word Ready)
+      </button>
+      <button class="btn" onclick="window.print()">
+        <svg width="18" height="18" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2 2v4h10z"></path></svg>
+        Print / Save PDF
+      </button>
+    </div>
+  </div>
+
+  <!-- Diagram Select Tabs -->
+  <div class="tab-bar">
+    <button class="tab-btn active" onclick="switchTab('dfd0')">DFD Level 0 (Context Diagram)</button>
+    <button class="tab-btn" onclick="switchTab('dfd1')">DFD Level 1 (System Decomposition)</button>
+    <button class="tab-btn" onclick="switchTab('dfd2')">DFD Level 2 (Booking Subsystem)</button>
+  </div>
+
+  <!-- TAB 1: DFD LEVEL 0 -->
+  <div id="dfd0" class="tab-pane active">
+    <div class="diagram-card">
+      <div class="card-meta">
+        <div>
+          <h2>Figure 2.1: DFD Level 0 — Context Analysis Diagram</h2>
+          <span style="font-size: 13px; color: #64748b;">Overall boundary interaction between External Entities and RentHub Core</span>
+        </div>
+        <span class="badge">Level 0 &bull; Context</span>
+      </div>
+      <div class="card-desc">
+        <strong>Explanation for Word Report:</strong> The Context Diagram illustrates the boundary of the RentHub system. The entire system is abstracted into a single central process (<strong>0.0 RentHub System</strong>). It interacts with two primary external terminators: the <strong>Registered Customer</strong> (providing login credentials, search filters, and booking transactions) and the <strong>System Administrator</strong> (managing fleet inventory, promotional rewards, and system configurations).
+      </div>
+      <div id="export-dfd0" class="export-area">
+        <div class="mermaid">
+graph LR
+    %% Entities
+    U["fa:fa-user Registered Customer<br/>(External Entity)"]:::entityClass
+    A["fa:fa-user-shield System Administrator<br/>(External Entity)"]:::entityClass
+    
+    %% Central Process
+    P0(("0.0<br/><b>RentHub Vehicle<br/>Rental & Fleet<br/>Management System</b>")):::processClass
+
+    %% User Inflows and Outflows
+    U -->|"1. User Credentials (Login/Reg)<br/>2. Vehicle Search & Filter Criteria<br/>3. Reservation Request (Dates/Tariff)<br/>4. Payment & Refund Request<br/>5. Support Issues & Feedback"| P0
+    P0 -->|"1. Auth Token (JWT) & Profile<br/>2. Dynamic Vehicle Catalog & Rates<br/>3. Confirmed Numeric Booking ID<br/>4. Digital Invoice & Transaction Slip<br/>5. Grievance Status & Response"| U
+
+    %% Admin Inflows and Outflows
+    A -->|"1. Admin Auth Credentials<br/>2. Fleet Addition & Updates (Cars/Bikes)<br/>3. Promotional Codes & Reward Rules<br/>4. Booking Status Modification<br/>5. Customer Support Resolutions"| P0
+    P0 -->|"1. Admin Session & Privilege State<br/>2. Live Fleet Inventory & Telemetry<br/>3. Booking Audits & Revenue Reports<br/>4. Active Customer Grievance Logs"| A
+
+    %% Classes & Styles
+    classDef entityClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0f172a,font-weight:bold;
+    classDef processClass fill:#fef08a,stroke:#ca8a04,stroke-width:3px,color:#0f172a,font-weight:bold;
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 2: DFD LEVEL 1 -->
+  <div id="dfd1" class="tab-pane">
+    <div class="diagram-card">
+      <div class="card-meta">
+        <div>
+          <h2>Figure 2.2: DFD Level 1 — Functional Decomposition Diagram</h2>
+          <span style="font-size: 13px; color: #64748b;">Decomposition into 5 Core Functional Sub-processes and 6 Central Data Stores</span>
+        </div>
+        <span class="badge">Level 1 &bull; Decomposition</span>
+      </div>
+      <div class="card-desc">
+        <strong>Explanation for Word Report:</strong> DFD Level 1 decomposes the central system into five fundamental operational processes: <strong>1.0 User Authentication</strong>, <strong>2.0 Fleet Management</strong>, <strong>3.0 Booking & Reservation</strong>, <strong>4.0 Offers & Rewards</strong>, and <strong>5.0 Support & Grievance Handling</strong>. Data flows directly between processes and dedicated relational stores (D1: `users`, D2: `admins`, D3: Fleet Catalog, D4: `bookings`, D5: `offers`/`rewards`, D6: `issues`).
+      </div>
+      <div id="export-dfd1" class="export-area">
+        <div class="mermaid">
+graph TB
+    %% External Entities
+    User["Registered Customer"]:::entityClass
+    Admin["System Administrator"]:::entityClass
+
+    %% Sub-processes
+    P1(("1.0<br/>Authentication &<br/>Account Mgmt")):::processClass
+    P2(("2.0<br/>Vehicle Fleet<br/>Catalog Mgmt")):::processClass
+    P3(("3.0<br/>Reservation &<br/>Booking Engine")):::processClass
+    P4(("4.0<br/>Discounts &<br/>Rewards Engine")):::processClass
+    P5(("5.0<br/>Customer Support<br/>& Grievances")):::processClass
+
+    %% Data Stores
+    D1[("D1: users Table")]:::storeClass
+    D2[("D2: admins Table")]:::storeClass
+    D3[("D3: cars / bikes / scooty")]:::storeClass
+    D4[("D4: bookings & sequence")]:::storeClass
+    D5[("D5: offers & rewards")]:::storeClass
+    D6[("D6: issues Table")]:::storeClass
+
+    %% Entity to Process 1.0
+    User -->|"Signup / Login Data"| P1
+    Admin -->|"Admin Credentials"| P1
+    P1 -->|"JWT Auth Token"| User
+    P1 -->|"Admin Session Token"| Admin
+    P1 <-->|"Verify / Hash Bcrypt Creds"| D1
+    P1 <-->|"Verify Admin Privileges"| D2
+
+    %% Entity to Process 2.0
+    Admin -->|"Add / Modify / Retire Vehicles"| P2
+    P2 -->|"Update Vehicle Specifications"| D3
+    D3 -->|"Available Fleet Stream"| P2
+    P2 -->|"Catalog & Tariff Browse List"| User
+
+    %% Entity to Process 3.0 & 4.0
+    User -->|"Submit Reservation (Dates/Car)"| P3
+    P3 -->|"Fetch Hourly Tariff & Availability"| D3
+    User -->|"Apply Promo / Reward Voucher"| P4
+    P4 <-->|"Validate Voucher & Single-Use Flag"| D5
+    P4 -->|"Computed Discount Deduction"| P3
+    P3 -->|"Commit Atomic Reservation (UUID)"| D4
+    P3 -->|"Issue Digital Booking Confirmation"| User
+    Admin -->|"Audit / Cancel / Review Bookings"| P3
+    D4 -->|"Booking Logs & Daily Turnover"| Admin
+
+    %% Entity to Process 5.0
+    User -->|"Submit Complaint / Breakdown Issue"| P5
+    P5 -->|"Persist Ticket (Status=Pending)"| D6
+    D6 -->|"Pending Issue Stream"| P5
+    P5 -->|"Issue Escalation Queue"| Admin
+    Admin -->|"Post Issue Resolution & Action"| P5
+    P5 -->|"Resolution Notice"| User
+
+    %% Styles
+    classDef entityClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0f172a,font-weight:bold;
+    classDef processClass fill:#fef08a,stroke:#ca8a04,stroke-width:2px,color:#0f172a,font-weight:bold;
+    classDef storeClass fill:#bbf7d0,stroke:#16a34a,stroke-width:2px,color:#0f172a,font-weight:bold;
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- TAB 3: DFD LEVEL 2 -->
+  <div id="dfd2" class="tab-pane">
+    <div class="diagram-card">
+      <div class="card-meta">
+        <div>
+          <h2>Figure 2.3: DFD Level 2 — Booking & Reservation Subsystem (Process 3.0)</h2>
+          <span style="font-size: 13px; color: #64748b;">Granular Step-by-Step Transaction Pipeline for Vehicle Booking & Billing</span>
+        </div>
+        <span class="badge">Level 2 &bull; Subsystem</span>
+      </div>
+      <div class="card-desc">
+        <strong>Explanation for Word Report:</strong> DFD Level 2 zooms into <strong>Process 3.0 (Booking Engine)</strong> to display internal sequential micro-steps: validating vehicle availability against collision schedules (3.1), computing gross duration tariffs & discount reductions (3.2), fetching atomic sequence increments (3.3), executing ACID transaction commits across database tables (3.4), and generating customer receipts (3.5).
+      </div>
+      <div id="export-dfd2" class="export-area">
+        <div class="mermaid">
+graph TB
+    %% External Entities
+    User["Registered Customer"]:::entityClass
+    Admin["System Administrator"]:::entityClass
+
+    %% Sub-processes of 3.0
+    P31(("3.1<br/>Check Fleet<br/>Availability")):::processClass
+    P32(("3.2<br/>Calculate Duration<br/>& Tariff Breakdown")):::processClass
+    P33(("3.3<br/>Generate Atomic<br/>Booking ID")):::processClass
+    P34(("3.4<br/>Execute ACID<br/>Booking Commit")):::processClass
+    P35(("3.5<br/>Issue Receipt &<br/>Notification")):::processClass
+
+    %% Data Stores
+    D3[("D3: cars / bikes / scooty")]:::storeClass
+    D4A[("D4a: booking_id_sequence")]:::storeClass
+    D4B[("D4b: bookings Table")]:::storeClass
+    D5[("D5: offers & rewards")]:::storeClass
+
+    %% Flow: Step 3.1
+    User -->|"Vehicle Model, Start/End Dates"| P31
+    P31 <-->|"Check Availability & Overlap Conflicts"| D3
+    P31 -->|"Confirmed Available Status & Hourly Rate"| P32
+
+    %% Flow: Step 3.2
+    User -->|"Optional Promo Code / Voucher ID"| P32
+    P32 <-->|"Validate Discount & Expiry"| D5
+    P32 -->|"Final Net Payable Calculation"| P33
+
+    %% Flow: Step 3.3
+    P33 <-->|"Fetch Next Atomic Sequence Number"| D4A
+    P33 -->|"Generated Unique Booking ID & Payload"| P34
+
+    %% Flow: Step 3.4
+    P34 -->|"Mark Vehicle Status = 'Booked'"| D3
+    P34 -->|"Insert Booking Record (Active State)"| D4B
+    P34 -->|"Mark Reward Voucher as Claimed"| D5
+    P34 -->|"Successful Transaction Log"| P35
+
+    %% Flow: Step 3.5
+    P35 -->|"Digital Invoice & Numeric Booking ID"| User
+    D4B -->|"Live Booking Feed & Revenue Ledger"| Admin
+
+    %% Styles
+    classDef entityClass fill:#e0f2fe,stroke:#0284c7,stroke-width:2px,color:#0f172a,font-weight:bold;
+    classDef processClass fill:#fef08a,stroke:#ca8a04,stroke-width:2px,color:#0f172a,font-weight:bold;
+    classDef storeClass fill:#bbf7d0,stroke:#16a34a,stroke-width:2px,color:#0f172a,font-weight:bold;
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Standard Notation Legend -->
+  <div class="legend-bar">
+    <span style="font-weight: 700; color: #94a3b8;">STANDARD DFD NOTATIONS:</span>
+    <div class="legend-item">
+      <div class="legend-box leg-entity"></div>
+      <span>External Entity (Terminator)</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-box leg-process"></div>
+      <span>Process / Functional Engine</span>
+    </div>
+    <div class="legend-item">
+      <div class="legend-box leg-store"></div>
+      <span>Data Store / Database Table</span>
+    </div>
+    <div class="legend-item" style="color: #38bdf8;">
+      <span>&rarr; Labeled Directed Data Flow</span>
+    </div>
+  </div>
+</div>
+
+<script>
+  // Initialize Mermaid with clean high-contrast settings
+  mermaid.initialize({
+    startOnLoad: true,
+    theme: 'neutral',
+    flowchart: {
+      useMaxWidth: false,
+      htmlLabels: true,
+      curve: 'basis'
+    }
+  });
+
+  // Switch between DFD Level 0, 1, and 2
+  function switchTab(tabId) {
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-pane').forEach(pane => pane.classList.remove('active'));
+
+    event.target.classList.add('active');
+    document.getElementById(tabId).classList.add('active');
+  }
+
+  // 1-Click High-Resolution PNG Exporter
+  async function downloadCurrentPNG() {
+    const activePane = document.querySelector('.tab-pane.active');
+    const targetElement = activePane.querySelector('.export-area');
+    const tabName = activePane.id.toUpperCase();
+
+    // Show temporary feedback
+    const btn = document.querySelector('.btn-green');
+    const originalText = btn.innerHTML;
+    btn.innerHTML = 'Rendering HD PNG...';
+
+    try {
+      const canvas = await html2canvas(targetElement, {
+        scale: 2.5, // 2.5x Retina resolution for crystal clear Word printing
+        backgroundColor: '#ffffff',
+        logging: false,
+        useCORS: true
+      });
+
+      const image = canvas.toDataURL('image/png');
+      const link = document.createElement('a');
+      link.download = `RentHub_${tabName}_HighRes.png`;
+      link.href = image;
+      link.click();
+    } catch (err) {
+      alert('Export error: ' + err.message);
+    } finally {
+      btn.innerHTML = originalText;
+    }
+  }
+</script>
+
+</body>
+</html>
