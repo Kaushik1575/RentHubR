@@ -4,19 +4,19 @@ import './Chatbot.css';
 import chatbotImg from '../assets/chatbot_styled.png';
 
 const INITIAL_OPTIONS = [
-    "Account and Login",
-    "Rent a Vehicle",
-    "Booking Status",
-    "Cancel Booking",
-    "Weather & Packing Tips",
-    "Something else"
+    "Tell me about RentHub",
+    "Browse available vehicles",
+    "Rental policies & documents",
+    "Advance & refund policy",
+    "Track my booking",
+    "Sponsor & partner program"
 ];
 
 const Chatbot = ({ isOpen, onClose }) => {
     const [messages, setMessages] = useState([
         {
             id: 1,
-            text: "Hello! I'm RentHub Support. How can I help you today?",
+            text: "👋 Hello! I am **RentHub AI**, your official digital concierge. How can I assist you today? Feel free to ask me anything about our vehicles, rental policies, pricing, booking, refunds, or partner program!",
             sender: 'bot',
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             options: INITIAL_OPTIONS
@@ -52,13 +52,10 @@ const Chatbot = ({ isOpen, onClose }) => {
         setInputValue("");
         setIsTyping(true);
 
-        // --- LOCAL PREDEFINED LOGIC ---
-        // This simulates instant responses for the "Chips" before hitting the heavy AI
-        const lowerText = textToSend.toLowerCase();
-        let localResponse = null;
-        let localOptions = null;
+        // --- EXPLICIT DIRECT SHORTCUTS ---
+        const lowerText = textToSend.toLowerCase().trim();
 
-        // 1. Handle "Forgot Password" - Explicit Redirect
+        // 1. Direct redirect for password reset
         if (lowerText === "forgot password" || lowerText === "reset password") {
             setTimeout(() => {
                 setMessages(prev => [...prev, {
@@ -73,7 +70,7 @@ const Chatbot = ({ isOpen, onClose }) => {
             return;
         }
 
-        // 2. Handle "My Profile" - Explicit Redirect
+        // 2. Direct redirect for user profile
         if (lowerText === "my profile") {
             const token = localStorage.getItem('token');
             if (token) {
@@ -90,7 +87,7 @@ const Chatbot = ({ isOpen, onClose }) => {
                 setTimeout(() => {
                     setMessages(prev => [...prev, {
                         id: Date.now() + 1,
-                        text: "You need to log in to view your profile. I'll take you to the login page, and you'll be redirected back automatically.",
+                        text: "You need to log in to view your profile. Taking you to the login page...",
                         sender: 'bot',
                         time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                     }]);
@@ -101,43 +98,12 @@ const Chatbot = ({ isOpen, onClose }) => {
             return;
         }
 
-        // 3. BYPASS: "Create Account" should go to AI, NOT local logic
-        // 3. BYPASS: "Create Account" should go to AI, NOT local logic
-        if (lowerText === "create account" || lowerText === "register") {
-            // Do nothing here, allowing it to fall through to the backend API call below
-        }
-        else if (lowerText.includes("account") || lowerText.includes("login")) {
-            localResponse = "For account related queries, please select one of the options below:";
-            localOptions = ["Forgot Password", "My Profile", "Create Account", "Go back"];
-        } else if (lowerText === "rent a vehicle" || lowerText === "rent a bike") {
-            localResponse = "We have a great collection! Which type of vehicle are you looking for?";
-            localOptions = ["Show Bikes", "Show Cars", "Show Scooty", "Go back"];
-        } else if (lowerText === "show bikes" || lowerText === "bikes") {
-            localResponse = "Here are some of our popular bikes:";
-            localOptions = ["Yamaha R15 V3", "Royal Enfield Classic 350", "KTM Duke 200", "Bajaj Pulsar 150", "Apache RTR 160", "Go back"];
-        } else if (lowerText === "show cars" || lowerText === "cars") {
-            localResponse = "Comfortable cars for your journey:";
-            localOptions = ["Swift Dzire", "Honda City", "Mahindra Thar", "Hyundai Creta", "Tata Nexon", "Go back"];
-        } else if (lowerText === "show scooty" || lowerText === "scooty") {
-            localResponse = "Easy-to-ride scooters for city commute:";
-            localOptions = ["Honda Activa 6G", "TVS Jupiter", "Suzuki Access", "Yamaha Fascino", "Hero Pleasure", "Go back"];
-        } else if (lowerText === "booking status" || lowerText === "check booking") {
-            localResponse = "To check your status, please provide your **Booking ID** (e.g., RH...).";
-            localOptions = ["Go back"];
-        } else if (lowerText.includes("return") || lowerText.includes("exchange")) {
-            localResponse = "You can return your vehicle at any authorized RentHub station. Are you facing an issue with a return?";
-            localOptions = ["Station Locations", "Overdue Charges", "Go back"];
-        } else if (lowerText === "cancel booking" || lowerText.includes("cancel booking")) {
-            localResponse = "To cancel your booking, please provide your **Booking ID** (e.g., RH...).";
-            localOptions = ["Go back"];
-        } else if (lowerText === "weather & packing tips" || lowerText.includes("weather") || lowerText.includes("packing")) {
-            localResponse = "I can help you check the weather and suggest what to pack! 🌤️\n\nPlease tell me your **destination location** (e.g., Mumbai, Goa, Delhi).";
-            localOptions = ["Go back"];
-        } else if (lowerText === "something else") {
+        // 3. Direct helpline trigger
+        if (lowerText === "call support" || lowerText === "call helpline" || lowerText === "customer care number") {
             setTimeout(() => {
                 setMessages(prev => [...prev, {
                     id: Date.now() + 1,
-                    text: "You can reach us directly at +91 9090598756. Opening your dialer now...",
+                    text: "You can reach our 24/7 RentHub Support desk directly at **+91 9090598756**. Opening your phone dialer...",
                     sender: 'bot',
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 }]);
@@ -145,32 +111,9 @@ const Chatbot = ({ isOpen, onClose }) => {
             }, 500);
             setIsTyping(false);
             return;
-        } else if (lowerText === "go back" || lowerText === "main menu") {
-            localResponse = "Sure, what's your question about?";
-            localOptions = INITIAL_OPTIONS;
         }
 
-        // Handle "Create Account" / "Register" specifically to guide the bot
-        // If user creates account, we want the bot to take over, so we DON'T return/intercept here completely,
-        // but we might want to change the text sent to the backend if needed.
-        // For now, let's assume the backend LLM handles "Create Account" well. 
-        // We just renamed "Register Issues" to "Create Account" in the list above.
-
-        if (localResponse) {
-            setTimeout(() => {
-                setMessages(prev => [...prev, {
-                    id: Date.now() + 1,
-                    text: localResponse,
-                    sender: 'bot',
-                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                    options: localOptions
-                }]);
-                setIsTyping(false);
-            }, 800); // Slight delay for realism
-            return;
-        }
-        // ------------------------------
-
+        // --- All other questions and prompts flow directly to Gemini AI ---
         try {
             const token = localStorage.getItem('token');
             const headers = { 'Content-Type': 'application/json' };

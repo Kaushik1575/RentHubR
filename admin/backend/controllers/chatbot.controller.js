@@ -10,14 +10,14 @@ async function getVehicleContext() {
         const cars = await SupabaseDB.getVehicles('cars');
         const scooty = await SupabaseDB.getVehicles('scooty');
 
-        // Simplify lists to just critical info to save tokens
-        const simplify = (list, type) => list.map(v => `${v.name} (${type}, ₹${v.price}/hr, ID:${v.id})`).join(', ');
+        // Simplify lists with pricing and category
+        const simplify = (list, type) => (list || []).map(v => `${v.name} (${type}, ₹${v.price}/hr, ID:${v.id})`).join(', ');
 
         return `
-Available Vehicles:
-BIKES: ${simplify(bikes || [], 'bikes')}
-CARS: ${simplify(cars || [], 'cars')}
-SCOOTY: ${simplify(scooty || [], 'scooty')}
+LIVE RENTHUB FLEET INVENTORY:
+- BIKES: ${simplify(bikes, 'bikes')}
+- CARS: ${simplify(cars, 'cars')}
+- SCOOTY: ${simplify(scooty, 'scooty')}
         `;
     } catch (e) {
         console.error("Error fetching vehicle context:", e);
@@ -62,10 +62,8 @@ async function getWeatherInfo(location) {
 
         let data;
         try {
-            // Try fetching by city/location string
             data = await getWeatherDataForCity(searchQuery);
         } catch (error) {
-            // Retry with ", India" if it failed and didn't already have it
             if (!searchQuery.toLowerCase().includes("india")) {
                 console.log("  - Exact match failed. Retrying with ', India'...");
                 try {
@@ -84,12 +82,10 @@ async function getWeatherInfo(location) {
                 condition: data.current.condition.text.toLowerCase(),
                 description: data.current.condition.text.toLowerCase(),
                 humidity: data.current.humidity,
-                // Return Exact Location: City, Region, Country
                 location: `${data.location.name}, ${data.location.region}, ${data.location.country}`
             };
         }
 
-        // PRIORITY 2: Try Open-Meteo (Fallback)
         console.log("  - Attempting Open-Meteo (Fallback)...");
         const openMeteoData = await getWeatherOpenMeteo(location);
         if (openMeteoData) {
@@ -117,7 +113,6 @@ function getWeatherRecommendations(weatherInfo) {
     let recommendations = `🌤️ **Weather in ${location}**: ${description}, ${temp}°C (feels like ${feelsLike}°C)\n\n`;
     recommendations += `📦 **What to pack for your ride:**\n`;
 
-    // Temperature-based recommendations
     if (temp > 30) {
         recommendations += `\n🔥 **Hot Weather Essentials:**\n`;
         recommendations += `• Sunscreen (SPF 30+)\n`;
@@ -139,7 +134,6 @@ function getWeatherRecommendations(weatherInfo) {
         recommendations += `• Sunglasses\n`;
     }
 
-    // Condition-based recommendations
     if (condition.includes('rain') || condition.includes('drizzle') || condition.includes('thunderstorm')) {
         recommendations += `\n🌧️ **Rainy Weather Extras:**\n`;
         recommendations += `• Raincoat/Rain jacket (MUST)\n`;
@@ -164,12 +158,11 @@ function getWeatherRecommendations(weatherInfo) {
         recommendations += `• Deodorant\n`;
     }
 
-    // General recommendations
     recommendations += `\n✅ **Always Carry:**\n`;
     recommendations += `• Valid ID & Driving License\n`;
     recommendations += `• Phone & Charger\n`;
     recommendations += `• First-aid kit\n`;
-    recommendations += `• Helmet (provided by RentHub)\n`;
+    recommendations += `• Helmet (complimentary from RentHub)\n`;
 
     return recommendations;
 }
@@ -193,88 +186,153 @@ exports.chat = async (req, res) => {
         if (req.user && req.user.id) {
             try {
                 const coins = await SupabaseDB.getUserCoins(req.user.id);
-                userContext = `\n**USER CONTEXT:**\n- User ID: ${req.user.id}\n- Reward Points Balance: ${coins}\n- Reward Status: ${coins >= 1000 ? "ELIGIBLE for Free 2-Hour Ride (Redeem in Profile)" : `${1000 - coins} points needed for Free Ride`}\n`;
+                userContext = `\n**LOGGED-IN USER STATUS:**\n- User ID: ${req.user.id}\n- Reward Points Balance: ${coins} Coins\n- Reward Redemption: ${coins >= 1000 ? "ELIGIBLE for a Free 2-Hour Ride coupon! (Redeem in Profile/Rewards)" : `Need ${1000 - coins} more points for a Free 2-Hour Ride`}\n`;
             } catch (e) {
                 console.error("Error fetching user coins for chatbot:", e);
             }
         } else {
-            userContext = `\n**USER CONTEXT:**\n- User is NOT logged in. If they ask about their coins, ask them to log in first.`;
+            userContext = `\n**USER CONTEXT:**\n- User is browsing as guest (not logged in). If they ask about their personal coins or profile, politely suggest logging in.`;
         }
 
-        let formattedHistory = [];
+        // Encyclopedic RentHub Knowledge Base
+        const systemPrompt = `You are "RentHub AI", the official, highly professional, polite, and intelligent customer concierge for RentHub. You represent RentHub with complete authority and comprehensive domain knowledge.
 
-        const systemPrompt = `You are the friendly and helpful AI assistant for RentHub.
+===================================================================
+1. ABOUT RENTHUB
+===================================================================
+RentHub is India's next-generation self-drive vehicle rental and fleet management platform, operating primary hubs in Bhubaneswar, Odisha (with major pickup stations near Biju Patnaik Airport, Bhubaneswar Railway Station, KIIT, Patia, Infocity, and Cuttack Road), with expanding services nationwide.
+We provide hourly, daily, and weekly self-drive rentals for:
+- Motorcycles & Superbikes (Royal Enfield, Yamaha, KTM, Bajaj Pulsar, Apache RTR, Honda Hornet)
+- Scooters (Honda Activa, TVS Jupiter, Suzuki Access, Yamaha Fascino)
+- Cars (Hatchbacks, Sedans, Compact SUVs: Swift Dzire, Honda City, Mahindra Thar, Hyundai Creta, Tata Nexon)
 
+Our mission: Deliver seamless, transparent, and affordable vehicle rentals with instant online verification, digital rental deeds, and contactless QR-code key handshakes.
+
+===================================================================
+2. LIVE FLEET & PRICING
+===================================================================
 ${vehicleContext}
+
+- **Pricing Structure**: All tariffs are priced per hour with transparent flat rates and zero hidden charges.
+- **Advance Payment Policy**: To confirm a reservation, customers pay an advance of 30% (or min ₹100) online. The remaining 70% balance is settled upon physical vehicle pickup or return.
+- **Accepted Payment Modes**: All payments are securely processed via Razorpay:
+  • UPI (Google Pay, PhonePe, Paytm, BHIM, CRED)
+  • Credit & Debit Cards (Visa, MasterCard, RuPay, Maestro)
+  • NetBanking across all major Indian banks
+
+===================================================================
+3. RENTAL POLICIES & TERMS OF SERVICE (OFFICIAL)
+===================================================================
+• **Age Requirement**: Minimum 18 years old.
+• **Required Documents (KYC)**:
+  1. Valid Government-approved Driving License (Original or DigiLocker):
+     - MCWG (Motorcycle with Gear) for geared bikes
+     - MCWOG (Motorcycle without Gear) for scooters/scooty
+     - LMV (Light Motor Vehicle) for cars
+  2. Valid Identity & Address Proof: Aadhaar Card, Passport, or Voter ID.
+• **Security Deposit**:
+  - RentHub offers ZERO or minimal refundable security deposit for KYC-verified users.
+• **Cancellation & Refund Policy**:
+  - Cancellation more than 2 hours prior to scheduled start time: 100% Full Refund of the advance payment.
+  - Cancellation within 2 hours of scheduled start time: 50% deduction of advance; remaining 50% refunded.
+  - "No Show" (Rider Not Come without cancellation): Advance payment is non-refundable.
+  - Refund Processing: Automated refunds are credited back to original payment method (Razorpay) or transferred directly to user's UPI/Bank account within 3–5 business days.
+• **Fuel Policy**:
+  - Fair "Same-to-Same" fuel policy: The vehicle is handed over with a noted fuel level and must be returned with the equivalent fuel level. If returned with less fuel, fuel charges apply.
+• **Complimentary Helmets & Safety Gear**:
+  - Clean, ISI-certified safety helmets are provided completely free with every two-wheeler rental. An extra pillion helmet is available upon request.
+• **Late Returns & Overdue Charges**:
+  - RentHub provides a 15-minute grace period.
+  - Delays beyond the grace period incur standard hourly rate plus nominal overtime fee, calculated automatically upon QR return scan.
+  - Riders can easily request trip extensions online before the scheduled return time.
+• **Traffic Fines & Damages**:
+  - The renter is responsible for traffic violations (challans) during their rental period.
+  - Standard insurance covers accidental damage subject to company policy and non-negligence.
+
+===================================================================
+4. SAFETY & 24/7 EMERGENCY SOS SYSTEM
+===================================================================
+- RentHub features a built-in 24/7 Emergency SOS button on every active booking.
+- In case of accident, medical emergency, or breakdown:
+  1. Rider or Admin clicks "SOS" in their portal.
+  2. The system immediately dispatches emergency SMS alerts with live GPS coordinates via Twilio.
+  3. The system initiates automated voice calls via Retell AI to the emergency response unit and local authorities.
+
+===================================================================
+5. LOYALTY PROGRAM & REWARDS
+===================================================================
 ${userContext}
+- **RentHub Coins**: Users earn loyalty reward coins on every completed rental journey.
+- **Scratch Cards**: Digital scratch cards with bonus coins and tariff discounts are unlocked upon milestone bookings.
+- **Referral Program**: Users get a personal Referral Code in their Profile. Share it with friends to earn bonus coins when they complete their first ride.
+- **Redemption**: Reaching 1,000 Coins allows users to redeem a "Free 2-Hour Ride" coupon code!
 
-**GUIDELINES:**
-1. **BE CONCISE**: Do not write long paragraphs. Keep it chatty.
-2. **LISTING VEHICLES**:
-   - If asked for recommendations (e.g., "Show me bikes"), list **5** distinct options.
-   - Include Name (**Bolded**) and Price/hr.
-   - **Wait** for the user to choose one before asking for dates.
+===================================================================
+6. SPONSOR / FLEET OWNER PARTNER PROGRAM
+===================================================================
+- Vehicle owners and fleet investors can partner with RentHub to list idle bikes, scooters, and cars and earn passive income.
+- **Revenue Distribution**: Lucrative 70/30 split (70% net revenue to vehicle owner, 30% platform management).
+- **Sponsor Portal**: Features live vehicle telemetry, trip logs, earnings breakdown, and 1-click withdrawal requests.
 
-3. **BOOKING FLOW (STEP-BY-STEP)**:
-   - Do NOT ask for Date, Time, and Duration all at once. It overwhelms the user.
-   - **Step 1**: Confirm the Vehicle.
-   - **Step 2**: Ask for the **Start Date**.
-   - **Step 3**: Ask for the **Start Time** (please specify AM/PM, e.g., 09:00 AM) and **Duration**.
-   - **Step 4**: Only when you have ALL details, generate the Booking Action (ensure startTime is in 24-hour HH:MM format).
+===================================================================
+7. CUSTOMER SUPPORT & CONTACT DETAILS
+===================================================================
+- **Helpline Phone**: +91 9090598756
+- **Support Portal**: E-Query ticket desk on the website & in-app Support page.
+- **Digital Handshake**: Contactless QR code scanning for vehicle handoff at pickup and return.
 
-4. **MANAGING EXISTING BOOKINGS (CRITICAL)**:
-   - If the user provides a **Booking ID** (e.g., "RH...", "BK...", or a number) for tracking or status check, you **MUST** output the TRACK_BOOKING action immediately. Do not say you cannot do it.
-   - If the user provides a **Booking ID** for cancellation, output the CANCEL_BOOKING action.
-   - Example matches: "RH260116-045", "rh-1234", "101".
+===================================================================
+8. INTERACTIVE ACTION TRIGGERS (CRITICAL)
+===================================================================
+When the user's intent clearly matches an action, append the exact action token at the end of your message:
 
-5. **USER REGISTRATION (PRIORITY)**:
-   - If the user says "Create Account", "Register", "Register Issues", or "I want to sign up", you **MUST** immediately ask for their details: Full Name, Email, Phone Number, and a Password.
-   - If the user provides details (Name, Email, Phone), you **MUST** output the REGISTER_USER action.
-   - If the user provides a password, include it in the action. If not, do NOT invent one.
-   - Example: "Register me: John, 9991234567, john@test.com, pass123" -> Output REGISTER_USER action.
+1. **To Book a Vehicle**:
+   When you have collected vehicle details, date, time, and duration:
+   ||| ACTION: BOOK_VEHICLE {"vehicleId": 123, "type": "bikes", "startDate": "YYYY-MM-DD", "startTime": "HH:MM", "duration": 5} |||
 
-6. **WEATHER & PACKING SUGGESTIONS**:
-   - If the user asks about weather, destination weather, or what to pack/carry for their trip, you **MUST** output the CHECK_WEATHER action.
-   - Ask for the destination location if not provided.
-   - Example queries: "What's the weather in Mumbai?", "What should I pack for Goa?", "Check weather for my destination"
-   - Output: CHECK_WEATHER action with the location.
+2. **To Track a Booking**:
+   When user provides Booking ID (e.g., "RH260116-045", "rh-1234", "101"):
+   ||| ACTION: TRACK_BOOKING {"bookingId": "RH123456-789"} |||
 
-{/* Reward system decommissioned */}
+3. **To Cancel a Booking**:
+   When user asks to cancel and provides Booking ID:
+   ||| ACTION: CANCEL_BOOKING {"bookingId": "RH123456-789"} |||
 
-8. **CONTACT SUPPORT / SOMETHING ELSE**:
-   - If the user asks for "Support", "Customer Care", "Phone Number", or says "Something else", you **MUST** output the CALL_SUPPORT action.
-   - Limit: "+919090598756".
+4. **To Register an Account**:
+   When user asks to sign up / create account and provides details:
+   ||| ACTION: REGISTER_USER {"fullName": "John Doe", "email": "john@example.com", "phoneNumber": "9876543210", "password": "optional_password"} |||
 
-**ACTIONS (Output ONLY the JSON block):**
+5. **To Check Weather & Packing**:
+   When user asks about weather or packing recommendations for a city:
+   ||| ACTION: CHECK_WEATHER {"location": "Bhubaneswar"} |||
 
-**To Book:**
-||| ACTION: BOOK_VEHICLE {"vehicleId": 123, "type": "bikes", "startDate": "YYYY-MM-DD", "startTime": "HH:MM", "duration": 5} |||
+6. **To Call Human Support**:
+   When user asks for customer care phone number or human representative:
+   ||| ACTION: CALL_SUPPORT {"number": "+919090598756"} |||
 
-**To Track:**
-||| ACTION: TRACK_BOOKING {"bookingId": "RH123456-789"} |||
+(Note: TYPE must be 'bikes', 'cars', or 'scooty'. Do NOT wrap the action token inside markdown code blocks).
 
-**To Cancel:**
-||| ACTION: CANCEL_BOOKING {"bookingId": "RH123456-789"} |||
+===================================================================
+9. CONVERSATIONAL STYLE & ETIQUETTE
+===================================================================
+- **Expert & Authoritative**: You know EVERYTHING about RentHub. Answer any question about policies, pricing, vehicles, bookings, refunds, safety, or sponsors thoroughly and accurately.
+- **Professional & Courteous**: Maintain a warm, welcoming, polite, and executive SaaS tone.
+- **Structured Formatting**: Use bold section titles, bullet points, numbered steps, and relevant emojis (🚗, 🛵, 💳, 📜, 🛡️, ⏰) to make your answers easy to scan and pleasant to read.
+- **Booking Flow**: When a user wants to book, guide them systematically:
+  Step 1: Confirm desired vehicle model.
+  Step 2: Ask for the start date.
+  Step 3: Ask for pickup time (AM/PM) and trip duration in hours.
+  Step 4: Output the BOOK_VEHICLE action token.
+`;
 
-**To Register:**
-||| ACTION: REGISTER_USER {"fullName": "John Doe", "email": "john@example.com", "phoneNumber": "9876543210", "password": "optional_password"} |||
-
-**To Check Weather:**
-||| ACTION: CHECK_WEATHER {"location": "Mumbai"} |||
-
-**To Call Support:**
-||| ACTION: CALL_SUPPORT {"number": "+919090598756"} |||
-
-(TYPE must be 'bikes', 'cars', or 'scooty').
-Do NOT wrap the output in markdown.`;
-
+        let formattedHistory = [];
         formattedHistory.push({
             role: "user",
             parts: [{ text: systemPrompt }]
         });
         formattedHistory.push({
             role: "model",
-            parts: [{ text: "Understood. I have the vehicle list and will follow the booking protocol." }]
+            parts: [{ text: "Understood! I am RentHub AI, equipped with complete, official domain knowledge about RentHub. I am ready to assist customers with supreme professionalism, accuracy, and interactive actions." }]
         });
 
         if (Array.isArray(history) && history.length > 0) {
@@ -291,26 +349,31 @@ Do NOT wrap the output in markdown.`;
             });
         }
 
-        // Helper to try models in sequence
+        // Prioritized list of active Gemini models (supports environment override)
+        const configuredModel = process.env.GEMINI_MODEL;
         const modelsToTry = [
-            ...['2.5', '2.0', '1.5'].map(v => `gemini-${v}-flash`),
-            "gemini-1.5-flash-8b",
+            ...(configuredModel ? [configuredModel] : []),
+            "gemini-2.5-flash",
+            "gemini-2.0-flash",
+            "gemini-1.5-flash",
+            "gemini-1.5-flash-latest",
             "gemini-1.5-pro",
-            "gemini-flash-latest"
+            "gemini-pro"
         ];
 
-        let text;
-        let lastError;
+        let text = null;
         let success = false;
+        let lastError = null;
 
         for (const modelName of modelsToTry) {
             try {
-                console.log(`Attempting generation with: ${modelName}`);
+                console.log(`🤖 Attempting RentHub AI generation with: ${modelName}`);
                 const currentModel = genAI.getGenerativeModel({ model: modelName });
                 const currentChat = currentModel.startChat({
                     history: formattedHistory,
                     generationConfig: {
-                        maxOutputTokens: 400,
+                        maxOutputTokens: 1000,
+                        temperature: 0.7,
                     },
                 });
 
@@ -318,34 +381,29 @@ Do NOT wrap the output in markdown.`;
                 const response = await result.response;
                 text = response.text();
 
-                console.log(`SUCCESS with ${modelName}`);
+                console.log(`✅ RentHub AI SUCCESS with: ${modelName}`);
                 success = true;
-                break; // Exit loop on success
+                break;
             } catch (e) {
-                console.warn(`FAILED with ${modelName}: ${e.message}`);
+                console.warn(`⚠️ Failed with ${modelName}: ${e.message}`);
                 lastError = e;
-                // Continue to next model
             }
         }
 
-        if (!success) {
-            throw lastError || new Error("All models failed to generate response.");
+        if (!success || !text) {
+            throw lastError || new Error("All Gemini models failed to generate response.");
         }
-
-        console.log("Gemini Reply:", text); // Debugging
 
         res.json({ reply: text });
     } catch (error) {
         console.error("Chatbot Error:", error.message);
 
-        // Check for Quota Exceeded (429) or Not Found (404)
         if (error.message.includes("429") || error.message.includes("Quota")) {
-            return res.status(429).json({ reply: "I'm currently experiencing very high traffic. Please ask me again in a minute!" });
+            return res.status(429).json({ reply: "I am currently experiencing very high inquiry volume. Please ask me again in just a moment!" });
         }
 
         if (error.message.includes("404")) {
-            // This usually means the API key is valid but the Model ID is wrong OR the API is not enabled for this project.
-            return res.status(503).json({ error: "AI Service Unavailable: Model not found or API not enabled. Please check server logs." });
+            return res.status(503).json({ error: "AI Service Temporarily Unavailable: Model routing update in progress." });
         }
 
         res.status(500).json({ error: "Failed to process your request." });
@@ -364,36 +422,27 @@ exports.checkWeather = async (req, res) => {
         const weatherInfo = await getWeatherInfo(location);
 
         if (!weatherInfo) {
-            // Provide helpful fallback response
-            const fallbackResponse = `I'm having trouble connecting to the weather service right now, but here are **essential packing tips for ${location}**:
+            const fallbackResponse = `I'm having trouble connecting to the live weather radar right now, but here are **essential travel packing tips for ${location}**:
 
-📦 **Smart Packing Checklist:**
+📦 **Smart Rider Packing Checklist:**
 
 🌡️ **For Any Weather:**
-• Light jacket or windcheater (versatile for temperature changes)
-• Comfortable riding clothes
-• Sunglasses (UV protection)
+• Light windcheater or riding jacket
+• Comfortable riding attire & sturdy footwear
+• UV sunglasses & sunscreen
 • Water bottle (stay hydrated)
 
-🌧️ **Rain Protection (Just in Case):**
-• Raincoat or rain jacket
-• Waterproof bag for belongings
-• Extra pair of socks
+🌧️ **Rain Protection (Recommended):**
+• Raincoat or waterproof poncho
+• Waterproof pouch for mobile & wallet
+• Spare pair of dry socks
 
-☀️ **Sun Protection:**
-• Sunscreen (SPF 30+)
-• Cap or hat
-• Cooling towel
+✅ **Mandatory Documents:**
+• Original Government Driving License & Aadhaar Card
+• Mobile with RentHub booking confirmation QR code
+• Helmets (complimentary provided by RentHub)
 
-✅ **Always Carry:**
-• Valid ID & Driving License
-• Phone & Charger
-• First-aid kit
-• Helmet (provided by RentHub)
-
-💡 **Pro Tip:** Check the local weather forecast before your trip for the most accurate conditions!
-
-⚠️ **Note:** Weather service is temporarily unavailable. For real-time weather, please check your weather app or try again in a few minutes.`;
+💡 **Pro Tip:** Check the local forecast before heading out for the best road conditions!`;
 
             return res.json({ reply: fallbackResponse });
         }
