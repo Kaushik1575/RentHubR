@@ -2440,134 +2440,154 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                         </div>
 
                         <div style={{ padding: '20px' }}>
-                            <div style={{
-                                background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px',
-                                padding: '12px 16px', marginBottom: '16px', display: 'flex',
-                                justifyContent: 'space-between', alignItems: 'center'
-                            }}>
-                                <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 700 }}>Remaining Balance Due:</span>
-                                <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a' }}>₹{cashModal.balance}</span>
-                            </div>
-
-                            <div style={{ marginBottom: '16px', textAlign: 'left' }}>
-                                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
-                                    Cash Amount Received from Customer (₹):
-                                </label>
-                                <input
-                                    type="number"
-                                    min="0"
-                                    step="1"
-                                    value={cashModal.received}
-                                    onChange={(e) => setCashModal(prev => ({ ...prev, received: parseFloat(e.target.value) || 0 }))}
-                                    style={{
-                                        width: '100%', padding: '12px 14px', fontSize: '1.25rem', fontWeight: 800,
-                                        borderRadius: '10px', border: '2px solid #10b981', outline: 'none',
-                                        color: '#065f46', boxSizing: 'border-box'
-                                    }}
-                                />
-                                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
-                                    {[
-                                        cashModal.balance,
-                                        (cashModal.balance > 10 && cashModal.balance % 10 !== 0) ? (cashModal.balance - (cashModal.balance % 10)) : null,
-                                        (cashModal.balance > 50 && cashModal.balance % 50 !== 0) ? (cashModal.balance - (cashModal.balance % 50)) : null,
-                                        Math.ceil(cashModal.balance / 100) * 100,
-                                        Math.ceil(cashModal.balance / 500) * 500
-                                    ].filter((v, i, a) => v !== null && v > 0 && a.indexOf(v) === i).map(quickAmt => (
-                                        <button
-                                            key={quickAmt}
-                                            type="button"
-                                            onClick={() => setCashModal(prev => ({ ...prev, received: quickAmt }))}
-                                            style={{
-                                                padding: '4px 10px', fontSize: '0.74rem', fontWeight: 700, borderRadius: '6px',
-                                                border: '1px solid #cbd5e1', background: quickAmt === cashModal.received ? '#d1fae5' : '#f1f5f9',
-                                                cursor: 'pointer', color: quickAmt === cashModal.received ? '#065f46' : '#334155'
-                                            }}
-                                        >
-                                            ₹{quickAmt}
-                                        </button>
-                                    ))}
-                                </div>
-                            </div>
-
-                            {/* Change / Discount Calculator */}
-                            {cashModal.received > cashModal.balance ? (
-                                <div style={{
-                                    background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px',
-                                    padding: '10px', marginBottom: '16px', textAlign: 'center'
-                                }}>
-                                    <span style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 700 }}>💵 Change to return to customer:</span>
-                                    <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#065f46' }}>
-                                        ₹{cashModal.received - cashModal.balance}
-                                    </div>
-                                </div>
-                            ) : cashModal.received === cashModal.balance ? (
-                                <div style={{
-                                    background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px',
-                                    padding: '8px', marginBottom: '16px', textAlign: 'center', color: '#16a34a',
-                                    fontSize: '0.8rem', fontWeight: 700
-                                }}>
-                                    ✅ Exact balance received in full
-                                </div>
-                            ) : (
-                                <div style={{
-                                    background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px',
-                                    padding: '10px 12px', marginBottom: '16px', textAlign: 'left'
-                                }}>
-                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
-                                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#92400e' }}>
-                                            Difference: ₹{cashModal.balance - cashModal.received}
-                                        </span>
-                                        <span style={{ fontSize: '0.72rem', background: '#fef3c7', color: '#b45309', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
-                                            Round-off / Discount
-                                        </span>
-                                    </div>
-                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700, color: '#78350f' }}>
-                                        <input
-                                            type="checkbox"
-                                            checked={cashModal.waive !== false}
-                                            onChange={(e) => setCashModal(prev => ({ ...prev, waive: e.target.checked }))}
-                                            style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
-                                        />
-                                        <span>Waive ₹{cashModal.balance - cashModal.received} round-off & complete booking</span>
-                                    </label>
-                                    {cashModal.waive !== false ? (
-                                        <div style={{ fontSize: '0.75rem', color: '#047857', marginTop: '4px', fontWeight: 600 }}>
-                                            ✅ Booking will be marked COMPLETED with ₹0 remaining balance.
+                            {(() => {
+                                const receivedAmt = (cashModal.received !== '' && cashModal.received !== undefined && cashModal.received !== null)
+                                    ? Number(cashModal.received)
+                                    : 0;
+                                return (
+                                    <>
+                                        <div style={{
+                                            background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px',
+                                            padding: '12px 16px', marginBottom: '16px', display: 'flex',
+                                            justifyContent: 'space-between', alignItems: 'center'
+                                        }}>
+                                            <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 700 }}>Remaining Balance Due:</span>
+                                            <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a' }}>₹{cashModal.balance}</span>
                                         </div>
-                                    ) : (
-                                        <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '4px' }}>
-                                            ⚠️ ₹{cashModal.balance - cashModal.received} will remain unpaid as debt.
-                                        </div>
-                                    )}
-                                </div>
-                            )}
 
-                            <div style={{ display: 'flex', gap: '10px' }}>
-                                <button
-                                    type="button"
-                                    onClick={() => setCashModal({ isOpen: false, booking: null, balance: 0, received: 0, waive: true })}
-                                    style={{
-                                        flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1',
-                                        background: '#ffffff', color: '#64748b', fontWeight: 700, cursor: 'pointer'
-                                    }}
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="button"
-                                    disabled={settlingCash || cashModal.received <= 0}
-                                    onClick={() => executeCashSettlement(cashModal.booking?.booking_id || cashModal.booking?.id, cashModal.received, cashModal.waive !== false)}
-                                    style={{
-                                        flex: 1.5, padding: '12px', borderRadius: '10px', border: 'none',
-                                        background: '#059669', color: '#ffffff', fontWeight: 800, fontSize: '0.95rem',
-                                        cursor: (settlingCash || cashModal.received <= 0) ? 'not-allowed' : 'pointer',
-                                        opacity: (settlingCash || cashModal.received <= 0) ? 0.7 : 1,
-                                        boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
-                                    }}
-                                >
-                                    {settlingCash ? 'Recording...' : `Confirm ₹${cashModal.received}`}
-                                </button>
-                            </div>
+                                        <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+                                            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                                                Cash Amount Received from Customer (₹):
+                                            </label>
+                                            <input
+                                                type="text"
+                                                inputMode="numeric"
+                                                pattern="[0-9]*"
+                                                value={cashModal.received !== undefined && cashModal.received !== null ? cashModal.received : ''}
+                                                onFocus={(e) => e.target.select()}
+                                                onChange={(e) => {
+                                                    let val = e.target.value.replace(/[^0-9]/g, '');
+                                                    if (val.length > 1 && val.startsWith('0')) {
+                                                        val = val.replace(/^0+/, '');
+                                                    }
+                                                    setCashModal(prev => ({
+                                                        ...prev,
+                                                        received: val === '' ? '' : parseInt(val, 10)
+                                                    }));
+                                                }}
+                                                placeholder="Enter cash received"
+                                                style={{
+                                                    width: '100%', padding: '12px 14px', fontSize: '1.35rem', fontWeight: 800,
+                                                    borderRadius: '10px', border: '2px solid #10b981', outline: 'none',
+                                                    color: '#065f46', boxSizing: 'border-box'
+                                                }}
+                                            />
+                                            <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                                                {[
+                                                    cashModal.balance,
+                                                    (cashModal.balance > 10 && cashModal.balance % 10 !== 0) ? (cashModal.balance - (cashModal.balance % 10)) : null,
+                                                    (cashModal.balance > 50 && cashModal.balance % 50 !== 0) ? (cashModal.balance - (cashModal.balance % 50)) : null,
+                                                    Math.ceil(cashModal.balance / 100) * 100,
+                                                    Math.ceil(cashModal.balance / 500) * 500
+                                                ].filter((v, i, a) => v !== null && v > 0 && a.indexOf(v) === i).map(quickAmt => (
+                                                    <button
+                                                        key={quickAmt}
+                                                        type="button"
+                                                        onClick={() => setCashModal(prev => ({ ...prev, received: quickAmt }))}
+                                                        style={{
+                                                            padding: '4px 10px', fontSize: '0.74rem', fontWeight: 700, borderRadius: '6px',
+                                                            border: '1px solid #cbd5e1', background: quickAmt === receivedAmt ? '#d1fae5' : '#f1f5f9',
+                                                            cursor: 'pointer', color: quickAmt === receivedAmt ? '#065f46' : '#334155'
+                                                        }}
+                                                    >
+                                                        ₹{quickAmt}
+                                                    </button>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Change / Discount Calculator */}
+                                        {receivedAmt > cashModal.balance ? (
+                                            <div style={{
+                                                background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px',
+                                                padding: '10px', marginBottom: '16px', textAlign: 'center'
+                                            }}>
+                                                <span style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 700 }}>💵 Change to return to customer:</span>
+                                                <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#065f46' }}>
+                                                    ₹{receivedAmt - cashModal.balance}
+                                                </div>
+                                            </div>
+                                        ) : receivedAmt === cashModal.balance ? (
+                                            <div style={{
+                                                background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px',
+                                                padding: '8px', marginBottom: '16px', textAlign: 'center', color: '#16a34a',
+                                                fontSize: '0.8rem', fontWeight: 700
+                                            }}>
+                                                ✅ Exact balance received in full
+                                            </div>
+                                        ) : (
+                                            <div style={{
+                                                background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px',
+                                                padding: '10px 12px', marginBottom: '16px', textAlign: 'left'
+                                            }}>
+                                                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                                    <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#92400e' }}>
+                                                        Difference: ₹{cashModal.balance - receivedAmt}
+                                                    </span>
+                                                    <span style={{ fontSize: '0.72rem', background: '#fef3c7', color: '#b45309', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                                                        Round-off / Discount
+                                                    </span>
+                                                </div>
+                                                <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700, color: '#78350f' }}>
+                                                    <input
+                                                        type="checkbox"
+                                                        checked={cashModal.waive !== false}
+                                                        onChange={(e) => setCashModal(prev => ({ ...prev, waive: e.target.checked }))}
+                                                        style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
+                                                    />
+                                                    <span>Waive ₹{cashModal.balance - receivedAmt} round-off & complete booking</span>
+                                                </label>
+                                                {cashModal.waive !== false ? (
+                                                    <div style={{ fontSize: '0.75rem', color: '#047857', marginTop: '4px', fontWeight: 600 }}>
+                                                        ✅ Booking will be marked COMPLETED with ₹0 remaining balance.
+                                                    </div>
+                                                ) : (
+                                                    <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '4px' }}>
+                                                        ⚠️ ₹{cashModal.balance - receivedAmt} will remain unpaid as debt.
+                                                    </div>
+                                                )}
+                                            </div>
+                                        )}
+
+                                        <div style={{ display: 'flex', gap: '10px' }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => setCashModal({ isOpen: false, booking: null, balance: 0, received: 0, waive: true })}
+                                                style={{
+                                                    flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1',
+                                                    background: '#ffffff', color: '#64748b', fontWeight: 700, cursor: 'pointer'
+                                                }}
+                                            >
+                                                Cancel
+                                            </button>
+                                            <button
+                                                type="button"
+                                                disabled={settlingCash || receivedAmt <= 0}
+                                                onClick={() => executeCashSettlement(cashModal.booking?.booking_id || cashModal.booking?.id, receivedAmt, cashModal.waive !== false)}
+                                                style={{
+                                                    flex: 1.5, padding: '12px', borderRadius: '10px', border: 'none',
+                                                    background: '#059669', color: '#ffffff', fontWeight: 800, fontSize: '0.95rem',
+                                                    cursor: (settlingCash || receivedAmt <= 0) ? 'not-allowed' : 'pointer',
+                                                    opacity: (settlingCash || receivedAmt <= 0) ? 0.7 : 1,
+                                                    boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                                                }}
+                                            >
+                                                {settlingCash ? 'Recording...' : `Confirm ₹${receivedAmt}`}
+                                            </button>
+                                        </div>
+                                    </>
+                                );
+                            })()}
                         </div>
                     </div>
                 </div>
