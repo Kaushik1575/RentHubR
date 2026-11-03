@@ -328,3 +328,4 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
 };
 
 export default SettlementQRModal;
+

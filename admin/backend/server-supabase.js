@@ -48,6 +48,7 @@ app.use('/api/bookings', bookingRoutes);
 app.use('/api/bookings', invoiceRoutes); // Invoice download routes
 app.use('/api/admin', adminRoutes);
 app.use('/api/payment', paymentRoutes);
+app.use('/api/payments', paymentRoutes);
 app.use('/api/vehicles', vehicleRoutes);
 app.use('/api', sosRoutes);
 app.use('/api/chatbot', chatbotRoutes);
