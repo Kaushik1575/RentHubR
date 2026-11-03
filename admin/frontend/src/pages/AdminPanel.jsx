@@ -13,6 +13,7 @@ import SettlementQRModal from '../components/SettlementQRModal';
 const AdminPanel = () => {
     const navigate = useNavigate();
     const [token, setToken] = useState(localStorage.getItem('token'));
+    const [settlingCash, setSettlingCash] = useState(false);
     const [adminUser, setAdminUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
     const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -243,6 +244,39 @@ const AdminPanel = () => {
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error updating' }); }
     };
 
+        const handleCashSettlement = async (bookingId) => {
+        if (!bookingId) return;
+        setSettlingCash(true);
+        try {
+            const res = await fetch('/api/payment/verify-settlement', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({
+                    bookingId: bookingId,
+                    paymentId: 'CASH_SETTLE',
+                    paymentMethod: 'cash'
+                })
+            });
+            const data = await res.json();
+            if (data.isPaid || data.success) {
+                setPopup({
+                    isOpen: true,
+                    type: 'success',
+                    title: 'Payment Received',
+                    message: 'Payment marked as PAID via Cash! Status updated to COMPLETED. Final tax invoice emailed to customer.'
+                });
+                loadBookings();
+                setModal(prev => (prev?.data ? { ...prev, data: { ...prev.data, status: 'completed', remaining_amount: 0 } } : { type: null }));
+            } else {
+                setPopup({ isOpen: true, type: 'error', title: 'Payment Failed', message: data.message || 'Could not record cash payment' });
+            }
+        } catch (e) {
+            setPopup({ isOpen: true, type: 'error', title: 'Error', message: e.message });
+        } finally {
+            setSettlingCash(false);
+        }
+    };
+
     // Booking Actions
     const handleConfirmBooking = async (id) => {
         try {
@@ -328,10 +362,24 @@ const AdminPanel = () => {
                 loadBookings(); // Refresh list
 
                 if (data.type === 'ride_end' || data.type === 'settlement_pending') {
-                    if (data.data?.paymentQr) {
-                        setModal({ type: 'settlementQR', data: data.data });
-                        return;
+                    try {
+                        const bRes = await fetch(`/api/admin/bookings?page=1&limit=50`, { headers: { 'Authorization': `Bearer ${token}` } });
+                        if (bRes.ok) {
+                            const bList = await bRes.json();
+                            if (Array.isArray(bList)) {
+                                setBookings(bList);
+                                const found = bList.find(b => String(b.booking_id || b.id) === String(data.data?.bookingId || data.data?.id));
+                                if (found) {
+                                    setModal({ type: 'viewBooking', data: { ...found, paymentQr: data.data?.paymentQr } });
+                                    return;
+                                }
+                            }
+                        }
+                    } catch (err) {
+                        console.error('Error fetching bookings after scan:', err);
                     }
+                    setModal({ type: 'viewBooking', data: data.data });
+                    return;
                     const balance = data.data.totalPayable !== undefined ? data.data.totalPayable : data.data.balance;
                     const isRefund = balance < 0;
 
@@ -2073,6 +2121,82 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     )}
                                 </div>
                             )}
+
+                            {/* Settlement Action Bar: Cash vs Online UPI QR */}
+                            {(() => {
+                                const total = parseFloat(modal.data.total_amount) || 0;
+                                const advance = parseFloat(modal.data.advance_payment) || 0;
+                                const balance = modal.data.remaining_amount !== undefined ? parseFloat(modal.data.remaining_amount) : (total - advance);
+
+                                if ((modal.data.status === 'ride_completed' || modal.data.status !== 'completed') && balance > 0) {
+                                    return (
+                                        <div style={{
+                                            marginTop: '16px',
+                                            padding: '14px',
+                                            background: '#ffffff',
+                                            border: '2px solid #2563eb',
+                                            borderRadius: '10px',
+                                            boxShadow: '0 4px 12px rgba(37,99,235,0.08)'
+                                        }}>
+                                            <div style={{ fontWeight: 800, fontSize: '0.92rem', color: '#1e3a8a', marginBottom: '4px' }}>
+                                                💳 Collect Remaining Balance: ₹{balance}
+                                            </div>
+                                            <p style={{ fontSize: '0.8rem', color: '#64748b', margin: '0 0 10px' }}>
+                                                Select customer payment method:
+                                            </p>
+                                            <div style={{ display: 'flex', gap: '10px' }}>
+                                                <button
+                                                    type="button"
+                                                    disabled={settlingCash}
+                                                    style={{
+                                                        flex: 1, padding: '10px', background: '#10b981', color: '#ffffff',
+                                                        border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.88rem',
+                                                        cursor: settlingCash ? 'not-allowed' : 'pointer', display: 'flex',
+                                                        alignItems: 'center', justifyContent: 'center', gap: '6px',
+                                                        opacity: settlingCash ? 0.7 : 1
+                                                    }}
+                                                    onClick={() => handleCashSettlement(modal.data.booking_id || modal.data.id)}
+                                                >
+                                                    <i className="fas fa-money-bill-wave"></i> {settlingCash ? 'Saving...' : '💵 Pay via Cash'}
+                                                </button>
+
+                                                <button
+                                                    type="button"
+                                                    style={{
+                                                        flex: 1, padding: '10px', background: '#2563eb', color: '#ffffff',
+                                                        border: 'none', borderRadius: '8px', fontWeight: 800, fontSize: '0.88rem',
+                                                        cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px'
+                                                    }}
+                                                    onClick={() => setModal({
+                                                        type: 'settlementQR',
+                                                        data: {
+                                                            bookingId: modal.data.booking_id || modal.data.id,
+                                                            totalPayable: balance,
+                                                            paymentQr: modal.data.paymentQr
+                                                        }
+                                                    })}
+                                                >
+                                                    <i className="fas fa-qrcode"></i> 📱 Pay via Online (UPI QR)
+                                                </button>
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
+                                if (modal.data.status === 'completed') {
+                                    return (
+                                        <div style={{
+                                            marginTop: '15px', padding: '12px', background: '#ecfdf5',
+                                            border: '1.5px solid #a7f3d0', borderRadius: '8px',
+                                            color: '#047857', fontWeight: 800, textAlign: 'center', fontSize: '0.9rem'
+                                        }}>
+                                            ✅ Payment Completed & Settled!
+                                        </div>
+                                    );
+                                }
+
+                                return null;
+                            })()}
 
                             {(modal.data.status === 'cancelled' || modal.data.status === 'rejected') && (
                                 <div style={{ borderTop: '1px solid #eee', marginTop: '10px', paddingTop: '10px' }}>

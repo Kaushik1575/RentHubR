@@ -366,13 +366,21 @@ async function verifySettlementPayment({ bookingId, paymentId, orderId }) {
         }
     }
 
-    // 4. In development/testing: If paymentId is test or admin confirmed settlement
-    if (!verifiedPayment && (paymentId === 'MANUAL_SETTLE' || paymentId?.startsWith('pay_test_simulated'))) {
-        console.log(`🧪 Verified via simulated/admin settlement for booking ${bookingIdentifier}`);
+    // 4. Cash or Manual Settlement (Admin verified collection) or Test simulation
+    if (!verifiedPayment && (
+        paymentId === 'CASH_SETTLE' || 
+        paymentId === 'MANUAL_SETTLE' || 
+        params.paymentMethod === 'cash' ||
+        paymentId?.startsWith('cash_') ||
+        paymentId?.startsWith('pay_test_simulated')
+    )) {
+        const methodTag = (paymentId === 'CASH_SETTLE' || params.paymentMethod === 'cash') ? 'CASH' : 'ADMIN_VERIFIED';
+        console.log(`💵 Verified via ${methodTag} settlement for booking ${bookingIdentifier}`);
         verifiedPayment = {
-            id: paymentId || `pay_sim_${Date.now()}`,
+            id: paymentId || `cash_${Date.now()}`,
             amount: expectedPaise,
-            currency: 'INR'
+            currency: 'INR',
+            method: methodTag.toLowerCase()
         };
     }
 
