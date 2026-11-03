@@ -152,7 +152,7 @@ const generateInvoiceBuffer = async (bookingId, userName, userEmail, vehicleName
             },
             {
                 title: '3. Cancellation Policy', color: '#f59e0b', bgColor: '#fffbeb', titleColor: '#92400e', items: [
-                    '2+ hrs before: Full refund. Within 2 hrs: 50% deducted.'
+                    '2+ hrs before: Full refund. Within 2 hrs: 30% deducted.'
                 ]
             },
             {

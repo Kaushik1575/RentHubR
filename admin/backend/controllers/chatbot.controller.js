@@ -212,8 +212,8 @@ function extractIssueId(msg) {
         return 'RH' + trimmed;
     }
 
-    // 3. User said "track issue ..." or "issue #..."
-    const m2 = trimmed.match(/(?:issue|ticket)\s*(?:id\s*)?[:#]?\s*([A-Za-z0-9_-]+)/i);
+    // 3. User said "track issue ..." or "issue #..." or "track support ..."
+    const m2 = trimmed.match(/(?:issue|ticket|support)\s*(?:id\s*)?[:#]?\s*([A-Za-z0-9_-]+)/i);
     if (m2) {
         let val = m2[1].toUpperCase().replace(/^#/, '');
         if (/^\d{8,}$/.test(val)) val = 'RH' + val;
@@ -233,22 +233,26 @@ exports.chat = async (req, res) => {
         // Direct handling for Support Issue Tracking
         const detectedIssueId = extractIssueId(message);
         const lowerMsg = message.toLowerCase().trim();
-        const isExplicitIssueTrack = /^(🔍\s*)?track\s*(my\s*)?(issue|ticket|complaint)(\s*status)?$/i.test(lowerMsg) ||
+        const isExplicitIssueTrack = /^(🔍\s*)?track\s*(my\s*)?(support|issue|ticket|complaint)(\s*status)?$/i.test(lowerMsg) ||
                                      lowerMsg === "issue status" ||
+                                     lowerMsg === "support status" ||
                                      lowerMsg === "track issue" ||
+                                     lowerMsg === "track support" ||
+                                     lowerMsg === "check support" ||
                                      lowerMsg === "check issue";
 
         if (isExplicitIssueTrack && !detectedIssueId) {
             return res.json({
-                reply: "🎫 **Track Your Support Issue**\n\nPlease enter your **Issue ID** (e.g., `RH1702456789012` or the number from your confirmation email) to check its live status and updates."
+                reply: "🎫 **Track Your Support Request**\n\nPlease enter your **Issue ID** (e.g., `RH1702456789012` or the number from your confirmation email) to check its live status and updates."
             });
         }
 
         const isDirectTrackQuery = detectedIssueId && (
             message.trim().toUpperCase() === detectedIssueId ||
-            /^(track\s*(?:issue|ticket)?\s*[:#]?\s*)?RH\d{8,}$/i.test(message.trim()) ||
+            /^(track\s*(?:support|issue|ticket)?\s*[:#]?\s*)?RH\d{8,}$/i.test(message.trim()) ||
             /^\d{10,15}$/.test(message.trim()) ||
             message.trim().toLowerCase().startsWith("track issue") ||
+            message.trim().toLowerCase().startsWith("track support") ||
             message.trim().toLowerCase().startsWith("issue status")
         );
 
@@ -343,7 +347,7 @@ ${vehicleContext}
   - RentHub offers ZERO or minimal refundable security deposit for KYC-verified users.
 • **Cancellation & Refund Policy**:
   - Cancellation more than 2 hours prior to scheduled start time: 100% Full Refund of the advance payment.
-  - Cancellation within 2 hours of scheduled start time: 50% deduction of advance; remaining 50% refunded.
+  - Cancellation within 2 hours of scheduled start time: 30% deduction of advance; remaining 70% refunded.
   - "No Show" (Rider Not Come without cancellation): Advance payment is non-refundable.
   - Refund Processing: Automated refunds are credited back to original payment method (Razorpay) or transferred directly to user's UPI/Bank account within 3–5 business days.
 • **Fuel Policy**:

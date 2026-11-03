@@ -34,7 +34,7 @@ const TermsPopup = ({ isOpen, onClose, onAccept, onDecline }) => {
             bgColor: '#FFF3E0',
             points: [
                 'Cancellation 2 hours before the booking time → Full refund of advance.',
-                'Cancellation within 2 hours of/after booking time → 50% of the advance will be deducted.',
+                'Cancellation within 2 hours of/after booking time → 30% of the advance will be deducted.',
                 'No show without cancellation → No refund.'
             ]
         },

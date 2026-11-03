@@ -9,7 +9,7 @@ const INITIAL_OPTIONS = [
     "Rental policies & documents",
     "Advance & refund policy",
     "Track my booking",
-    "🔍 Track Issue",
+    "Track Support",
     "Sponsor & partner program"
 ];
 
@@ -114,19 +114,22 @@ const Chatbot = ({ isOpen, onClose }) => {
             return;
         }
 
-        // 4. Direct Track Issue prompt
-        const isTrackIssuePrompt = lowerText === "🔍 track issue" ||
+        // 4. Direct Track Support / Issue prompt
+        const isTrackSupportPrompt = lowerText === "track support" ||
+            lowerText === "🔍 track support" ||
             lowerText === "track issue" ||
+            lowerText === "🔍 track issue" ||
             lowerText === "track an issue" ||
             lowerText === "track my issue" ||
             lowerText === "track ticket" ||
+            lowerText === "support status" ||
             lowerText === "issue status";
 
-        if (isTrackIssuePrompt) {
+        if (isTrackSupportPrompt) {
             setTimeout(() => {
                 setMessages(prev => [...prev, {
                     id: Date.now() + 1,
-                    text: "🎫 **Track Your Support Issue**\n\nPlease enter your **Issue ID** (e.g., `RH1702456789012` or just the numbers from your confirmation email) to check its live status and updates.",
+                    text: "🎫 **Track Support Request**\n\nPlease enter your **Issue ID** (e.g., `RH1702456789012` or just the numbers from your confirmation email) to check its live status and updates.",
                     sender: 'bot',
                     time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
                 }]);
@@ -399,7 +402,7 @@ const Chatbot = ({ isOpen, onClose }) => {
                 text: replyText,
                 sender: 'bot',
                 time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-                options: null // API responses might not have hardcoded options unless we parse them
+                options: ["Track Support", "Track my booking", "Advance & refund policy", "Browse available vehicles"]
             };
             setMessages(prev => [...prev, botResponse]);
 
