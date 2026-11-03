@@ -139,16 +139,21 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
 
     if (!isOpen) return null;
 
-    const displayQR = activeTab === 'flyer' 
-        ? (qrData?.qrImageUrl || qrData?.cleanQrImageUrl) 
-        : (qrData?.cleanQrImageUrl || qrData?.qrImageUrl);
+    // Guaranteed high-resolution QR: uses backend cleanQrImageUrl or reliable instant SVG/PNG QR generator
+    const cleanQR = qrData?.cleanQrImageUrl || (
+        (qrData?.upiIntentUrl || qrData?.qrImageUrl)
+            ? `https://api.qrserver.com/v1/create-qr-code/?size=450x450&margin=1&data=${encodeURIComponent(qrData.upiIntentUrl || qrData.qrImageUrl)}`
+            : null
+    );
+
+    const displayQR = activeTab === 'flyer' && qrData?.qrImageUrl ? qrData.qrImageUrl : cleanQR;
 
     return (
         <div style={{
             position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
             background: 'rgba(15, 23, 42, 0.75)',
             display: 'flex', alignItems: 'center', justifyContent: 'center',
-            zIndex: 99999, backdropFilter: 'blur(5px)', padding: '16px'
+            zIndex: 99999, backdropFilter: 'blur(6px)', padding: '16px'
         }}>
             <style>{`
                 @keyframes pulseDot { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.3; transform: scale(0.85); } }
@@ -158,7 +163,7 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                 background: '#ffffff',
                 borderRadius: '24px',
                 width: '100%',
-                maxWidth: '440px',
+                maxWidth: '430px',
                 maxHeight: '92vh',
                 overflowY: 'auto',
                 boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
@@ -199,7 +204,7 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                 </div>
 
                 {/* Body Content */}
-                <div style={{ padding: '24px', textAlign: 'center' }}>
+                <div style={{ padding: '22px', textAlign: 'center' }}>
                     {isPaid ? (
                         <div>
                             <div style={{
@@ -234,17 +239,17 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                         </div>
                     ) : (
                         <div>
-                            {/* Amount Highlight */}
+                            {/* Amount Highlight Banner */}
                             <div style={{
                                 background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '14px',
-                                padding: '14px 18px', marginBottom: '16px', display: 'flex',
+                                padding: '12px 18px', marginBottom: '14px', display: 'flex',
                                 justifyContent: 'space-between', alignItems: 'center'
                             }}>
                                 <div style={{ textAlign: 'left' }}>
                                     <span style={{ fontSize: '0.75rem', color: '#64748b', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
                                         Remaining Balance to Collect
                                     </span>
-                                    <div style={{ color: '#0f172a', fontSize: '1.6rem', fontWeight: 900 }}>
+                                    <div style={{ color: '#0f172a', fontSize: '1.65rem', fontWeight: 900 }}>
                                         ₹{amount}
                                     </div>
                                 </div>
@@ -256,10 +261,10 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                 </div>
                             </div>
 
-                            {/* View Switcher if both clean QR and Razorpay card exist */}
-                            {qrData?.cleanQrImageUrl && qrData?.qrImageUrl && (
+                            {/* View Mode Switcher */}
+                            {qrData?.qrImageUrl && (
                                 <div style={{
-                                    display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '12px'
+                                    display: 'flex', justifyContent: 'center', gap: '8px', marginBottom: '14px'
                                 }}>
                                     <button
                                         type="button"
@@ -268,10 +273,11 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                             padding: '6px 14px', borderRadius: '20px', fontSize: '0.78rem',
                                             fontWeight: 700, border: 'none', cursor: 'pointer',
                                             background: activeTab === 'qr' ? '#2563eb' : '#f1f5f9',
-                                            color: activeTab === 'qr' ? '#ffffff' : '#64748b'
+                                            color: activeTab === 'qr' ? '#ffffff' : '#64748b',
+                                            boxShadow: activeTab === 'qr' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none'
                                         }}
                                     >
-                                        📱 Crisp QR
+                                        ⚡ Large Scan QR
                                     </button>
                                     <button
                                         type="button"
@@ -280,43 +286,69 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                             padding: '6px 14px', borderRadius: '20px', fontSize: '0.78rem',
                                             fontWeight: 700, border: 'none', cursor: 'pointer',
                                             background: activeTab === 'flyer' ? '#2563eb' : '#f1f5f9',
-                                            color: activeTab === 'flyer' ? '#ffffff' : '#64748b'
+                                            color: activeTab === 'flyer' ? '#ffffff' : '#64748b',
+                                            boxShadow: activeTab === 'flyer' ? '0 2px 8px rgba(37,99,235,0.25)' : 'none'
                                         }}
                                     >
-                                        📄 Official Card
+                                        📄 Razorpay Slip
                                     </button>
                                 </div>
                             )}
 
-                            {/* Dynamic QR Code Card (Aspect Ratio Preserved) */}
+                            {/* Prominent QR Code Presentation Card */}
                             <div style={{
                                 background: '#ffffff',
-                                border: '2px dashed #cbd5e1',
-                                borderRadius: '18px',
-                                padding: '14px',
-                                display: 'flex',
+                                border: '1.5px solid #e2e8f0',
+                                borderRadius: '20px',
+                                padding: activeTab === 'flyer' ? '12px' : '16px',
+                                display: 'inline-flex',
+                                flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                minHeight: '260px',
                                 boxShadow: '0 8px 24px rgba(0,0,0,0.06)',
                                 marginBottom: '14px'
                             }}>
                                 {displayQR ? (
-                                    <img
-                                        src={displayQR}
-                                        alt="UPI Dynamic QR"
-                                        style={{
-                                            width: activeTab === 'flyer' ? '100%' : '240px',
-                                            maxWidth: activeTab === 'flyer' ? '280px' : '240px',
-                                            height: activeTab === 'flyer' ? 'auto' : '240px',
-                                            maxHeight: '340px',
-                                            objectFit: 'contain',
-                                            display: 'block',
-                                            borderRadius: '8px'
-                                        }}
-                                    />
+                                    activeTab === 'flyer' ? (
+                                        <img
+                                            src={displayQR}
+                                            alt="Razorpay Slip"
+                                            style={{
+                                                width: '100%',
+                                                maxWidth: '260px',
+                                                height: 'auto',
+                                                maxHeight: '340px',
+                                                display: 'block',
+                                                borderRadius: '10px'
+                                            }}
+                                        />
+                                    ) : (
+                                        <div style={{ position: 'relative', width: '230px', height: '230px' }}>
+                                            <img
+                                                src={displayQR}
+                                                alt="UPI Dynamic QR"
+                                                style={{
+                                                    width: '230px',
+                                                    height: '230px',
+                                                    display: 'block',
+                                                    borderRadius: '10px'
+                                                }}
+                                            />
+                                            {/* Micro Center Badge */}
+                                            <div style={{
+                                                position: 'absolute', top: '50%', left: '50%',
+                                                transform: 'translate(-50%, -50%)',
+                                                background: '#ffffff', border: '1.5px solid #e2e8f0',
+                                                borderRadius: '6px', padding: '2px 6px',
+                                                boxShadow: '0 2px 6px rgba(0,0,0,0.15)',
+                                                fontSize: '0.68rem', fontWeight: 900, color: '#1e3a8a'
+                                            }}>
+                                                UPI
+                                            </div>
+                                        </div>
+                                    )
                                 ) : (
-                                    <div style={{ color: '#94a3b8', fontSize: '0.9rem', fontWeight: 600 }}>
+                                    <div style={{ width: '230px', height: '230px', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#94a3b8', fontWeight: 600 }}>
                                         Generating Dynamic QR...
                                     </div>
                                 )}

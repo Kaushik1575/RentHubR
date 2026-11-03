@@ -55,6 +55,18 @@ async function generateSettlementQR(booking, finalBalance) {
     const existing = settlementCache.get(bookingIdentifier);
     if (existing && existing.status === 'active' && new Date(existing.expiresAt) > new Date()) {
         console.log(`♻️ Returning cached active settlement QR for booking ${bookingIdentifier} (expires at: ${existing.expiresAt})`);
+        if (!existing.cleanQrImageUrl) {
+            try {
+                existing.cleanQrImageUrl = await QRCode.toDataURL(existing.upiIntentUrl || existing.qrImageUrl, {
+                    errorCorrectionLevel: 'H',
+                    margin: 1,
+                    width: 450,
+                    color: { dark: '#0f172a', light: '#ffffff' }
+                });
+            } catch (e) {
+                console.warn('Could not generate cached cleanQrImageUrl:', e.message);
+            }
+        }
         return existing;
     }
 
