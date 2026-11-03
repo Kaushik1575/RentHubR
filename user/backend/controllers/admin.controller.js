@@ -128,22 +128,11 @@ const getAllBookings = async (req, res) => {
 // Admin: Get single booking
 const getBookingById = async (req, res) => {
     try {
-        const { data: booking, error } = await supabase
-            .from('bookings')
-            .select(`
-                *,
-                users:user_id (
-                    full_name,
-                    email,
-                    phone_number
-                ),
-                rewards:reward_id (
-                    coupon_code,
-                    reward_type
-                )
-            `)
-            .eq('id', req.params.id)
-            .single();
+        let bQuery = supabase.from('bookings').select(`*,
+                users:user_id ( full_name, email, phone_number ),
+                rewards:reward_id ( coupon_code, reward_type )`);
+        if (String(req.params.id).startsWith('RH')) { bQuery = bQuery.eq('booking_id', req.params.id); } else { bQuery = bQuery.eq('id', req.params.id); }
+        const { data: booking, error } = await bQuery.single();
 
         if (error) throw error;
         if (!booking) {

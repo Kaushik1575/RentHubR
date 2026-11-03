@@ -362,23 +362,43 @@ const AdminPanel = () => {
                 loadBookings(); // Refresh list
 
                 if (data.type === 'ride_end' || data.type === 'settlement_pending') {
+                    const bookingTargetId = data.data?.bookingId || data.data?.id;
                     try {
-                        const bRes = await fetch(`/api/admin/bookings?page=1&limit=50`, { headers: { 'Authorization': `Bearer ${token}` } });
-                        if (bRes.ok) {
-                            const bList = await bRes.json();
-                            if (Array.isArray(bList)) {
-                                setBookings(bList);
-                                const found = bList.find(b => String(b.booking_id || b.id) === String(data.data?.bookingId || data.data?.id));
-                                if (found) {
-                                    setModal({ type: 'viewBooking', data: { ...found, paymentQr: data.data?.paymentQr } });
-                                    return;
-                                }
+                        const fullRes = await fetch(`/api/admin/bookings/${bookingTargetId}`, {
+                            headers: { 'Authorization': `Bearer ${token}` }
+                        });
+                        if (fullRes.ok) {
+                            const fullBooking = await fullRes.json();
+                            if (fullBooking && (fullBooking.booking_id || fullBooking.id)) {
+                                setModal({
+                                    type: 'viewBooking',
+                                    data: {
+                                        ...fullBooking,
+                                        paymentQr: data.data?.paymentQr
+                                    }
+                                });
+                                return;
                             }
                         }
                     } catch (err) {
-                        console.error('Error fetching bookings after scan:', err);
+                        console.error('Error fetching full booking on scan:', err);
                     }
-                    setModal({ type: 'viewBooking', data: data.data });
+
+                    // Fallback to table search
+                    const list = Array.isArray(bookings) ? bookings : [];
+                    const found = list.find(b => String(b.booking_id || b.id) === String(bookingTargetId));
+                    if (found) {
+                        setModal({
+                            type: 'viewBooking',
+                            data: {
+                                ...found,
+                                status: 'ride_completed',
+                                paymentQr: data.data?.paymentQr
+                            }
+                        });
+                        return;
+                    }
+
                     return;
                     const balance = data.data.totalPayable !== undefined ? data.data.totalPayable : data.data.balance;
                     const isRefund = balance < 0;
