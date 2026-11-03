@@ -324,3 +324,34 @@
     background: #dcdcdc;
     border-radius: 10px;
 }
+
+/* Markdown formatting inside Bot Messages */
+.message.bot a {
+    color: #1a4da1;
+    font-weight: 700;
+    text-decoration: underline;
+    transition: color 0.15s ease;
+}
+
+.message.bot a:hover {
+    color: #2874f0;
+}
+
+.message.bot blockquote {
+    margin: 8px 0;
+    padding: 8px 12px;
+    background: #f0f7ff;
+    border-left: 3px solid #2874f0;
+    border-radius: 0 8px 8px 0;
+    font-size: 13px;
+    color: #334155;
+    font-style: italic;
+}
+
+.message.bot p {
+    margin: 0 0 8px 0;
+}
+
+.message.bot p:last-child {
+    margin-bottom: 0;
+}

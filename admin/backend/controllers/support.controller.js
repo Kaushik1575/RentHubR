@@ -305,11 +305,25 @@ const trackIssue = async (req, res) => {
         const { issue_id } = req.params;
         if (!issue_id) return res.status(400).json({ error: 'Issue ID required' });
 
-        const { data, error } = await supabase
+        let queryId = issue_id.trim().toUpperCase().replace(/^#/, '');
+        if (!queryId.startsWith('RH') && /^\d{8,}$/.test(queryId)) {
+            queryId = 'RH' + queryId;
+        }
+
+        let { data, error } = await supabase
             .from('issues')
             .select('issue_id, category, sub_category, description, status, admin_reply, created_at, updated_at, booking_id, attachment_url')
-            .eq('issue_id', issue_id.trim().toUpperCase())
-            .single();
+            .eq('issue_id', queryId)
+            .maybeSingle();
+
+        if (!data && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(queryId)) {
+            const uuidRes = await supabase
+                .from('issues')
+                .select('issue_id, category, sub_category, description, status, admin_reply, created_at, updated_at, booking_id, attachment_url')
+                .eq('id', queryId.toLowerCase())
+                .maybeSingle();
+            data = uuidRes.data;
+        }
 
         if (error || !data) {
             return res.status(404).json({ error: 'Issue not found. Please check the Issue ID.' });

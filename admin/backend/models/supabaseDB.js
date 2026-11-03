@@ -527,6 +527,32 @@ class SupabaseDB {
 
         return true;
     }
+
+    // Support Issue operations
+    static async getIssueById(issueId) {
+        if (!issueId) return null;
+        let cleanId = issueId.trim().toUpperCase().replace(/^#/, '');
+        if (!cleanId.startsWith('RH') && /^\d{8,}$/.test(cleanId)) {
+            cleanId = 'RH' + cleanId;
+        }
+
+        let { data, error } = await supabase
+            .from('issues')
+            .select('*')
+            .eq('issue_id', cleanId)
+            .maybeSingle();
+
+        if (!data && /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(cleanId)) {
+            const uuidRes = await supabase
+                .from('issues')
+                .select('*')
+                .eq('id', cleanId.toLowerCase())
+                .maybeSingle();
+            data = uuidRes.data;
+        }
+
+        return data;
+    }
 }
 
 module.exports = SupabaseDB;

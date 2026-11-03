@@ -9,6 +9,7 @@ const INITIAL_OPTIONS = [
     "Rental policies & documents",
     "Advance & refund policy",
     "Track my booking",
+    "🔍 Track Issue",
     "Sponsor & partner program"
 ];
 
@@ -109,6 +110,27 @@ const Chatbot = ({ isOpen, onClose }) => {
                 }]);
                 setTimeout(() => window.location.href = 'tel:+919090598756', 1500);
             }, 500);
+            setIsTyping(false);
+            return;
+        }
+
+        // 4. Direct Track Issue prompt
+        const isTrackIssuePrompt = lowerText === "🔍 track issue" ||
+            lowerText === "track issue" ||
+            lowerText === "track an issue" ||
+            lowerText === "track my issue" ||
+            lowerText === "track ticket" ||
+            lowerText === "issue status";
+
+        if (isTrackIssuePrompt) {
+            setTimeout(() => {
+                setMessages(prev => [...prev, {
+                    id: Date.now() + 1,
+                    text: "🎫 **Track Your Support Issue**\n\nPlease enter your **Issue ID** (e.g., `RH1702456789012` or just the numbers from your confirmation email) to check its live status and updates.",
+                    sender: 'bot',
+                    time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                }]);
+            }, 400);
             setIsTyping(false);
             return;
         }
@@ -248,6 +270,31 @@ const Chatbot = ({ isOpen, onClose }) => {
                         }, 500);
                     } catch (e) {
                         console.error("Failed to parse cancel action", e);
+                    }
+                }
+
+                // Regex for TRACK ISSUE
+                const trackIssueRegex = /\|\|\| ACTION: TRACK_ISSUE (.*?) \|\|\|/s;
+                const trackIssueMatch = replyText.match(trackIssueRegex);
+                if (trackIssueMatch) {
+                    try {
+                        let jsonStr = trackIssueMatch[1];
+                        const details = JSON.parse(jsonStr);
+                        replyText = replyText.replace(trackIssueMatch[0], "").trim();
+
+                        setTimeout(() => {
+                            setMessages(prev => [...prev, {
+                                id: Date.now() + 2,
+                                text: `Checking live tracking details for Issue #${details.issueId}...`,
+                                sender: 'bot',
+                                time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })
+                            }]);
+                            setTimeout(() => {
+                                window.location.href = `/track-issue?id=${details.issueId}`;
+                            }, 1500);
+                        }, 500);
+                    } catch (e) {
+                        console.error("Failed to parse track issue action", e);
                     }
                 }
 

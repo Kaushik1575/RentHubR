@@ -167,9 +167,105 @@ function getWeatherRecommendations(weatherInfo) {
     return recommendations;
 }
 
+// Helper to format issue details response
+function formatIssueResponse(issue) {
+    const statusConfig = {
+        'Pending': { icon: '⏳', label: 'Pending Review' },
+        'In Progress': { icon: '🔄', label: 'In Progress' },
+        'Resolved': { icon: '✅', label: 'Resolved' },
+        'Closed': { icon: '🔒', label: 'Closed' }
+    };
+    const sc = statusConfig[issue.status] || { icon: '📋', label: issue.status };
+    const createdDate = issue.created_at ? new Date(issue.created_at).toLocaleString('en-IN', {
+        day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit', hour12: true
+    }) : '—';
+
+    let reply = `🎫 **Support Issue Status [#${issue.issue_id}]**\n\n`;
+    reply += `• **Status**: ${sc.icon} **${sc.label}**\n`;
+    reply += `• **Category**: ${issue.category || 'General'}${issue.sub_category ? ` (${issue.sub_category})` : ''}\n`;
+    if (issue.booking_id) {
+        reply += `• **Related Booking**: #${issue.booking_id}\n`;
+    }
+    reply += `• **Reported On**: ${createdDate}\n`;
+    reply += `• **Description**: ${issue.description}\n\n`;
+
+    if (issue.admin_reply) {
+        reply += `💬 **Admin Response / Resolution:**\n> ${issue.admin_reply}\n\n`;
+    } else {
+        reply += `ℹ️ **Support Update:**\n> Our team is actively reviewing your request. Most issues are addressed within 24 hours.\n\n`;
+    }
+
+    reply += `🔗 [Click here to view on full Issue Tracker](/track-issue?id=${issue.issue_id})`;
+    return reply;
+}
+
+// Helper to extract Issue ID from user message
+function extractIssueId(msg) {
+    if (!msg || typeof msg !== 'string') return null;
+    const trimmed = msg.trim();
+    // 1. Explicit RH followed by 8+ digits
+    const m1 = trimmed.match(/\b(RH\d{8,})\b/i);
+    if (m1) return m1[1].toUpperCase();
+
+    // 2. Just 10-15 digits
+    if (/^\d{10,15}$/.test(trimmed)) {
+        return 'RH' + trimmed;
+    }
+
+    // 3. User said "track issue ..." or "issue #..."
+    const m2 = trimmed.match(/(?:issue|ticket)\s*(?:id\s*)?[:#]?\s*([A-Za-z0-9_-]+)/i);
+    if (m2) {
+        let val = m2[1].toUpperCase().replace(/^#/, '');
+        if (/^\d{8,}$/.test(val)) val = 'RH' + val;
+        if (!val.includes('-')) return val;
+    }
+    return null;
+}
+
 exports.chat = async (req, res) => {
     try {
         const { message, history } = req.body;
+
+        if (!message || typeof message !== 'string') {
+            return res.status(400).json({ error: "Message is required" });
+        }
+
+        // Direct handling for Support Issue Tracking
+        const detectedIssueId = extractIssueId(message);
+        const lowerMsg = message.toLowerCase().trim();
+        const isExplicitIssueTrack = /^(🔍\s*)?track\s*(my\s*)?(issue|ticket|complaint)(\s*status)?$/i.test(lowerMsg) ||
+                                     lowerMsg === "issue status" ||
+                                     lowerMsg === "track issue" ||
+                                     lowerMsg === "check issue";
+
+        if (isExplicitIssueTrack && !detectedIssueId) {
+            return res.json({
+                reply: "🎫 **Track Your Support Issue**\n\nPlease enter your **Issue ID** (e.g., `RH1702456789012` or the number from your confirmation email) to check its live status and updates."
+            });
+        }
+
+        const isDirectTrackQuery = detectedIssueId && (
+            message.trim().toUpperCase() === detectedIssueId ||
+            /^(track\s*(?:issue|ticket)?\s*[:#]?\s*)?RH\d{8,}$/i.test(message.trim()) ||
+            /^\d{10,15}$/.test(message.trim()) ||
+            message.trim().toLowerCase().startsWith("track issue") ||
+            message.trim().toLowerCase().startsWith("issue status")
+        );
+
+        if (isDirectTrackQuery) {
+            try {
+                const issue = await SupabaseDB.getIssueById(detectedIssueId);
+                if (issue) {
+                    return res.json({ reply: formatIssueResponse(issue) });
+                } else {
+                    return res.json({
+                        reply: `❌ **Issue Not Found**\n\nWe couldn't find any support request with ID **${detectedIssueId}**.\n\nPlease double-check the ID from your confirmation email or submit a new inquiry on our [Support Page](/support).`
+                    });
+                }
+            } catch (err) {
+                console.error("Error direct tracking issue in chatbot:", err);
+            }
+        }
 
         if (!process.env.GEMINI_API_KEY) {
             console.error("GEMINI_API_KEY is missing");
@@ -192,6 +288,19 @@ exports.chat = async (req, res) => {
             }
         } else {
             userContext = `\n**USER CONTEXT:**\n- User is browsing as guest (not logged in). If they ask about their personal coins or profile, politely suggest logging in.`;
+        }
+
+        // Live Issue Context if an issue ID was detected in conversation
+        let issueContext = "";
+        if (detectedIssueId) {
+            try {
+                const liveIssue = await SupabaseDB.getIssueById(detectedIssueId);
+                if (liveIssue) {
+                    issueContext = `\n**LIVE SUPPORT ISSUE FOUND IN DATABASE:**\n- Issue ID: ${liveIssue.issue_id}\n- Status: ${liveIssue.status}\n- Category: ${liveIssue.category}${liveIssue.sub_category ? ` (${liveIssue.sub_category})` : ''}\n- Description: ${liveIssue.description}\n- Admin Reply / Resolution: ${liveIssue.admin_reply || "Under review by support team"}\n- Created At: ${liveIssue.created_at}\nAnswer with these live facts.`;
+                }
+            } catch (e) {
+                console.error("Error fetching issue context for chatbot:", e);
+            }
         }
 
         // Encyclopedic RentHub Knowledge Base
@@ -280,6 +389,7 @@ ${userContext}
 - **Helpline Phone**: +91 9090598756
 - **Support Portal**: E-Query ticket desk on the website & in-app Support page.
 - **Digital Handshake**: Contactless QR code scanning for vehicle handoff at pickup and return.
+${issueContext}
 
 ===================================================================
 8. INTERACTIVE ACTION TRIGGERS (CRITICAL)
@@ -309,6 +419,10 @@ When the user's intent clearly matches an action, append the exact action token 
 6. **To Call Human Support**:
    When user asks for customer care phone number or human representative:
    ||| ACTION: CALL_SUPPORT {"number": "+919090598756"} |||
+
+7. **To Track a Support Issue / Ticket**:
+   When user asks to track a support issue or ticket and provides an Issue ID:
+   ||| ACTION: TRACK_ISSUE {"issueId": "RH1702456789012"} |||
 
 (Note: TYPE must be 'bikes', 'cars', or 'scooty'. Do NOT wrap the action token inside markdown code blocks).
 
