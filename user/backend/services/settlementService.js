@@ -88,11 +88,25 @@ async function generateSettlementQR(booking, finalBalance) {
 
         console.log(`✅ Razorpay Native Dynamic QR created successfully! QR ID: ${rzpQr.id}`);
 
+        // Generate crisp, high-resolution direct QR code data URL
+        let cleanQrImageUrl = null;
+        try {
+            cleanQrImageUrl = await QRCode.toDataURL(rzpQr.image_url, {
+                errorCorrectionLevel: 'H',
+                margin: 1,
+                width: 400,
+                color: { dark: '#0f172a', light: '#ffffff' }
+            });
+        } catch (qrGenErr) {
+            console.warn('Could not generate clean QR code data URL:', qrGenErr.message);
+        }
+
         qrRecord = {
             method: 'razorpay_dynamic_qr',
             qrId: rzpQr.id,
             qrImageUrl: rzpQr.image_url,
-            upiIntentUrl: rzpQr.image_url, // Official Razorpay image
+            cleanQrImageUrl: cleanQrImageUrl,
+            upiIntentUrl: rzpQr.image_url, // Official Razorpay hosted link
             amount: exactBalance,
             amountPaise: amountPaise,
             currency: 'INR',

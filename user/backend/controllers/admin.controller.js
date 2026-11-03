@@ -847,6 +847,8 @@ const handleQRScan = async (req, res) => {
 
             // 7. Prepare Response
             const responseData = {
+                bookingId: booking.booking_id || booking.id,
+                id: booking.id,
                 rideStartTime: startTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }), // Format for user
                 rideEndTime: endTime.toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
                 durationText: durationText,
