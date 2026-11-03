@@ -3,6 +3,7 @@ import { useSearchParams, useNavigate, useLocation } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 import ConfirmationPopup from '../components/ConfirmationPopup';
 import RefundDetailsPopup from '../components/RefundDetailsPopup';
+import SettlementQRModal from '../components/SettlementQRModal';
 
 const TrackBooking = () => {
     const [bookingId, setBookingId] = useState('');
@@ -17,6 +18,7 @@ const TrackBooking = () => {
     const [showCancellationModal, setShowCancellationModal] = useState(false);
     const [showRefundDetailsModal, setShowRefundDetailsModal] = useState(false);
     const [isCancelling, setIsCancelling] = useState(false);
+    const [settlementModal, setSettlementModal] = useState({ isOpen: false, bookingId: null, data: null });
 
     // Popup State
     const [popup, setPopup] = useState({ isOpen: false, type: 'info', title: '', message: '' });
@@ -385,6 +387,25 @@ const TrackBooking = () => {
                         </div>
 
                         <div style={{ marginTop: '1.5rem', display: 'flex', gap: '10px', justifyContent: 'center' }}>
+                            {result.status === 'ride_completed' && (result.remainingDisplayAmount > 0 || result.remaining_amount > 0) && (
+                                <button
+                                    onClick={() => setSettlementModal({
+                                        isOpen: true,
+                                        bookingId: result.booking_id || result.id,
+                                        data: { remainingAmount: result.remainingDisplayAmount || result.remaining_amount }
+                                    })}
+                                    style={{
+                                        display: 'inline-flex', alignItems: 'center', padding: '10px 20px',
+                                        background: 'linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%)', color: 'white',
+                                        border: 'none', borderRadius: '5px', fontWeight: 'bold', cursor: 'pointer',
+                                        boxShadow: '0 2px 8px rgba(37, 99, 235, 0.4)'
+                                    }}
+                                >
+                                    <i className="fas fa-qrcode" style={{ marginRight: '8px' }}></i>
+                                    Pay Remaining ₹{result.remainingDisplayAmount || result.remaining_amount} via UPI QR
+                                </button>
+                            )}
+
                             <button
                                 onClick={handleDownloadInvoice}
                                 style={{
@@ -497,6 +518,14 @@ const TrackBooking = () => {
             />
 
             {/* Refund Details Modal */}
+            <SettlementQRModal
+                isOpen={settlementModal.isOpen}
+                onClose={() => { setSettlementModal({ isOpen: false, bookingId: null, data: null }); }}
+                bookingId={settlementModal.bookingId}
+                initialData={settlementModal.data}
+                onPaymentSuccess={() => { window.location.reload(); }}
+            />
+
             <RefundDetailsPopup
                 isOpen={showRefundDetailsModal}
                 onClose={() => setShowRefundDetailsModal(false)}

@@ -793,7 +793,101 @@ const getBookingById = async (req, res) => {
     }
 };
 
+
+const scanGatePass = async (req, res) => {
+    try {
+        let { bookingId } = req.body;
+        if (!bookingId) {
+            return res.status(400).json({ error: 'Booking ID is required' });
+        }
+
+        try {
+            if (typeof bookingId === 'string' && bookingId.trim().startsWith('{')) {
+                const parsed = JSON.parse(bookingId);
+                if (parsed.bookingId) bookingId = parsed.bookingId;
+            }
+        } catch (e) {}
+
+        let query = supabase.from('bookings').select('*, users:user_id(full_name, email)');
+        if (String(bookingId).startsWith('RH')) {
+            query = query.eq('booking_id', bookingId);
+        } else {
+            query = query.eq('id', bookingId);
+        }
+        let { data: booking, error } = await query.single();
+        if (error || !booking) {
+            return res.status(404).json({ error: 'Booking not found' });
+        }
+
+        const now = new Date();
+        const nowISO = now.toISOString();
+
+        if (booking.status === 'confirmed') {
+            const { error: updateError } = await supabase
+                .from('bookings')
+                .update({
+                    status: 'ride_started',
+                    ride_start_time: nowISO,
+                    updated_at: nowISO
+                })
+                .eq('id', booking.id);
+
+            if (updateError) throw updateError;
+
+            return res.json({
+                success: true,
+                message: 'Ride started successfully! Safe travels with RentHub.',
+                type: 'ride_start',
+                booking: { ...booking, status: 'ride_started', ride_start_time: nowISO }
+            });
+        }
+
+        if (booking.status === 'ride_started') {
+            return res.json({
+                success: true,
+                message: 'Ride is currently in progress. Please return the vehicle to the hub for admin check-in.',
+                type: 'ride_in_progress',
+                booking
+            });
+        }
+
+        if (booking.status === 'ride_completed') {
+            const settlementService = require('../services/settlementService');
+            const remaining = parseFloat(booking.remaining_amount) || 0;
+            let paymentQr = null;
+            if (remaining > 0) {
+                paymentQr = await settlementService.generateSettlementQR(booking, remaining);
+            }
+
+            return res.json({
+                success: true,
+                message: remaining > 0 ? `Ride completed. Outstanding balance: ₹${remaining}` : 'Ride completed.',
+                type: 'settlement_pending',
+                remainingAmount: remaining,
+                paymentQr,
+                booking
+            });
+        }
+
+        if (booking.status === 'completed') {
+            return res.json({
+                success: true,
+                message: 'Booking is completed and fully paid.',
+                type: 'already_completed',
+                booking
+            });
+        }
+
+        return res.status(400).json({ error: `Cannot scan gate pass. Status: ${booking.status}` });
+
+    } catch (err) {
+        console.error('Error scanning gate pass:', err);
+        res.status(500).json({ error: 'Internal server error scanning pass: ' + err.message });
+    }
+};
+
 module.exports = {
+    scanGatePass,
     checkAvailability,
     createBooking,
     getUserBookings,

@@ -4,6 +4,7 @@ const { getISTTimestamp } = require('../utils/dateUtils');
 const { generateInvoiceBuffer } = require('../utils/invoiceGenerator');
 const { sendEmail, sendRefundCompleteEmail, sendSOSLinkEmail, sendRideCompletedEmail, sendVehicleApprovedEmail } = require('../config/emailService');
 const { sendWithdrawalPaidEmail } = require('../config/sponsorEmailService');
+const settlementService = require('../services/settlementService');
 const { makeBookingConfirmationCall } = require('../config/retellCallService');
 const { sendImmediateReminderIfNeeded, checkAndSendReminders } = require('../services/reminderService');
 const { normalizeVehicleType } = require('../utils/vehicleTypeNormalizer');
@@ -808,8 +809,8 @@ const handleQRScan = async (req, res) => {
                 message += `\nTOTAL PAYABLE: ₹${finalBalance}`;
             }
 
-            // 6. Update Database
-            // const updatedRemainingAmount = finalBalance > 0 ? finalBalance : 0; // Uncomment after running migration
+            // 6. Update Database with remaining balance
+            const remainingToPay = finalBalance > 0 ? finalBalance : 0;
             const { error: updateError } = await supabase
                 .from('bookings')
                 .update({
@@ -819,9 +820,25 @@ const handleQRScan = async (req, res) => {
                     extra_hours: parseFloat((extraMinutes / 60).toFixed(2)),
                     extra_amount: extraAmount,
                     total_amount: actualBillableAmount,
+                    remaining_amount: remainingToPay,
                     updated_at: now.toISOString()
                 })
                 .eq('id', booking.id);
+
+            // 6.1 Generate unique, fixed-amount, single-use Razorpay Dynamic UPI QR code if balance exists
+            let paymentQr = null;
+            if (finalBalance > 0) {
+                try {
+                    paymentQr = await settlementService.generateSettlementQR({
+                        ...booking,
+                        total_amount: actualBillableAmount,
+                        advance_payment: advancePaid
+                    }, finalBalance);
+                    console.log('✅ Settlement UPI Payment QR attached to ride_end response for booking ' + (booking.booking_id || booking.id));
+                } catch (qrErr) {
+                    console.error('⚠️ Could not generate settlement QR in handleQRScan:', qrErr.message);
+                }
+            }
 
             if (updateError) throw updateError;
 
@@ -840,7 +857,8 @@ const handleQRScan = async (req, res) => {
                 totalBaseAmount: actualBillableAmount, // Now strictly usage based
                 advancePaid: advancePaid,
                 pendingBase: 0, // Deprecated in favor of direct balance
-                totalPayable: finalBalance
+                totalPayable: finalBalance,
+                paymentQr: paymentQr
             };
 
             return res.json({
@@ -851,17 +869,29 @@ const handleQRScan = async (req, res) => {
             });
         }
 
-        // 4. Validation: Already Completed
+        // 4. Validation: Already Completed / Settlement Pending
         if (booking.status === 'ride_completed' || booking.status === 'completed') {
-            // Instead of error, return success with booking info
             const total = parseFloat(booking.total_amount) || 0;
             const advance = parseFloat(booking.advance_payment) || 0;
-            const balance = total - advance;
+            const balance = booking.remaining_amount !== undefined && booking.remaining_amount !== null
+                ? parseFloat(booking.remaining_amount)
+                : (total - advance);
+
+            let paymentQr = null;
+            if (balance > 0 && booking.status !== 'completed') {
+                try {
+                    paymentQr = await settlementService.generateSettlementQR(booking, balance);
+                } catch (qrErr) {
+                    console.warn('QR lookup warning in already_completed:', qrErr.message);
+                }
+            }
 
             return res.json({
                 success: true,
-                message: `Ride already completed for this booking`,
-                type: 'already_completed',
+                message: balance > 0 && booking.status !== 'completed'
+                    ? `Ride completed. Outstanding balance: ₹${balance}`
+                    : `Ride already completed and settled for this booking`,
+                type: balance > 0 && booking.status !== 'completed' ? 'settlement_pending' : 'already_completed',
                 data: {
                     bookingId: booking.booking_id || booking.id,
                     status: booking.status,
@@ -869,7 +899,8 @@ const handleQRScan = async (req, res) => {
                     advancePaid: advance,
                     balance: balance,
                     rideStartTime: booking.ride_start_time,
-                    rideEndTime: booking.ride_end_time
+                    rideEndTime: booking.ride_end_time,
+                    paymentQr: paymentQr
                 }
             });
         }

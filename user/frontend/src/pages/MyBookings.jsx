@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router-dom';
 import StatusPopup from '../components/StatusPopup';
 import ConfirmationPopup from '../components/ConfirmationPopup';
 import RefundDetailsPopup from '../components/RefundDetailsPopup';
+import SettlementQRModal from '../components/SettlementQRModal';
 
 
 const MyBookings = () => {
@@ -23,6 +24,7 @@ const MyBookings = () => {
     // Re-confirmation modal state
     const [showReconfirmModal, setShowReconfirmModal] = useState(false);
     const [isReconfirming, setIsReconfirming] = useState(false);
+    const [settlementModal, setSettlementModal] = useState({ isOpen: false, bookingId: null, data: null });
     const [reconfirmBookingObj, setReconfirmBookingObj] = useState(null);
 
 
@@ -500,11 +502,12 @@ const MyBookings = () => {
                                 fontWeight: 'bold', padding: '0.5rem 1rem', borderRadius: '5px', display: 'inline-block', marginTop: '0.5rem', color: 'white', textAlign: 'center', width: 'fit-content',
                                 backgroundColor: booking.status === 'confirmed' ? '#4CAF50' :
                                     booking.status === 'ride_started' ? '#0284c7' :
+                                    booking.status === 'ride_completed' ? '#f59e0b' :
                                     booking.status === 'pending' ? '#ffa726' :
                                         booking.status === 'cancelled' ? '#f44336' :
                                             booking.status === 'completed' ? '#2196F3' : '#9e9e9e'
                             }}>
-                                {booking.status === 'ride_started' ? 'RIDE IN PROGRESS' : (booking.status ? booking.status.toUpperCase() : 'N/A')}
+                                {booking.status === 'ride_started' ? 'RIDE IN PROGRESS' : booking.status === 'ride_completed' ? 'RIDE COMPLETED - SETTLEMENT DUE' : (booking.status ? booking.status.toUpperCase() : 'N/A')}
                             </span>
 
                             {(booking.status === 'confirmed' || booking.status === 'ride_started' || booking.status === 'pending' || booking.status === 'completed') && (
@@ -522,7 +525,24 @@ const MyBookings = () => {
                                         </a>
                                     )}
 
-                                    {(booking.status === 'confirmed' || booking.status === 'completed' || booking.status === 'ride_started') && (
+                                    {booking.status === 'ride_completed' && (booking.remainingDisplayAmount > 0 || booking.remaining_amount > 0 || booking.remainingDisplayAmount === undefined) && (
+                                        <button
+                                            onClick={() => setSettlementModal({
+                                                isOpen: true,
+                                                bookingId: booking.booking_id || booking.id,
+                                                data: { remainingAmount: booking.remainingDisplayAmount || booking.remaining_amount }
+                                            })}
+                                            style={{
+                                                backgroundColor: '#2563eb', color: 'white', border: 'none', padding: '0.8rem 1.2rem',
+                                                borderRadius: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem',
+                                                fontWeight: 'bold', boxShadow: '0 2px 8px rgba(37, 99, 235, 0.4)'
+                                            }}
+                                        >
+                                            <span>💳</span> Pay Balance via UPI QR
+                                        </button>
+                                    )}
+
+                                    {(booking.status === 'confirmed' || booking.status === 'completed' || booking.status === 'ride_started' || booking.status === 'ride_completed') && (
                                         <button onClick={() => handleDownloadInvoice(booking.id)} style={{
                                             backgroundColor: '#2196F3', color: 'white', border: 'none', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem'
                                         }}>
@@ -694,6 +714,14 @@ const MyBookings = () => {
 
 
             {/* Refund Details Modal (Matches Confirmation Style) */}
+            <SettlementQRModal
+                isOpen={settlementModal.isOpen}
+                onClose={() => { setSettlementModal({ isOpen: false, bookingId: null, data: null }); fetchUserBookings(); }}
+                bookingId={settlementModal.bookingId}
+                initialData={settlementModal.data}
+                onPaymentSuccess={() => { fetchUserBookings(); }}
+            />
+
             <RefundDetailsPopup
                 isOpen={showRefundDetailsModal}
                 onClose={() => setShowRefundDetailsModal(false)}

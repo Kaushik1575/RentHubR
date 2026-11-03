@@ -7,6 +7,7 @@ import AdminIssues from '../components/AdminIssues';
 import AdminOffers from '../components/AdminOffers';
 import AdminReports from '../components/AdminReports';
 import ComingSoonCard from '../components/ComingSoonCard';
+import SettlementQRModal from '../components/SettlementQRModal';
 
 
 const AdminPanel = () => {
@@ -326,9 +327,12 @@ const AdminPanel = () => {
                 setScanInput('');
                 loadBookings(); // Refresh list
 
-                if (data.type === 'ride_end') {
-                    // Show detailed summary for ride end
-                    const balance = data.data.totalPayable;
+                if (data.type === 'ride_end' || data.type === 'settlement_pending') {
+                    if (data.data?.paymentQr) {
+                        setModal({ type: 'settlementQR', data: data.data });
+                        return;
+                    }
+                    const balance = data.data.totalPayable !== undefined ? data.data.totalPayable : data.data.balance;
                     const isRefund = balance < 0;
 
                     const summary = `Ride Ended Successfully!
@@ -912,6 +916,16 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                         {(['cancelled'].includes(b.status) && b.refund_status === 'processing') &&
                                                             <button className="action-btn btn-confirm-refund" onClick={() => handleRefundComplete(b.id)}><i className="fas fa-check"></i> Ref. Done</button>
                                                         }
+                                                        {b.status === 'ride_completed' && (b.remaining_amount > 0 || b.remaining_amount === undefined) && (
+                                                            <button
+                                                                className="action-btn"
+                                                                style={{ background: '#2563eb', color: '#fff' }}
+                                                                title="Collect remaining balance via UPI QR"
+                                                                onClick={() => setModal({ type: 'settlementQR', data: { bookingId: b.booking_id || b.id, totalPayable: b.remaining_amount } })}
+                                                            >
+                                                                <i className="fas fa-qrcode"></i> Settle QR
+                                                            </button>
+                                                        )}
                                                     </div>
                                                 </td>
                                             </tr>
@@ -2208,6 +2222,15 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                     </div>
                 </div>
             )}
+
+            {/* SETTLEMENT DYNAMIC UPI QR MODAL */}
+            <SettlementQRModal
+                isOpen={modal.type === 'settlementQR'}
+                onClose={() => { setModal({ type: null }); loadBookings(); }}
+                bookingId={modal.data?.bookingId || modal.data?.id}
+                initialData={modal.data}
+                onPaymentSuccess={() => { loadBookings(); }}
+            />
 
             {/* CONFIRM DELETE BOOKING */}
             <StatusPopup
