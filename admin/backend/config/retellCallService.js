@@ -17,18 +17,22 @@ try {
     }
 }
 
-// Retell AI Configuration
-const RETELL_API_KEY = process.env.RETELL_API_KEY || 'key_47254fd3407901e9678eb9f05504';
-const RETELL_AGENT_ID = process.env.RETELL_AGENT_ID || 'agent_1bafe9ca9c302f33c15826c22b';
-const RETELL_SOS_AGENT_ID = process.env.RETELL_SOS_AGENT_ID || 'agent_3df3da5cd8eb882f4a2906d499';
-
-// Ensure valid registered caller ID (override stale +12173933886 if present in old environment variables)
-let validFromNumber = process.env.RETELL_FROM_NUMBER || '+13502072319';
-if (validFromNumber === '+12173933886' || !validFromNumber.startsWith('+')) {
-    validFromNumber = '+13502072319';
-}
-const RETELL_FROM_NUMBER = validFromNumber;
+// Retell AI Verified Configuration
+const VERIFIED_RETELL_API_KEY = 'key_47254fd3407901e9678eb9f05504';
+const VERIFIED_FROM_NUMBER = '+13502072319';
+const VERIFIED_SOS_AGENT_ID = 'agent_3df3da5cd8eb882f4a2906d499';
+const VERIFIED_BOOKING_AGENT_ID = 'agent_1bafe9ca9c302f33c15826c22b';
 const RETELL_API_URL = 'https://api.retellai.com/v2/create-phone-call';
+
+function sanitizeRetellParam(val) {
+    if (!val) return '';
+    return String(val).replace(/["'\r\n\t\s]/g, '').trim();
+}
+
+const RETELL_API_KEY = sanitizeRetellParam(process.env.RETELL_API_KEY) || VERIFIED_RETELL_API_KEY;
+const RETELL_AGENT_ID = sanitizeRetellParam(process.env.RETELL_AGENT_ID) || VERIFIED_BOOKING_AGENT_ID;
+const RETELL_SOS_AGENT_ID = sanitizeRetellParam(process.env.RETELL_SOS_AGENT_ID) || VERIFIED_SOS_AGENT_ID;
+const RETELL_FROM_NUMBER = sanitizeRetellParam(process.env.RETELL_FROM_NUMBER) || VERIFIED_FROM_NUMBER;
 
 /**
  * Format phone number to E.164 format (e.g., +918018084672)
@@ -107,18 +111,20 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
             };
         }
 
-        // Prepare the payload
-        const activeApiKey = (process.env.RETELL_API_KEY && process.env.RETELL_API_KEY.startsWith('key_')) 
-            ? process.env.RETELL_API_KEY 
-            : 'key_47254fd3407901e9678eb9f05504';
+        const isSOS = callMetadata.call_reason === 'sos_emergency';
 
-        const activeFromNumber = (process.env.RETELL_FROM_NUMBER && process.env.RETELL_FROM_NUMBER.startsWith('+1350')) 
-            ? process.env.RETELL_FROM_NUMBER 
-            : '+13502072319';
+        // Clean env values
+        const envApiKey = sanitizeRetellParam(process.env.RETELL_API_KEY);
+        const envFromNumber = sanitizeRetellParam(process.env.RETELL_FROM_NUMBER);
+        const envSosAgent = sanitizeRetellParam(process.env.RETELL_SOS_AGENT_ID);
+        const envBookingAgent = sanitizeRetellParam(process.env.RETELL_AGENT_ID);
 
-        const targetAgentId = callMetadata.agent_id || (callMetadata.call_reason === 'sos_emergency' 
-            ? (process.env.RETELL_SOS_AGENT_ID || 'agent_3df3da5cd8eb882f4a2906d499') 
-            : (process.env.RETELL_AGENT_ID || 'agent_1bafe9ca9c302f33c15826c22b'));
+        // Prioritize known verified key; if env key is missing or not a retell key, use verified
+        let activeApiKey = (envApiKey && envApiKey.startsWith('key_')) ? envApiKey : VERIFIED_RETELL_API_KEY;
+        let activeFromNumber = (envFromNumber && envFromNumber.startsWith('+1350')) ? envFromNumber : VERIFIED_FROM_NUMBER;
+        let targetAgentId = callMetadata.agent_id || (isSOS
+            ? (envSosAgent && envSosAgent.startsWith('agent_') ? envSosAgent : VERIFIED_SOS_AGENT_ID)
+            : (envBookingAgent && envBookingAgent.startsWith('agent_') ? envBookingAgent : VERIFIED_BOOKING_AGENT_ID));
 
         const payload = {
             from_number: activeFromNumber,
@@ -160,7 +166,7 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
         });
 
         // Make the API call
-        const response = await fetch(RETELL_API_URL, {
+        let response = await fetch(RETELL_API_URL, {
             method: 'POST',
             headers: {
                 'Authorization': `Bearer ${activeApiKey}`,
@@ -169,7 +175,27 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
             body: JSON.stringify(payload),
         });
 
-        const data = await response.json();
+        let data = await response.json();
+
+        // If the call failed (e.g. 404, 401 due to outdated or mismatched environment variable on hosting platform),
+        // automatically retry once with the verified primary credentials
+        if (!response.ok && (activeApiKey !== VERIFIED_RETELL_API_KEY || activeFromNumber !== VERIFIED_FROM_NUMBER || targetAgentId !== (isSOS ? VERIFIED_SOS_AGENT_ID : VERIFIED_BOOKING_AGENT_ID))) {
+            console.warn(`⚠️ Retell call attempt failed (${data?.message || data?.error || response.status}). Retrying with verified primary credentials...`);
+            
+            payload.from_number = VERIFIED_FROM_NUMBER;
+            payload.override_agent_id = isSOS ? VERIFIED_SOS_AGENT_ID : VERIFIED_BOOKING_AGENT_ID;
+
+            response = await fetch(RETELL_API_URL, {
+                method: 'POST',
+                headers: {
+                    'Authorization': `Bearer ${VERIFIED_RETELL_API_KEY}`,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(payload),
+            });
+
+            data = await response.json();
+        }
 
         if (response.ok) {
             console.log('📞 Retell AI outbound call launched successfully!');

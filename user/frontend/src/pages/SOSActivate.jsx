@@ -187,12 +187,12 @@ const SOSActivate = () => {
                     navigator.geolocation.getCurrentPosition(
                         (position) => resolve(position),
                         (error) => reject(error),
-                        { enableHighAccuracy: true, timeout: 12000, maximumAge: 0 }
+                        { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
                     );
                 });
 
                 const safetyTimeout = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("Location request timed out")), 13000)
+                    setTimeout(() => reject(new Error("Location request timed out")), 4500)
                 );
 
                 const position = await Promise.race([getPosition, safetyTimeout]);
