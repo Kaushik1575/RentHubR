@@ -272,7 +272,7 @@ const AdminPanel = () => {
                 loadBookings();
                 setModal(prev => (prev?.data ? { ...prev, data: { ...prev.data, status: 'completed', remaining_amount: 0 } } : { type: null }));
             } else {
-                setPopup({ isOpen: true, type: 'error', title: 'Payment Failed', message: data.message || 'Could not record cash payment' });
+                setPopup({ isOpen: true, type: 'error', title: 'Payment Failed', message: data.message || data.error || 'Could not record cash payment' });
             }
         } catch (e) {
             setPopup({ isOpen: true, type: 'error', title: 'Error', message: e.message });

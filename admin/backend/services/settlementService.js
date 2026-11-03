@@ -317,8 +317,43 @@ async function verifySettlementPayment({ bookingId, paymentId, orderId, paymentM
 
     let verifiedPayment = null;
 
-    // 2. If paymentId provided, fetch payment directly from Razorpay
-    if (paymentId && paymentId !== 'MANUAL_SETTLE') {
+    const isCash = paymentMethod === 'cash' || paymentId === 'CASH_SETTLE' || (typeof paymentId === 'string' && paymentId.startsWith('cash_'));
+    const isSimulated = simulate || paymentId === 'MANUAL_SETTLE' || (typeof paymentId === 'string' && paymentId.startsWith('pay_test_simulated'));
+
+    // 2. Cash Settlement (Admin physically collected cash at desk - DO NOT query Razorpay)
+    if (isCash) {
+        const receivedRupees = (amountPaid !== undefined && amountPaid !== null && !isNaN(Number(amountPaid)) && Number(amountPaid) > 0)
+            ? Number(amountPaid)
+            : expectedRemaining;
+        const receivedPaise = Math.round(receivedRupees * 100);
+
+        console.log(`💵 Verified via CASH settlement for booking ${bookingIdentifier}: ₹${receivedRupees}`);
+        verifiedPayment = {
+            id: `cash_${Date.now()}`,
+            amount: receivedPaise,
+            currency: 'INR',
+            method: 'cash',
+            cashAmount: receivedRupees
+        };
+    }
+
+    // 3. Simulated test settlement
+    if (!verifiedPayment && isSimulated) {
+        const receivedRupees = (amountPaid !== undefined && amountPaid !== null && !isNaN(Number(amountPaid)) && Number(amountPaid) > 0)
+            ? Number(amountPaid)
+            : expectedRemaining;
+        console.log(`🧪 Verified via SIMULATED settlement for booking ${bookingIdentifier}: ₹${receivedRupees}`);
+        verifiedPayment = {
+            id: paymentId && paymentId.startsWith('pay_') ? paymentId : `pay_sim_${Date.now()}`,
+            amount: Math.round(receivedRupees * 100),
+            currency: 'INR',
+            method: 'upi',
+            cashAmount: receivedRupees
+        };
+    }
+
+    // 4. Real Razorpay payment verification (only if NOT cash or test settlement)
+    if (!verifiedPayment && paymentId && paymentId !== 'MANUAL_SETTLE' && paymentId !== 'CASH_SETTLE' && !paymentId.startsWith('cash_')) {
         console.log(`🔍 Fetching payment ${paymentId} from Razorpay...`);
         try {
             const payment = await razorpay.payments.fetch(paymentId);
@@ -347,7 +382,7 @@ async function verifySettlementPayment({ bookingId, paymentId, orderId, paymentM
         }
     }
 
-    // 3. If orderId provided and payment not found yet, check order status on Razorpay
+    // 5. If orderId provided and payment not found yet, check order status on Razorpay
     if (!verifiedPayment && orderId) {
         console.log(`🔍 Checking Razorpay Order ${orderId}...`);
         try {
@@ -364,27 +399,6 @@ async function verifySettlementPayment({ bookingId, paymentId, orderId, paymentM
         } catch (orderErr) {
             console.warn(`Order check warning: ${orderErr.message}`);
         }
-    }
-
-    // 4. Cash or Manual Settlement (Admin verified collection) or Test simulation
-    const isCash = paymentMethod === 'cash' || paymentId === 'CASH_SETTLE' || (typeof paymentId === 'string' && paymentId.startsWith('cash_'));
-    const isSimulated = simulate || paymentId === 'MANUAL_SETTLE' || (typeof paymentId === 'string' && paymentId.startsWith('pay_test_simulated'));
-
-    if (!verifiedPayment && (isCash || isSimulated)) {
-        const methodTag = isCash ? 'CASH' : 'ADMIN_VERIFIED';
-        const receivedRupees = (amountPaid !== undefined && amountPaid !== null && !isNaN(Number(amountPaid)) && Number(amountPaid) > 0)
-            ? Number(amountPaid)
-            : expectedRemaining;
-        const receivedPaise = Math.round(receivedRupees * 100);
-
-        console.log(`💵 Verified via ${methodTag} settlement for booking ${bookingIdentifier}: ₹${receivedRupees}`);
-        verifiedPayment = {
-            id: isCash ? `cash_${Date.now()}` : (paymentId || `pay_sim_${Date.now()}`),
-            amount: receivedPaise,
-            currency: 'INR',
-            method: isCash ? 'cash' : 'upi',
-            cashAmount: receivedRupees
-        };
     }
 
     if (!verifiedPayment) {
