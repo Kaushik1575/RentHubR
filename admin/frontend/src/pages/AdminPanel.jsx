@@ -898,6 +898,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                         <option value="confirmed">Confirmed</option>
                                         <option value="ride_started">Ride Started</option>
                                         <option value="ride_completed">Ride Completed</option>
+                                        <option value="completed">Completed</option>
                                         <option value="cancelled">Cancelled</option>
                                         <option value="rider_not_come">Rider Not Come</option>
 
@@ -2306,6 +2307,9 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 <select value={editBookingData.status} onChange={e => setEditBookingData({ ...editBookingData, status: e.target.value })} className="form-control">
                                     <option value="pending">Pending</option>
                                     <option value="confirmed">Confirmed</option>
+                                    <option value="ride_started">Ride Started</option>
+                                    <option value="ride_completed">Ride Completed</option>
+                                    <option value="completed">Completed</option>
                                     <option value="cancelled">Cancelled</option>
                                     <option value="rejected">Rejected</option>
                                 </select>
