@@ -254,7 +254,7 @@ const AdminPanel = () => {
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({
                     bookingId: bookingId,
-                    paymentId: 'CASH_SETTLE',
+                    paymentId: 'MANUAL_SETTLE',
                     paymentMethod: 'cash',
                     amountPaid: parseFloat(amountReceived) || 0,
                     waiveRemaining: waiveDiff
