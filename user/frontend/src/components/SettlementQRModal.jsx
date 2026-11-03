@@ -152,7 +152,7 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
             alignItems: 'center',
             justifyContent: 'center',
             zIndex: 99999,
-            padding: '16px',
+            padding: '12px',
             boxSizing: 'border-box'
         }}>
             <style>{`
@@ -160,8 +160,12 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                     0%, 100% { opacity: 1; transform: scale(1); }
                     50% { opacity: 0.35; transform: scale(0.85); }
                 }
+                @keyframes rhSpin {
+                    from { transform: rotate(0deg); }
+                    to { transform: rotate(360deg); }
+                }
                 .renthub-qr-modal-body::-webkit-scrollbar {
-                    width: 6px;
+                    width: 5px;
                 }
                 .renthub-qr-modal-body::-webkit-scrollbar-track {
                     background: #f1f5f9;
@@ -174,46 +178,60 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                 .renthub-qr-modal-body::-webkit-scrollbar-thumb:hover {
                     background: #94a3b8;
                 }
+                @media (max-width: 440px) {
+                    .renthub-settlement-qr-img {
+                        max-width: 240px !important;
+                    }
+                }
+                @media (min-width: 441px) {
+                    .renthub-settlement-qr-img {
+                        max-width: 280px !important;
+                    }
+                }
             `}</style>
 
             {/* Modal Card */}
             <div style={{
                 background: '#ffffff',
-                borderRadius: '20px',
+                borderRadius: '18px',
                 width: '100%',
-                maxWidth: '440px',
+                maxWidth: '430px',
                 maxHeight: '90vh',
                 display: 'flex',
                 flexDirection: 'column',
-                boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.25), 0 0 0 1px rgba(0, 0, 0, 0.05)',
+                boxShadow: '0 20px 45px -10px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(0, 0, 0, 0.06)',
                 overflow: 'hidden',
-                position: 'relative'
+                position: 'relative',
+                margin: 'auto'
             }}>
-                {/* 1. Fixed Header (Never Scrolls) */}
+                {/* 1. Fixed Header (Always visible, close button does not overlap) */}
                 <div style={{
                     background: 'linear-gradient(135deg, #1e40af 0%, #2563eb 100%)',
-                    padding: '16px 20px',
+                    padding: '14px 18px',
                     color: '#ffffff',
                     display: 'flex',
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     flexShrink: 0,
-                    boxShadow: '0 2px 8px rgba(0,0,0,0.1)'
+                    boxShadow: '0 2px 8px rgba(0,0,0,0.08)'
                 }}>
-                    <div style={{ textAlign: 'left', paddingRight: '12px' }}>
+                    <div style={{ textAlign: 'left', paddingRight: '12px', minWidth: 0 }}>
                         <h2 style={{
                             margin: 0,
-                            fontSize: '1.2rem',
+                            fontSize: '1.15rem',
                             fontWeight: 800,
-                            letterSpacing: '-0.3px',
-                            color: '#ffffff'
+                            letterSpacing: '-0.2px',
+                            color: '#ffffff',
+                            whiteSpace: 'nowrap',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis'
                         }}>
                             Final Ride Settlement
                         </h2>
                         <p style={{
                             margin: '2px 0 0',
-                            fontSize: '0.8rem',
-                            color: '#e0e7ff',
+                            fontSize: '0.78rem',
+                            color: '#dbeafe',
                             fontWeight: 500
                         }}>
                             Booking #{effectiveBookingId} • Dynamic UPI QR
@@ -228,17 +246,17 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                             background: 'rgba(255, 255, 255, 0.2)',
                             border: 'none',
                             color: '#ffffff',
-                            width: '32px',
-                            height: '32px',
+                            width: '30px',
+                            height: '30px',
                             borderRadius: '50%',
-                            fontSize: '16px',
+                            fontSize: '15px',
                             fontWeight: 'bold',
                             cursor: 'pointer',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                             flexShrink: 0,
-                            transition: 'all 0.2s ease'
+                            transition: 'all 0.15s ease'
                         }}
                         onMouseEnter={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.35)'}
                         onMouseLeave={e => e.currentTarget.style.background = 'rgba(255, 255, 255, 0.2)'}
@@ -247,9 +265,9 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                     </button>
                 </div>
 
-                {/* 2. Scrollable Body Content (Only Scrolls if Viewport is Restricted) */}
+                {/* 2. Scrollable Body Content (Single scroll, only when restricted) */}
                 <div className="renthub-qr-modal-body" style={{
-                    padding: '18px 20px',
+                    padding: '14px 18px',
                     overflowY: 'auto',
                     flex: 1,
                     textAlign: 'center'
@@ -301,32 +319,33 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                     ) : (
                         /* Active Payment QR State */
                         <div>
-                            {/* Remaining Balance Card (Prominent & Read-Only) */}
+                            {/* Remaining Balance Card (Prominent & Fixed Read-Only) */}
                             <div style={{
                                 background: '#f8fafc',
                                 border: '1.5px solid #e2e8f0',
-                                borderRadius: '14px',
-                                padding: '10px 16px',
-                                marginBottom: '14px',
+                                borderRadius: '12px',
+                                padding: '10px 14px',
+                                marginBottom: '12px',
                                 display: 'flex',
                                 justifyContent: 'space-between',
                                 alignItems: 'center'
                             }}>
                                 <div style={{ textAlign: 'left' }}>
                                     <span style={{
-                                        fontSize: '0.72rem',
+                                        fontSize: '0.7rem',
                                         color: '#64748b',
                                         fontWeight: 800,
                                         textTransform: 'uppercase',
-                                        letterSpacing: '0.5px'
+                                        letterSpacing: '0.5px',
+                                        display: 'block'
                                     }}>
                                         Remaining Balance to Collect
                                     </span>
                                     <div style={{
                                         color: '#0f172a',
-                                        fontSize: '1.65rem',
+                                        fontSize: '1.55rem',
                                         fontWeight: 900,
-                                        lineHeight: 1.2
+                                        lineHeight: 1.15
                                     }}>
                                         ₹{amount}
                                     </div>
@@ -334,9 +353,9 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                 <div style={{
                                     background: '#dbeafe',
                                     color: '#1e40af',
-                                    padding: '5px 12px',
-                                    borderRadius: '20px',
-                                    fontSize: '0.72rem',
+                                    padding: '4px 10px',
+                                    borderRadius: '16px',
+                                    fontSize: '0.7rem',
                                     fontWeight: 800,
                                     letterSpacing: '0.3px'
                                 }}>
@@ -344,25 +363,27 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                 </div>
                             </div>
 
-                            {/* Clean QR Presentation Box (Intrinsic Aspect Ratio, High-Contrast White Background) */}
+                            {/* Clean QR Presentation Box (Centered, 280-320px Desktop / 240-280px Mobile, No excessive space) */}
                             <div style={{
                                 background: '#ffffff',
                                 border: '1.5px solid #e2e8f0',
-                                borderRadius: '16px',
-                                padding: '12px',
-                                display: 'inline-flex',
+                                borderRadius: '14px',
+                                padding: '8px',
+                                display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                boxShadow: '0 4px 16px rgba(0, 0, 0, 0.05)',
-                                marginBottom: '12px',
-                                width: '100%',
-                                maxWidth: '304px',
+                                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)',
+                                marginBottom: '10px',
+                                margin: '0 auto 10px',
+                                width: 'fit-content',
+                                maxWidth: '100%',
                                 boxSizing: 'border-box'
                             }}>
                                 {qrImageSource ? (
                                     <img
                                         src={qrImageSource}
                                         alt="Razorpay Dynamic UPI QR"
+                                        className="renthub-settlement-qr-img"
                                         style={{
                                             width: '100%',
                                             maxWidth: '280px',
@@ -370,7 +391,7 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                             aspectRatio: '1 / 1',
                                             objectFit: 'contain',
                                             display: 'block',
-                                            borderRadius: '8px'
+                                            borderRadius: '6px'
                                         }}
                                     />
                                 ) : (
@@ -378,40 +399,51 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                         width: '240px',
                                         height: '240px',
                                         display: 'flex',
+                                        flexDirection: 'column',
                                         alignItems: 'center',
                                         justifyContent: 'center',
                                         color: '#94a3b8',
                                         fontSize: '0.85rem',
-                                        fontWeight: 600
+                                        fontWeight: 600,
+                                        gap: '8px'
                                     }}>
+                                        <div style={{
+                                            width: '24px',
+                                            height: '24px',
+                                            border: '3px solid #e2e8f0',
+                                            borderTopColor: '#2563eb',
+                                            borderRadius: '50%',
+                                            animation: 'rhSpin 0.8s linear infinite'
+                                        }} />
                                         Generating Dynamic QR...
                                     </div>
                                 )}
                             </div>
 
                             {/* Scan Instruction & Supported Apps */}
-                            <div style={{ marginBottom: '12px' }}>
+                            <div style={{ marginBottom: '10px' }}>
                                 <p style={{
-                                    fontSize: '0.82rem',
+                                    fontSize: '0.8rem',
                                     color: '#1e293b',
                                     fontWeight: 700,
-                                    margin: '0 0 6px'
+                                    margin: '0 0 6px',
+                                    lineHeight: 1.3
                                 }}>
-                                    Scan with Google Pay, PhonePe, Paytm or any supported UPI app:
+                                    Scan with Google Pay, PhonePe, Paytm or any supported UPI app
                                 </p>
                                 <div style={{
                                     display: 'flex',
                                     justifyContent: 'center',
-                                    gap: '6px',
+                                    gap: '5px',
                                     flexWrap: 'wrap'
                                 }}>
                                     {['Google Pay', 'PhonePe', 'Paytm', 'BHIM'].map(app => (
                                         <span key={app} style={{
                                             background: '#f1f5f9',
                                             color: '#475569',
-                                            padding: '3px 8px',
+                                            padding: '2px 8px',
                                             borderRadius: '6px',
-                                            fontSize: '0.72rem',
+                                            fontSize: '0.7rem',
                                             fontWeight: 700,
                                             border: '1px solid #e2e8f0'
                                         }}>
@@ -421,9 +453,9 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                 </div>
                                 <small style={{
                                     color: '#64748b',
-                                    fontSize: '0.74rem',
+                                    fontSize: '0.72rem',
                                     display: 'block',
-                                    marginTop: '5px'
+                                    marginTop: '4px'
                                 }}>
                                     Payee: <strong>RentHub Rentals</strong> ({qrData?.merchantVpa || 'renthub.rentals@okaxis'})
                                 </small>
@@ -434,20 +466,20 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                 background: '#fef3c7',
                                 border: '1px solid #fde68a',
                                 color: '#92400e',
-                                borderRadius: '10px',
-                                padding: '8px 12px',
-                                fontSize: '0.78rem',
+                                borderRadius: '8px',
+                                padding: '6px 10px',
+                                fontSize: '0.76rem',
                                 fontWeight: 700,
                                 display: 'flex',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                gap: '8px',
-                                marginBottom: '12px'
+                                gap: '6px',
+                                marginBottom: '10px'
                             }}>
                                 <span style={{
                                     display: 'inline-block',
-                                    width: '8px',
-                                    height: '8px',
+                                    width: '7px',
+                                    height: '7px',
                                     borderRadius: '50%',
                                     backgroundColor: '#f59e0b',
                                     animation: 'pulseDot 1.5s infinite',
@@ -463,7 +495,7 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                     border: '1px solid #fecaca',
                                     padding: '6px 10px',
                                     borderRadius: '8px',
-                                    fontSize: '0.78rem',
+                                    fontSize: '0.76rem',
                                     marginBottom: '10px',
                                     fontWeight: 600
                                 }}>
@@ -472,19 +504,19 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                             )}
 
                             {/* Action Buttons: Copy Link & Verify Payment */}
-                            <div style={{ display: 'flex', gap: '8px', marginBottom: '8px' }}>
+                            <div style={{ display: 'flex', gap: '8px', marginBottom: '6px' }}>
                                 <button
                                     type="button"
                                     onClick={handleCopyUpi}
                                     style={{
                                         flex: 1,
-                                        padding: '10px',
+                                        padding: '9px 12px',
                                         borderRadius: '8px',
                                         border: '1px solid #cbd5e1',
                                         background: '#ffffff',
                                         color: '#334155',
                                         fontWeight: 700,
-                                        fontSize: '0.82rem',
+                                        fontSize: '0.8rem',
                                         cursor: 'pointer',
                                         transition: 'all 0.15s ease'
                                     }}
@@ -498,13 +530,13 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                     disabled={verifying}
                                     style={{
                                         flex: 1,
-                                        padding: '10px',
+                                        padding: '9px 12px',
                                         borderRadius: '8px',
                                         border: 'none',
                                         background: '#2563eb',
                                         color: '#ffffff',
                                         fontWeight: 700,
-                                        fontSize: '0.82rem',
+                                        fontSize: '0.8rem',
                                         cursor: verifying ? 'not-allowed' : 'pointer',
                                         opacity: verifying ? 0.75 : 1,
                                         transition: 'all 0.15s ease'
@@ -515,7 +547,7 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                             </div>
 
                             {/* Test Simulation Option */}
-                            <div style={{ paddingTop: '6px' }}>
+                            <div style={{ paddingTop: '4px' }}>
                                 <button
                                     type="button"
                                     onClick={handleSimulatePayment}
@@ -524,7 +556,7 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                         background: 'none',
                                         border: 'none',
                                         color: '#94a3b8',
-                                        fontSize: '0.72rem',
+                                        fontSize: '0.7rem',
                                         textDecoration: 'underline',
                                         cursor: 'pointer'
                                     }}
