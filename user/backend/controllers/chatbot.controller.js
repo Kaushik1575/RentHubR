@@ -271,6 +271,35 @@ exports.chat = async (req, res) => {
             }
         }
 
+        // Direct fast-path for "Tell me about RentHub" / "About RentHub" / Founder / History queries
+        const isAboutIntent = /^(tell me about renthub|about renthub|about us|who (is|are) (the )?(owner|founder|ceo)|how many years|renthub history|who owns renthub)$/i.test(lowerMsg);
+        if (isAboutIntent) {
+            return res.json({
+                reply: `🚗 **About RentHub — Smart Mobility, Delivered**\n\n` +
+                       `**RentHub** is India's next-generation self-drive vehicle rental and fleet management platform, engineered for seamless urban commutes, weekend getaways, and scenic road trips.\n\n` +
+                       `👑 **Founder & Leadership:**\n` +
+                       `• **Kaushik Das** — Founder & CEO\n` +
+                       `• **Jyoti Ranjan Sahoo** — Operation Manager\n` +
+                       `• **Jyoti Swarup Parhi** — Head of Maintenance\n\n` +
+                       `📅 **Our Journey & Experience:**\n` +
+                       `• **Founded in 2024** (Over **2+ years of trusted operations**).\n` +
+                       `• Started with just 10 bikes in Bhubaneswar, Odisha.\n` +
+                       `• Today, RentHub has proudly powered **15,000+ verified customer trips** across a diverse fleet of motorcycles, scooters, and cars!\n\n` +
+                       `📍 **Primary Hubs in Bhubaneswar, Odisha:**\n` +
+                       `• Biju Patnaik International Airport (BBI)\n` +
+                       `• Bhubaneswar Railway Station (Master Canteen)\n` +
+                       `• KIIT University / Patia / Infocity Tech Corridor\n` +
+                       `• Central Corridor: Plot 42, Aerocity Expressway\n\n` +
+                       `🛡️ **Why Choose RentHub?**\n` +
+                       `• **24/7 Operations** & Instant QR Code Vehicle Handshake\n` +
+                       `• **Zero or Minimal Deposit** for KYC-verified riders\n` +
+                       `• **Complimentary ISI Helmets** with every two-wheeler\n` +
+                       `• **24/7 Voice AI Emergency SOS** with live GPS dispatch\n` +
+                       `• **Fair & Transparent Tariffs** with 30% advance & remaining settled at pickup\n\n` +
+                       `📞 **Need help?** Call our 24/7 desk at **+91 70777 33320** or WhatsApp us anytime!`
+            });
+        }
+
         if (!process.env.GEMINI_API_KEY) {
             console.error("GEMINI_API_KEY is missing");
             return res.status(500).json({ error: "Server configuration error: API Key missing" });
@@ -311,15 +340,35 @@ exports.chat = async (req, res) => {
         const systemPrompt = `You are "RentHub AI", the official, highly professional, polite, and intelligent customer concierge for RentHub. You represent RentHub with complete authority and comprehensive domain knowledge.
 
 ===================================================================
-1. ABOUT RENTHUB
+1. ABOUT RENTHUB, STORY, FOUNDER & LEADERSHIP
 ===================================================================
-RentHub is India's next-generation self-drive vehicle rental and fleet management platform, operating primary hubs in Bhubaneswar, Odisha (with major pickup stations near Biju Patnaik Airport, Bhubaneswar Railway Station, KIIT, Patia, Infocity, and Cuttack Road), with expanding services nationwide.
+• **What is RentHub?**: RentHub is India's next-generation self-drive vehicle rental and smart mobility platform, delivering flexible, transparent, and hassle-free hourly, daily, and weekly vehicle rentals.
+• **Founder & Leadership**:
+  - **Founder & CEO**: Kaushik Das — Founded RentHub with the visionary goal to democratize clean, accessible, and affordable self-drive transport across Odisha and India.
+  - **Operation Manager**: Jyoti Ranjan Sahoo — Leads fleet logistics, vehicle allocation, hub operations, and customer experience.
+  - **Head of Maintenance**: Jyoti Swarup Parhi — Directs multi-point safety inspections, vehicle servicing, and ISI helmet sanitization.
+• **Company History & Experience**:
+  - Founded in **2024** (**Over 2+ years of continuous trusted service**).
+  - Started in 2024 with a modest fleet of just 10 bikes in Bhubaneswar.
+  - Today, RentHub has proudly powered over **15,000+ verified customer trips** with a rapidly expanding fleet of premium bikes, scooters, and cars!
+• **Mission & Core Values**:
+  - **Mission**: Make quality mobility accessible to everyone with zero hidden charges, digital rental deeds, and contactless QR-code key handshakes.
+  - **Sustainability**: Promoting eco-friendly, fuel-efficient scooters and electric vehicles.
+  - **Quality**: Strict multi-point safety checks prior to every ride.
+  - **Trust & Transparency**: Real-time fixed pricing, no surprise fees, and clear advance refund policies.
+  - **Community**: Empowering a passionate community of daily commuters, students, and weekend adventure riders.
+• **Operational Hubs & Stations (Bhubaneswar, Odisha)**:
+  - **Airport Corridor**: Biju Patnaik International Airport (BBI) pickup point.
+  - **Railway Station Hub**: Bhubaneswar Master Canteen Railway Station zone.
+  - **Tech & Education Zone**: KIIT University, Patia, Infocity, and Silicon Institute hubs.
+  - **Central Office / Corridor**: Plot 42, Aerocity Expressway, Bhubaneswar, Odisha.
+• **Hours of Operation**:
+  - **24/7 Operations**: Vehicle booking, contactless pickups, vehicle drop-offs, and customer support are active 24 hours a day, 7 days a week, 365 days a year!
+
 We provide hourly, daily, and weekly self-drive rentals for:
 - Motorcycles & Superbikes (Royal Enfield, Yamaha, KTM, Bajaj Pulsar, Apache RTR, Honda Hornet)
 - Scooters (Honda Activa, TVS Jupiter, Suzuki Access, Yamaha Fascino)
 - Cars (Hatchbacks, Sedans, Compact SUVs: Swift Dzire, Honda City, Mahindra Thar, Hyundai Creta, Tata Nexon)
-
-Our mission: Deliver seamless, transparent, and affordable vehicle rentals with instant online verification, digital rental deeds, and contactless QR-code key handshakes.
 
 ===================================================================
 2. LIVE FLEET & PRICING
@@ -390,9 +439,14 @@ ${userContext}
 ===================================================================
 7. CUSTOMER SUPPORT & CONTACT DETAILS
 ===================================================================
-- **Helpline Phone**: +91 9090598756
-- **Support Portal**: E-Query ticket desk on the website & in-app Support page.
-- **Digital Handshake**: Contactless QR code scanning for vehicle handoff at pickup and return.
+• **24/7 Helpline Phone**: +91 70777 33320 / +91 9090598756
+• **WhatsApp Assistance**: +91 70777 33320 (Direct chat for quick support)
+• **Official Inquiries Email**: support@renthub.in
+• **Central Corridor & Hub**: Plot 42, Aerocity Expressway, Bhubaneswar, Odisha, India
+• **Support Portal**: E-Query ticket desk on the website (`/e-query`) & in-app Support page (`/support`)
+• **Live Issue Tracker**: Easily check support issue status on `/track-issue` or directly in this chat via "Track Support"
+• **24/7 Roadside Voice AI SOS ('Aarohi')**: 1-click emergency dispatch via `/sos-activate`
+• **Digital Handshake**: Contactless QR code scanning for vehicle handoff at pickup and return.
 ${issueContext}
 
 ===================================================================
