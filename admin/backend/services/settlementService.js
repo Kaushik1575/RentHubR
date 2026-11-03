@@ -416,43 +416,22 @@ async function verifySettlementPayment({ bookingId, paymentId, orderId, paymentM
         ? `${booking.transaction_id}|${methodTag}`
         : methodTag;
 
-    // Build update object (safely tries to update cash_collected, upi_collected, discount_amount, settlement_method if columns exist, otherwise falls back gracefully)
-    const fullPayload = {
+    // Direct update to core columns only (NO database schema alterations required)
+    const payload = {
         status: newStatus,
         remaining_amount: newRemaining,
         transaction_id: finalTxnId,
-        updated_at: nowISO,
-        settlement_method: verifiedPayment.method,
-        cash_collected: verifiedPayment.method === 'cash' ? collectedAmount : 0,
-        upi_collected: verifiedPayment.method === 'upi' ? collectedAmount : 0,
-        discount_amount: waived
+        updated_at: nowISO
     };
 
-    let { data: updatedBooking, error: updateError } = await supabase
+    const { data: updatedBooking, error: updateError } = await supabase
         .from('bookings')
-        .update(fullPayload)
+        .update(payload)
         .eq('id', booking.id)
         .select()
         .single();
 
-    // If Supabase throws column not found, gracefully save via core columns:
-    if (updateError && updateError.message && (updateError.message.includes('column') || updateError.message.includes('does not exist'))) {
-        console.warn('ℹ️ Dedicated settlement columns not found in Supabase schema. Saving via core columns + transaction_id log:', updateError.message);
-        const corePayload = {
-            status: newStatus,
-            remaining_amount: newRemaining,
-            transaction_id: finalTxnId,
-            updated_at: nowISO
-        };
-        const fallbackRes = await supabase
-            .from('bookings')
-            .update(corePayload)
-            .eq('id', booking.id)
-            .select()
-            .single();
-        if (fallbackRes.error) throw fallbackRes.error;
-        updatedBooking = fallbackRes.data;
-    } else if (updateError) {
+    if (updateError) {
         console.error('Error updating booking to completed:', updateError);
         throw updateError;
     }
