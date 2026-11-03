@@ -12,6 +12,11 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
     const [copied, setCopied] = useState(false);
     const [errorMsg, setErrorMsg] = useState('');
     const [txnId, setTxnId] = useState('');
+    
+    // Zoom & Download State
+    const [isZoomed, setIsZoomed] = useState(false);
+    const [zoomScale, setZoomScale] = useState(1);
+
     const pollIntervalRef = useRef(null);
 
     // Sync props whenever modal opens or initialData changes
@@ -68,6 +73,21 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
             if (pollIntervalRef.current) clearInterval(pollIntervalRef.current);
         };
     }, [isOpen, effectiveBookingId, initialData]);
+
+    // Keyboard support for closing zoom overlay
+    useEffect(() => {
+        const handleKeyDown = (e) => {
+            if (e.key === 'Escape') {
+                if (isZoomed) {
+                    setIsZoomed(false);
+                } else if (isOpen) {
+                    onClose();
+                }
+            }
+        };
+        window.addEventListener('keydown', handleKeyDown);
+        return () => window.removeEventListener('keydown', handleKeyDown);
+    }, [isZoomed, isOpen, onClose]);
 
     const handleCopyUpi = () => {
         const link = qrData?.upiIntentUrl || qrData?.paymentLinkUrl || qrData?.qrImageUrl;
@@ -136,10 +156,36 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
         }
     };
 
-    if (!isOpen) return null;
+    // Use actual Razorpay image_url / qrImageUrl directly
+    const qrImageSource = qrData?.image_url || qrData?.qrImageUrl || qrData?.cleanQrImageUrl;
 
-    // Use cleanQrImageUrl (high-res pure QR) if available, otherwise direct Razorpay qrImageUrl
-    const qrImageSource = qrData?.cleanQrImageUrl || qrData?.qrImageUrl;
+    const handleDownloadQr = async () => {
+        if (!qrImageSource) return;
+        const filename = `renthub-settlement-qr-${effectiveBookingId || 'booking'}.png`;
+        try {
+            const res = await fetch(qrImageSource);
+            const blob = await res.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = blobUrl;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+        } catch {
+            // Fallback direct anchor click
+            const a = document.createElement('a');
+            a.href = qrImageSource;
+            a.target = '_blank';
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+        }
+    };
+
+    if (!isOpen) return null;
 
     return (
         <div style={{
@@ -178,24 +224,24 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                 .renthub-qr-modal-body::-webkit-scrollbar-thumb:hover {
                     background: #94a3b8;
                 }
-                @media (max-width: 440px) {
-                    .renthub-settlement-qr-img {
-                        max-width: 240px !important;
-                    }
-                }
-                @media (min-width: 441px) {
+                @media (max-width: 480px) {
                     .renthub-settlement-qr-img {
                         max-width: 280px !important;
                     }
                 }
+                @media (min-width: 481px) {
+                    .renthub-settlement-qr-img {
+                        max-width: 335px !important;
+                    }
+                }
             `}</style>
 
-            {/* Modal Card */}
+            {/* Main Modal Card */}
             <div style={{
                 background: '#ffffff',
                 borderRadius: '18px',
                 width: '100%',
-                maxWidth: '430px',
+                maxWidth: '460px',
                 maxHeight: '90vh',
                 display: 'flex',
                 flexDirection: 'column',
@@ -363,41 +409,103 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                 </div>
                             </div>
 
-                            {/* Clean QR Presentation Box (Centered, 280-320px Desktop / 240-280px Mobile, No excessive space) */}
+                            {/* Clean QR Presentation Box (Large 320-360px Desktop / 260-300px Mobile with Quiet Zone) */}
                             <div style={{
                                 background: '#ffffff',
                                 border: '1.5px solid #e2e8f0',
-                                borderRadius: '14px',
-                                padding: '8px',
+                                borderRadius: '16px',
+                                padding: '10px',
                                 display: 'flex',
+                                flexDirection: 'column',
                                 alignItems: 'center',
                                 justifyContent: 'center',
-                                boxShadow: '0 2px 10px rgba(0, 0, 0, 0.04)',
-                                marginBottom: '10px',
+                                boxShadow: '0 4px 14px rgba(0, 0, 0, 0.05)',
                                 margin: '0 auto 10px',
                                 width: 'fit-content',
                                 maxWidth: '100%',
                                 boxSizing: 'border-box'
                             }}>
                                 {qrImageSource ? (
-                                    <img
-                                        src={qrImageSource}
-                                        alt="Razorpay Dynamic UPI QR"
-                                        className="renthub-settlement-qr-img"
-                                        style={{
+                                    <>
+                                        <img
+                                            src={qrImageSource}
+                                            alt="Razorpay Dynamic UPI QR"
+                                            className="renthub-settlement-qr-img"
+                                            onClick={() => { setIsZoomed(true); setZoomScale(1); }}
+                                            title="Click to zoom QR"
+                                            style={{
+                                                width: '100%',
+                                                maxWidth: '335px',
+                                                height: 'auto',
+                                                aspectRatio: '1 / 1',
+                                                objectFit: 'contain',
+                                                display: 'block',
+                                                borderRadius: '6px',
+                                                cursor: 'pointer',
+                                                imageRendering: '-webkit-optimize-contrast'
+                                            }}
+                                        />
+
+                                        {/* Dedicated Zoom & Save QR Controls */}
+                                        <div style={{
+                                            display: 'flex',
+                                            gap: '8px',
+                                            marginTop: '10px',
                                             width: '100%',
-                                            maxWidth: '280px',
-                                            height: 'auto',
-                                            aspectRatio: '1 / 1',
-                                            objectFit: 'contain',
-                                            display: 'block',
-                                            borderRadius: '6px'
-                                        }}
-                                    />
+                                            justifyContent: 'center'
+                                        }}>
+                                            <button
+                                                type="button"
+                                                onClick={() => { setIsZoomed(true); setZoomScale(1); }}
+                                                style={{
+                                                    padding: '6px 14px',
+                                                    fontSize: '0.78rem',
+                                                    fontWeight: 700,
+                                                    color: '#1e40af',
+                                                    background: '#eff6ff',
+                                                    border: '1px solid #bfdbfe',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '5px',
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                                onMouseEnter={e => e.currentTarget.style.background = '#dbeafe'}
+                                                onMouseLeave={e => e.currentTarget.style.background = '#eff6ff'}
+                                            >
+                                                🔍 Zoom QR (Enlarge)
+                                            </button>
+
+                                            <button
+                                                type="button"
+                                                onClick={handleDownloadQr}
+                                                style={{
+                                                    padding: '6px 12px',
+                                                    fontSize: '0.78rem',
+                                                    fontWeight: 700,
+                                                    color: '#475569',
+                                                    background: '#f8fafc',
+                                                    border: '1px solid #cbd5e1',
+                                                    borderRadius: '8px',
+                                                    cursor: 'pointer',
+                                                    display: 'inline-flex',
+                                                    alignItems: 'center',
+                                                    gap: '5px',
+                                                    transition: 'all 0.15s ease'
+                                                }}
+                                                title="Download original QR image"
+                                                onMouseEnter={e => e.currentTarget.style.background = '#f1f5f9'}
+                                                onMouseLeave={e => e.currentTarget.style.background = '#f8fafc'}
+                                            >
+                                                ⬇️ Save
+                                            </button>
+                                        </div>
+                                    </>
                                 ) : (
                                     <div style={{
-                                        width: '240px',
-                                        height: '240px',
+                                        width: '260px',
+                                        height: '260px',
                                         display: 'flex',
                                         flexDirection: 'column',
                                         alignItems: 'center',
@@ -408,8 +516,8 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                                         gap: '8px'
                                     }}>
                                         <div style={{
-                                            width: '24px',
-                                            height: '24px',
+                                            width: '26px',
+                                            height: '26px',
                                             border: '3px solid #e2e8f0',
                                             borderTopColor: '#2563eb',
                                             borderRadius: '50%',
@@ -568,6 +676,219 @@ const SettlementQRModal = ({ isOpen, onClose, bookingId, initialData, onPaymentS
                     )}
                 </div>
             </div>
+
+            {/* 3. Fullscreen / Centered QR Zoom Overlay */}
+            {isZoomed && qrImageSource && (
+                <div
+                    role="dialog"
+                    aria-label="Enlarged QR Preview"
+                    style={{
+                        position: 'fixed',
+                        inset: 0,
+                        backgroundColor: 'rgba(15, 23, 42, 0.92)',
+                        backdropFilter: 'blur(10px)',
+                        WebkitBackdropFilter: 'blur(10px)',
+                        zIndex: 1000000,
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        padding: '16px',
+                        boxSizing: 'border-box'
+                    }}
+                    onClick={(e) => {
+                        if (e.target === e.currentTarget) setIsZoomed(false);
+                    }}
+                >
+                    {/* Zoom Top Bar */}
+                    <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'space-between',
+                        width: '100%',
+                        maxWidth: '520px',
+                        marginBottom: '14px',
+                        padding: '8px 16px',
+                        background: 'rgba(30, 41, 59, 0.85)',
+                        borderRadius: '14px',
+                        border: '1px solid rgba(255, 255, 255, 0.12)',
+                        color: '#ffffff',
+                        boxSizing: 'border-box',
+                        flexWrap: 'wrap',
+                        gap: '8px'
+                    }}>
+                        <div style={{ textAlign: 'left' }}>
+                            <div style={{ fontSize: '0.92rem', fontWeight: 800, color: '#ffffff' }}>
+                                🔍 Enlarged UPI QR
+                            </div>
+                            <div style={{ fontSize: '0.74rem', color: '#93c5fd' }}>
+                                Amount: ₹{amount} • Booking #{effectiveBookingId}
+                            </div>
+                        </div>
+
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                            {/* Zoom Out */}
+                            <button
+                                type="button"
+                                onClick={() => setZoomScale(s => Math.max(0.8, Number((s - 0.2).toFixed(2))))}
+                                disabled={zoomScale <= 0.8}
+                                title="Zoom Out"
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.15)',
+                                    border: 'none',
+                                    color: '#ffffff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: zoomScale <= 0.8 ? 'not-allowed' : 'pointer',
+                                    opacity: zoomScale <= 0.8 ? 0.4 : 1
+                                }}
+                            >
+                                −
+                            </button>
+
+                            {/* Scale Display / Reset */}
+                            <button
+                                type="button"
+                                onClick={() => setZoomScale(1)}
+                                title="Reset to 100%"
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: 'none',
+                                    color: '#e2e8f0',
+                                    padding: '4px 8px',
+                                    borderRadius: '6px',
+                                    fontSize: '0.75rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                {Math.round(zoomScale * 100)}%
+                            </button>
+
+                            {/* Zoom In */}
+                            <button
+                                type="button"
+                                onClick={() => setZoomScale(s => Math.min(2.5, Number((s + 0.2).toFixed(2))))}
+                                disabled={zoomScale >= 2.5}
+                                title="Zoom In"
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.15)',
+                                    border: 'none',
+                                    color: '#ffffff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '8px',
+                                    fontSize: '16px',
+                                    fontWeight: 'bold',
+                                    cursor: zoomScale >= 2.5 ? 'not-allowed' : 'pointer',
+                                    opacity: zoomScale >= 2.5 ? 0.4 : 1
+                                }}
+                            >
+                                +
+                            </button>
+
+                            {/* Download Button */}
+                            <button
+                                type="button"
+                                onClick={handleDownloadQr}
+                                title="Download Original QR"
+                                style={{
+                                    background: '#059669',
+                                    border: 'none',
+                                    color: '#ffffff',
+                                    padding: '6px 12px',
+                                    borderRadius: '8px',
+                                    fontSize: '0.76rem',
+                                    fontWeight: 700,
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: '4px'
+                                }}
+                            >
+                                ⬇️ Save
+                            </button>
+
+                            {/* Close Zoom */}
+                            <button
+                                type="button"
+                                onClick={() => setIsZoomed(false)}
+                                aria-label="Close Zoom"
+                                title="Close Zoom Overlay (Esc)"
+                                style={{
+                                    background: 'rgba(239, 68, 68, 0.85)',
+                                    border: 'none',
+                                    color: '#ffffff',
+                                    width: '32px',
+                                    height: '32px',
+                                    borderRadius: '8px',
+                                    fontSize: '15px',
+                                    fontWeight: 'bold',
+                                    cursor: 'pointer',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    marginLeft: '4px'
+                                }}
+                            >
+                                ✕
+                            </button>
+                        </div>
+                    </div>
+
+                    {/* Centered Large White Card with Quiet Zone */}
+                    <div style={{
+                        background: '#ffffff',
+                        borderRadius: '20px',
+                        padding: '24px',
+                        boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6), 0 0 0 1px rgba(255, 255, 255, 0.2)',
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        maxWidth: '92vw',
+                        maxHeight: '75vh',
+                        overflow: 'auto',
+                        boxSizing: 'border-box'
+                    }}>
+                        <div style={{
+                            transform: `scale(${zoomScale})`,
+                            transformOrigin: 'center center',
+                            transition: 'transform 0.18s cubic-bezier(0.4, 0, 0.2, 1)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center'
+                        }}>
+                            <img
+                                src={qrImageSource}
+                                alt="Razorpay Dynamic UPI QR (Enlarged)"
+                                style={{
+                                    width: '380px',
+                                    maxWidth: '80vw',
+                                    height: 'auto',
+                                    aspectRatio: '1 / 1',
+                                    objectFit: 'contain',
+                                    display: 'block',
+                                    imageRendering: '-webkit-optimize-contrast',
+                                    borderRadius: '4px'
+                                }}
+                            />
+                        </div>
+
+                        <div style={{ marginTop: '16px', textAlign: 'center' }}>
+                            <div style={{ fontSize: '0.88rem', fontWeight: 800, color: '#0f172a' }}>
+                                Scan with any UPI App: GPay • PhonePe • Paytm • BHIM
+                            </div>
+                            <div style={{ fontSize: '0.76rem', color: '#64748b', marginTop: '2px' }}>
+                                Payee: <strong>RentHub Rentals</strong> ({qrData?.merchantVpa || 'renthub.rentals@okaxis'})
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
