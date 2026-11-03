@@ -284,7 +284,7 @@ async function getSettlementStatus(bookingId) {
  *
  * @param {object} params - { bookingId, paymentId, orderId }
  */
-async function verifySettlementPayment({ bookingId, paymentId, orderId, paymentMethod, amountPaid, simulate }) {
+async function verifySettlementPayment({ bookingId, paymentId, orderId, paymentMethod, amountPaid, discountAmount, waiveRemaining, simulate }) {
     if (!bookingId) throw new Error('Booking ID is required');
 
     let query = supabase.from('bookings').select('*, users:user_id(full_name, email, phone_number)');
@@ -398,27 +398,61 @@ async function verifySettlementPayment({ bookingId, paymentId, orderId, paymentM
     // 5. Update Database to PAID / COMPLETED
     const nowISO = new Date().toISOString();
     const collectedAmount = verifiedPayment.cashAmount !== undefined ? verifiedPayment.cashAmount : expectedRemaining;
-    const newRemaining = Math.max(0, expectedRemaining - collectedAmount);
+    const diff = Math.max(0, expectedRemaining - collectedAmount);
+    
+    // Waive remaining if explicitly requested or if full payment
+    const shouldWaive = waiveRemaining !== undefined ? Boolean(waiveRemaining) : (diff > 0);
+    const waived = shouldWaive ? diff : (parseFloat(discountAmount) || 0);
+    const newRemaining = shouldWaive ? 0 : Math.max(0, expectedRemaining - collectedAmount - waived);
     const newStatus = newRemaining <= 0 ? 'completed' : booking.status;
 
-    const methodTag = verifiedPayment.method === 'cash' ? `settle_cash:${collectedAmount}` : `settle_upi:${collectedAmount}`;
+    // Track payment channel and waived discount clearly
+    let methodTag = verifiedPayment.method === 'cash' ? `settle_cash:${collectedAmount}` : `settle_upi:${collectedAmount}`;
+    if (waived > 0) {
+        methodTag += `|waived:${waived}`;
+    }
+
     const finalTxnId = booking.transaction_id
         ? `${booking.transaction_id}|${methodTag}`
         : methodTag;
 
-    const { data: updatedBooking, error: updateError } = await supabase
+    // Build update object (safely tries to update cash_collected, upi_collected, discount_amount, settlement_method if columns exist, otherwise falls back gracefully)
+    const fullPayload = {
+        status: newStatus,
+        remaining_amount: newRemaining,
+        transaction_id: finalTxnId,
+        updated_at: nowISO,
+        settlement_method: verifiedPayment.method,
+        cash_collected: verifiedPayment.method === 'cash' ? collectedAmount : 0,
+        upi_collected: verifiedPayment.method === 'upi' ? collectedAmount : 0,
+        discount_amount: waived
+    };
+
+    let { data: updatedBooking, error: updateError } = await supabase
         .from('bookings')
-        .update({
-            status: newStatus,
-            remaining_amount: newRemaining,
-            transaction_id: finalTxnId,
-            updated_at: nowISO
-        })
+        .update(fullPayload)
         .eq('id', booking.id)
         .select()
         .single();
 
-    if (updateError) {
+    // If Supabase throws column not found, gracefully save via core columns:
+    if (updateError && updateError.message && (updateError.message.includes('column') || updateError.message.includes('does not exist'))) {
+        console.warn('ℹ️ Dedicated settlement columns not found in Supabase schema. Saving via core columns + transaction_id log:', updateError.message);
+        const corePayload = {
+            status: newStatus,
+            remaining_amount: newRemaining,
+            transaction_id: finalTxnId,
+            updated_at: nowISO
+        };
+        const fallbackRes = await supabase
+            .from('bookings')
+            .update(corePayload)
+            .eq('id', booking.id)
+            .select()
+            .single();
+        if (fallbackRes.error) throw fallbackRes.error;
+        updatedBooking = fallbackRes.data;
+    } else if (updateError) {
         console.error('Error updating booking to completed:', updateError);
         throw updateError;
     }

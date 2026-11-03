@@ -245,7 +245,7 @@ const AdminPanel = () => {
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error updating' }); }
     };
 
-        const executeCashSettlement = async (bookingId, amountReceived) => {
+        const executeCashSettlement = async (bookingId, amountReceived, waiveDiff = true) => {
         if (!bookingId) return;
         setSettlingCash(true);
         try {
@@ -256,7 +256,8 @@ const AdminPanel = () => {
                     bookingId: bookingId,
                     paymentId: 'CASH_SETTLE',
                     paymentMethod: 'cash',
-                    amountPaid: parseFloat(amountReceived) || 0
+                    amountPaid: parseFloat(amountReceived) || 0,
+                    waiveRemaining: waiveDiff
                 })
             });
             const data = await res.json();
@@ -265,9 +266,9 @@ const AdminPanel = () => {
                     isOpen: true,
                     type: 'success',
                     title: 'Cash Payment Recorded',
-                    message: `Cash payment of ₹${amountReceived} recorded successfully! Booking marked as COMPLETED.`
+                    message: `Cash payment of ₹${amountReceived} recorded successfully! Status updated to COMPLETED.`
                 });
-                setCashModal({ isOpen: false, booking: null, balance: 0, received: 0 });
+                setCashModal({ isOpen: false, booking: null, balance: 0, received: 0, waive: true });
                 loadBookings();
                 setModal(prev => (prev?.data ? { ...prev, data: { ...prev.data, status: 'completed', remaining_amount: 0 } } : { type: null }));
             } else {
@@ -286,7 +287,8 @@ const AdminPanel = () => {
             isOpen: true,
             booking,
             balance: bal,
-            received: bal
+            received: bal,
+            waive: true
         });
     };
 
@@ -926,6 +928,11 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                             Due: ₹{b.remaining_amount}
                                                         </small>
                                                     )}
+                                                    {b.transaction_id && b.transaction_id.includes('waived:') && (
+            <span style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', padding: '1px 5px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800, display: 'inline-block', marginRight: '4px', marginTop: '2px' }}>
+                ✂️ Waived ₹{b.transaction_id.match(/waived:(\d+)/)?.[1]}
+            </span>
+        )}
                                                     {b.transaction_id && b.transaction_id.includes('settle_cash') && (
                                                         <span style={{
                                                             background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0',
@@ -2458,15 +2465,22 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                         color: '#065f46', boxSizing: 'border-box'
                                     }}
                                 />
-                                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
-                                    {[cashModal.balance, Math.ceil(cashModal.balance / 100) * 100, Math.ceil(cashModal.balance / 500) * 500].filter((v, i, a) => v > 0 && a.indexOf(v) === i).map(quickAmt => (
+                                <div style={{ display: 'flex', gap: '6px', marginTop: '8px', flexWrap: 'wrap' }}>
+                                    {[
+                                        cashModal.balance,
+                                        (cashModal.balance > 10 && cashModal.balance % 10 !== 0) ? (cashModal.balance - (cashModal.balance % 10)) : null,
+                                        (cashModal.balance > 50 && cashModal.balance % 50 !== 0) ? (cashModal.balance - (cashModal.balance % 50)) : null,
+                                        Math.ceil(cashModal.balance / 100) * 100,
+                                        Math.ceil(cashModal.balance / 500) * 500
+                                    ].filter((v, i, a) => v !== null && v > 0 && a.indexOf(v) === i).map(quickAmt => (
                                         <button
                                             key={quickAmt}
                                             type="button"
                                             onClick={() => setCashModal(prev => ({ ...prev, received: quickAmt }))}
                                             style={{
                                                 padding: '4px 10px', fontSize: '0.74rem', fontWeight: 700, borderRadius: '6px',
-                                                border: '1px solid #cbd5e1', background: '#f1f5f9', cursor: 'pointer', color: '#334155'
+                                                border: '1px solid #cbd5e1', background: quickAmt === cashModal.received ? '#d1fae5' : '#f1f5f9',
+                                                cursor: 'pointer', color: quickAmt === cashModal.received ? '#065f46' : '#334155'
                                             }}
                                         >
                                             ₹{quickAmt}
@@ -2475,7 +2489,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 </div>
                             </div>
 
-                            {/* Change Calculator */}
+                            {/* Change / Discount Calculator */}
                             {cashModal.received > cashModal.balance ? (
                                 <div style={{
                                     background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px',
@@ -2497,17 +2511,41 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                             ) : (
                                 <div style={{
                                     background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px',
-                                    padding: '8px', marginBottom: '16px', textAlign: 'center', color: '#b45309',
-                                    fontSize: '0.8rem', fontWeight: 700
+                                    padding: '10px 12px', marginBottom: '16px', textAlign: 'left'
                                 }}>
-                                    ⚠️ Partial payment: ₹{cashModal.balance - cashModal.received} will remain due
+                                    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '6px' }}>
+                                        <span style={{ fontSize: '0.82rem', fontWeight: 800, color: '#92400e' }}>
+                                            Difference: ₹{cashModal.balance - cashModal.received}
+                                        </span>
+                                        <span style={{ fontSize: '0.72rem', background: '#fef3c7', color: '#b45309', padding: '2px 6px', borderRadius: '4px', fontWeight: 800 }}>
+                                            Round-off / Discount
+                                        </span>
+                                    </div>
+                                    <label style={{ display: 'flex', alignItems: 'center', gap: '8px', cursor: 'pointer', fontSize: '0.82rem', fontWeight: 700, color: '#78350f' }}>
+                                        <input
+                                            type="checkbox"
+                                            checked={cashModal.waive !== false}
+                                            onChange={(e) => setCashModal(prev => ({ ...prev, waive: e.target.checked }))}
+                                            style={{ width: '16px', height: '16px', accentColor: '#059669', cursor: 'pointer' }}
+                                        />
+                                        <span>Waive ₹{cashModal.balance - cashModal.received} round-off & complete booking</span>
+                                    </label>
+                                    {cashModal.waive !== false ? (
+                                        <div style={{ fontSize: '0.75rem', color: '#047857', marginTop: '4px', fontWeight: 600 }}>
+                                            ✅ Booking will be marked COMPLETED with ₹0 remaining balance.
+                                        </div>
+                                    ) : (
+                                        <div style={{ fontSize: '0.75rem', color: '#dc2626', marginTop: '4px' }}>
+                                            ⚠️ ₹{cashModal.balance - cashModal.received} will remain unpaid as debt.
+                                        </div>
+                                    )}
                                 </div>
                             )}
 
                             <div style={{ display: 'flex', gap: '10px' }}>
                                 <button
                                     type="button"
-                                    onClick={() => setCashModal({ isOpen: false, booking: null, balance: 0, received: 0 })}
+                                    onClick={() => setCashModal({ isOpen: false, booking: null, balance: 0, received: 0, waive: true })}
                                     style={{
                                         flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1',
                                         background: '#ffffff', color: '#64748b', fontWeight: 700, cursor: 'pointer'
@@ -2518,7 +2556,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                 <button
                                     type="button"
                                     disabled={settlingCash || cashModal.received <= 0}
-                                    onClick={() => executeCashSettlement(cashModal.booking?.booking_id || cashModal.booking?.id, cashModal.received)}
+                                    onClick={() => executeCashSettlement(cashModal.booking?.booking_id || cashModal.booking?.id, cashModal.received, cashModal.waive !== false)}
                                     style={{
                                         flex: 1.5, padding: '12px', borderRadius: '10px', border: 'none',
                                         background: '#059669', color: '#ffffff', fontWeight: 800, fontSize: '0.95rem',

@@ -115,12 +115,12 @@ const getSettlementStatus = async (req, res) => {
  */
 const verifySettlement = async (req, res) => {
     try {
-        const { bookingId, paymentId, orderId, paymentMethod, amountPaid, simulate } = req.body;
+        const { bookingId, paymentId, orderId, paymentMethod, amountPaid, discountAmount, waiveRemaining, simulate } = req.body;
         if (!bookingId) {
             return res.status(400).json({ error: 'Booking ID is required' });
         }
 
-        const result = await settlementService.verifySettlementPayment({ bookingId, paymentId, orderId, paymentMethod, amountPaid, simulate });
+        const result = await settlementService.verifySettlementPayment({ bookingId, paymentId, orderId, paymentMethod, amountPaid, discountAmount, waiveRemaining, simulate });
         res.json(result);
     } catch (error) {
         console.error('Error verifying settlement payment:', error);

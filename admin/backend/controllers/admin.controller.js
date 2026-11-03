@@ -2068,6 +2068,11 @@ const getAnalyticsReport = async (req, res) => {
                 status: b.status || 'pending',
                 refundAmount: parseFloat(b.refund_amount) || 0,
                 refundStatus: b.refund_status || 'N/A',
+                transaction_id: b.transaction_id,
+                cash_collected: b.cash_collected,
+                upi_collected: b.upi_collected,
+                discount_amount: b.discount_amount,
+                settlement_method: b.settlement_method,
                 createdAt: b.created_at || null,
                 date: bookingDate
             };
@@ -2115,20 +2120,41 @@ const getAnalyticsReport = async (req, res) => {
 
         let cashCollected = 0;
         let upiCollected = 0;
+        let discountGiven = 0;
+
         filteredBookings.forEach(b => {
             if (b.status === 'cancelled') return;
-            upiCollected += (b.advancePayment || 0);
-            const txn = String(b.transaction_id || '');
-            const mCash = txn.match(/settle_cash:(\d+(\.\d+)?)/);
-            const mUpi = txn.match(/settle_upi:(\d+(\.\d+)?)/);
-            if (mCash) {
-                cashCollected += parseFloat(mCash[1]) || 0;
-            } else if (mUpi) {
-                upiCollected += parseFloat(mUpi[1]) || 0;
-            } else if (txn.includes('CASH')) {
-                cashCollected += Math.max(0, (b.totalAmount || 0) - (b.advancePayment || 0));
-            } else if (['completed', 'ride_completed', 'ride_ended'].includes(b.status)) {
-                upiCollected += Math.max(0, (b.totalAmount || 0) - (b.advancePayment || 0));
+            
+            // Online advance (30%) is always UPI
+            upiCollected += (parseFloat(b.advancePayment || b.advance_payment) || 0);
+
+            // Check if dedicated columns exist
+            if (b.cash_collected !== undefined && b.cash_collected > 0) {
+                cashCollected += parseFloat(b.cash_collected) || 0;
+            }
+            if (b.upi_collected !== undefined && b.upi_collected > 0) {
+                upiCollected += parseFloat(b.upi_collected) || 0;
+            }
+            if (b.discount_amount !== undefined && b.discount_amount > 0) {
+                discountGiven += parseFloat(b.discount_amount) || 0;
+            }
+
+            // Fallback: parse from transaction_id if columns were not set
+            if (!b.cash_collected && !b.upi_collected) {
+                const txn = String(b.transaction_id || '');
+                const mCash = txn.match(/settle_cash:(\d+(\.\d+)?)/);
+                const mUpi = txn.match(/settle_upi:(\d+(\.\d+)?)/);
+                const mWaived = txn.match(/waived:(\d+(\.\d+)?)/);
+
+                if (mCash) cashCollected += parseFloat(mCash[1]) || 0;
+                if (mUpi) upiCollected += parseFloat(mUpi[1]) || 0;
+                if (mWaived) discountGiven += parseFloat(mWaived[1]) || 0;
+
+                if (!mCash && !mUpi && txn.includes('CASH')) {
+                    cashCollected += Math.max(0, (b.totalAmount || 0) - (b.advancePayment || 0));
+                } else if (!mCash && !mUpi && ['completed', 'ride_completed', 'ride_ended'].includes(b.status)) {
+                    upiCollected += Math.max(0, (b.totalAmount || 0) - (b.advancePayment || 0));
+                }
             }
         });
 
@@ -2329,6 +2355,7 @@ const getAnalyticsReport = async (req, res) => {
                 balanceCollected,
                 cashCollected,
                 upiCollected,
+                discountGiven,
                 totalRefunds,
                 netRevenue,
                 averageOrderValue,

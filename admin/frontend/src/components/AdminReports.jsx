@@ -123,7 +123,7 @@ const AdminReports = ({ token }) => {
     const kpis = reportData?.kpis || {
         totalBookings: 0, completedBookings: 0, confirmedBookings: 0, cancelledBookings: 0,
         riderNotComeBookings: 0, cancellationRate: 0, completionRate: 0, grossRevenue: 0,
-        advanceCollected: 0, balanceCollected: 0, totalRefunds: 0, netRevenue: 0,
+        advanceCollected: 0, balanceCollected: 0, cashCollected: 0, upiCollected: 0, discountGiven: 0, totalRefunds: 0, netRevenue: 0,
         averageOrderValue: 0, totalRideHours: 0, averageDurationHours: 0
     };
 
