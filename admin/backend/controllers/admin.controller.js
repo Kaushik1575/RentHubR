@@ -2113,6 +2113,25 @@ const getAnalyticsReport = async (req, res) => {
             .filter(b => ['completed', 'ride_completed', 'ride_ended'].includes(b.status))
             .reduce((sum, b) => sum + (b.remainingAmount || 0), 0);
 
+        let cashCollected = 0;
+        let upiCollected = 0;
+        filteredBookings.forEach(b => {
+            if (b.status === 'cancelled') return;
+            upiCollected += (b.advancePayment || 0);
+            const txn = String(b.transaction_id || '');
+            const mCash = txn.match(/settle_cash:(\d+(\.\d+)?)/);
+            const mUpi = txn.match(/settle_upi:(\d+(\.\d+)?)/);
+            if (mCash) {
+                cashCollected += parseFloat(mCash[1]) || 0;
+            } else if (mUpi) {
+                upiCollected += parseFloat(mUpi[1]) || 0;
+            } else if (txn.includes('CASH')) {
+                cashCollected += Math.max(0, (b.totalAmount || 0) - (b.advancePayment || 0));
+            } else if (['completed', 'ride_completed', 'ride_ended'].includes(b.status)) {
+                upiCollected += Math.max(0, (b.totalAmount || 0) - (b.advancePayment || 0));
+            }
+        });
+
         const totalRefunds = filteredBookings
             .filter(b => b.status === 'cancelled')
             .reduce((sum, b) => sum + (b.refundAmount || 0), 0);
@@ -2308,6 +2327,8 @@ const getAnalyticsReport = async (req, res) => {
                 grossRevenue,
                 advanceCollected,
                 balanceCollected,
+                cashCollected,
+                upiCollected,
                 totalRefunds,
                 netRevenue,
                 averageOrderValue,

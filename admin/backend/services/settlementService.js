@@ -284,7 +284,7 @@ async function getSettlementStatus(bookingId) {
  *
  * @param {object} params - { bookingId, paymentId, orderId }
  */
-async function verifySettlementPayment({ bookingId, paymentId, orderId }) {
+async function verifySettlementPayment({ bookingId, paymentId, orderId, paymentMethod, amountPaid, simulate }) {
     if (!bookingId) throw new Error('Booking ID is required');
 
     let query = supabase.from('bookings').select('*, users:user_id(full_name, email, phone_number)');
@@ -367,20 +367,23 @@ async function verifySettlementPayment({ bookingId, paymentId, orderId }) {
     }
 
     // 4. Cash or Manual Settlement (Admin verified collection) or Test simulation
-    if (!verifiedPayment && (
-        paymentId === 'CASH_SETTLE' || 
-        paymentId === 'MANUAL_SETTLE' || 
-        params.paymentMethod === 'cash' ||
-        paymentId?.startsWith('cash_') ||
-        paymentId?.startsWith('pay_test_simulated')
-    )) {
-        const methodTag = (paymentId === 'CASH_SETTLE' || params.paymentMethod === 'cash') ? 'CASH' : 'ADMIN_VERIFIED';
-        console.log(`💵 Verified via ${methodTag} settlement for booking ${bookingIdentifier}`);
+    const isCash = paymentMethod === 'cash' || paymentId === 'CASH_SETTLE' || (typeof paymentId === 'string' && paymentId.startsWith('cash_'));
+    const isSimulated = simulate || paymentId === 'MANUAL_SETTLE' || (typeof paymentId === 'string' && paymentId.startsWith('pay_test_simulated'));
+
+    if (!verifiedPayment && (isCash || isSimulated)) {
+        const methodTag = isCash ? 'CASH' : 'ADMIN_VERIFIED';
+        const receivedRupees = (amountPaid !== undefined && amountPaid !== null && !isNaN(Number(amountPaid)) && Number(amountPaid) > 0)
+            ? Number(amountPaid)
+            : expectedRemaining;
+        const receivedPaise = Math.round(receivedRupees * 100);
+
+        console.log(`💵 Verified via ${methodTag} settlement for booking ${bookingIdentifier}: ₹${receivedRupees}`);
         verifiedPayment = {
-            id: paymentId || `cash_${Date.now()}`,
-            amount: expectedPaise,
+            id: isCash ? `cash_${Date.now()}` : (paymentId || `pay_sim_${Date.now()}`),
+            amount: receivedPaise,
             currency: 'INR',
-            method: methodTag.toLowerCase()
+            method: isCash ? 'cash' : 'upi',
+            cashAmount: receivedRupees
         };
     }
 
@@ -394,15 +397,20 @@ async function verifySettlementPayment({ bookingId, paymentId, orderId }) {
 
     // 5. Update Database to PAID / COMPLETED
     const nowISO = new Date().toISOString();
+    const collectedAmount = verifiedPayment.cashAmount !== undefined ? verifiedPayment.cashAmount : expectedRemaining;
+    const newRemaining = Math.max(0, expectedRemaining - collectedAmount);
+    const newStatus = newRemaining <= 0 ? 'completed' : booking.status;
+
+    const methodTag = verifiedPayment.method === 'cash' ? `settle_cash:${collectedAmount}` : `settle_upi:${collectedAmount}`;
     const finalTxnId = booking.transaction_id
-        ? `${booking.transaction_id}|settle:${verifiedPayment.id}`
-        : verifiedPayment.id;
+        ? `${booking.transaction_id}|${methodTag}`
+        : methodTag;
 
     const { data: updatedBooking, error: updateError } = await supabase
         .from('bookings')
         .update({
-            status: 'completed',
-            remaining_amount: 0,
+            status: newStatus,
+            remaining_amount: newRemaining,
             transaction_id: finalTxnId,
             updated_at: nowISO
         })

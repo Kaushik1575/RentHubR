@@ -14,6 +14,7 @@ const AdminPanel = () => {
     const navigate = useNavigate();
     const [token, setToken] = useState(localStorage.getItem('token'));
     const [settlingCash, setSettlingCash] = useState(false);
+    const [cashModal, setCashModal] = useState({ isOpen: false, booking: null, balance: 0, received: 0 });
     const [adminUser, setAdminUser] = useState(JSON.parse(localStorage.getItem('user') || '{}'));
     const [activeTab, setActiveTab] = useState('dashboard');
 
@@ -244,7 +245,7 @@ const AdminPanel = () => {
         } catch (e) { setPopup({ isOpen: true, type: 'error', title: 'Error', message: 'Error updating' }); }
     };
 
-        const handleCashSettlement = async (bookingId) => {
+        const executeCashSettlement = async (bookingId, amountReceived) => {
         if (!bookingId) return;
         setSettlingCash(true);
         try {
@@ -254,7 +255,8 @@ const AdminPanel = () => {
                 body: JSON.stringify({
                     bookingId: bookingId,
                     paymentId: 'CASH_SETTLE',
-                    paymentMethod: 'cash'
+                    paymentMethod: 'cash',
+                    amountPaid: parseFloat(amountReceived) || 0
                 })
             });
             const data = await res.json();
@@ -262,9 +264,10 @@ const AdminPanel = () => {
                 setPopup({
                     isOpen: true,
                     type: 'success',
-                    title: 'Payment Received',
-                    message: 'Payment marked as PAID via Cash! Status updated to COMPLETED. Final tax invoice emailed to customer.'
+                    title: 'Cash Payment Recorded',
+                    message: `Cash payment of ₹${amountReceived} recorded successfully! Booking marked as COMPLETED.`
                 });
+                setCashModal({ isOpen: false, booking: null, balance: 0, received: 0 });
                 loadBookings();
                 setModal(prev => (prev?.data ? { ...prev, data: { ...prev.data, status: 'completed', remaining_amount: 0 } } : { type: null }));
             } else {
@@ -275,6 +278,16 @@ const AdminPanel = () => {
         } finally {
             setSettlingCash(false);
         }
+    };
+
+    const openCashModal = (booking, balance) => {
+        const bal = balance !== undefined ? balance : Math.max(0, (booking.total_amount || 0) - (booking.advance_payment || 0));
+        setCashModal({
+            isOpen: true,
+            booking,
+            balance: bal,
+            received: bal
+        });
     };
 
     // Booking Actions
@@ -906,7 +919,30 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                 <td>{b.vehicleName}</td>
                                                 <td>{b.start_date}</td>
                                                 <td>{b.duration} hrs</td>
-                                                <td>₹{b.total_amount}</td>
+                                                <td>
+                                                    <div style={{ fontWeight: 700 }}>₹{b.total_amount}</div>
+                                                    {b.remaining_amount !== undefined && b.remaining_amount > 0 && (
+                                                        <small style={{ color: '#dc2626', fontWeight: 700, display: 'block', fontSize: '0.72rem' }}>
+                                                            Due: ₹{b.remaining_amount}
+                                                        </small>
+                                                    )}
+                                                    {b.transaction_id && b.transaction_id.includes('settle_cash') && (
+                                                        <span style={{
+                                                            background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0',
+                                                            padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, display: 'inline-block', marginTop: '2px'
+                                                        }}>
+                                                            💵 Cash (₹{b.transaction_id.match(/settle_cash:(\d+)/)?.[1] || (b.total_amount - b.advance_payment)})
+                                                        </span>
+                                                    )}
+                                                    {b.transaction_id && (b.transaction_id.includes('settle_upi') || b.transaction_id.includes('pay_')) && b.status === 'completed' && (
+                                                        <span style={{
+                                                            background: '#dbeafe', color: '#1e40af', border: '1px solid #bfdbfe',
+                                                            padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, display: 'inline-block', marginTop: '2px'
+                                                        }}>
+                                                            📱 UPI (₹{b.transaction_id.match(/settle_upi:(\d+)/)?.[1] || (b.total_amount - b.advance_payment)})
+                                                        </span>
+                                                    )}
+                                                </td>
                                                 {/* Points column data removed */}
                                                 <td><span className={`status-badge status-${(b.status || 'pending').toLowerCase()}`}>{b.status?.replace(/_/g, ' ').replace(/\b\w/g, l => l.toUpperCase())}</span></td>
                                                 <td>
@@ -2175,7 +2211,7 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                         alignItems: 'center', justifyContent: 'center', gap: '6px',
                                                         opacity: settlingCash ? 0.7 : 1
                                                     }}
-                                                    onClick={() => handleCashSettlement(modal.data.booking_id || modal.data.id)}
+                                                    onClick={() => openCashModal(modal.data, balance)}
                                                 >
                                                     <i className="fas fa-money-bill-wave"></i> {settlingCash ? 'Saving...' : '💵 Pay via Cash'}
                                                 </button>
@@ -2368,6 +2404,137 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
             )}
 
             {/* SETTLEMENT DYNAMIC UPI QR MODAL */}
+            {/* CASH PAYMENT COLLECTION DIALOG */}
+            {cashModal.isOpen && (
+                <div style={{
+                    position: 'fixed', inset: 0, background: 'rgba(15, 23, 42, 0.75)',
+                    display: 'flex', alignItems: 'center', justifyContent: 'center',
+                    zIndex: 100000, backdropFilter: 'blur(5px)', padding: '16px'
+                }}>
+                    <div style={{
+                        background: '#ffffff', borderRadius: '18px', width: '100%', maxWidth: '420px',
+                        boxShadow: '0 20px 40px rgba(0,0,0,0.25)', overflow: 'hidden'
+                    }}>
+                        <div style={{
+                            background: 'linear-gradient(135deg, #059669 0%, #10b981 100%)',
+                            padding: '16px 20px', color: '#ffffff', display: 'flex',
+                            justifyContent: 'space-between', alignItems: 'center'
+                        }}>
+                            <div style={{ textAlign: 'left' }}>
+                                <h3 style={{ margin: 0, fontSize: '1.15rem', fontWeight: 800 }}>💵 Record Cash Payment</h3>
+                                <p style={{ margin: '2px 0 0', fontSize: '0.8rem', color: '#d1fae5' }}>
+                                    Booking #{cashModal.booking?.booking_id || cashModal.booking?.id}
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setCashModal({ isOpen: false, booking: null, balance: 0, received: 0 })}
+                                style={{ background: 'rgba(255,255,255,0.2)', border: 'none', color: '#fff', borderRadius: '50%', width: '30px', height: '30px', cursor: 'pointer', fontSize: '15px' }}
+                            >✕</button>
+                        </div>
+
+                        <div style={{ padding: '20px' }}>
+                            <div style={{
+                                background: '#f8fafc', border: '1px solid #e2e8f0', borderRadius: '12px',
+                                padding: '12px 16px', marginBottom: '16px', display: 'flex',
+                                justifyContent: 'space-between', alignItems: 'center'
+                            }}>
+                                <span style={{ fontSize: '0.82rem', color: '#64748b', fontWeight: 700 }}>Remaining Balance Due:</span>
+                                <span style={{ fontSize: '1.4rem', fontWeight: 900, color: '#0f172a' }}>₹{cashModal.balance}</span>
+                            </div>
+
+                            <div style={{ marginBottom: '16px', textAlign: 'left' }}>
+                                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 700, color: '#334155', marginBottom: '6px' }}>
+                                    Cash Amount Received from Customer (₹):
+                                </label>
+                                <input
+                                    type="number"
+                                    min="0"
+                                    step="1"
+                                    value={cashModal.received}
+                                    onChange={(e) => setCashModal(prev => ({ ...prev, received: parseFloat(e.target.value) || 0 }))}
+                                    style={{
+                                        width: '100%', padding: '12px 14px', fontSize: '1.25rem', fontWeight: 800,
+                                        borderRadius: '10px', border: '2px solid #10b981', outline: 'none',
+                                        color: '#065f46', boxSizing: 'border-box'
+                                    }}
+                                />
+                                <div style={{ display: 'flex', gap: '6px', marginTop: '8px' }}>
+                                    {[cashModal.balance, Math.ceil(cashModal.balance / 100) * 100, Math.ceil(cashModal.balance / 500) * 500].filter((v, i, a) => v > 0 && a.indexOf(v) === i).map(quickAmt => (
+                                        <button
+                                            key={quickAmt}
+                                            type="button"
+                                            onClick={() => setCashModal(prev => ({ ...prev, received: quickAmt }))}
+                                            style={{
+                                                padding: '4px 10px', fontSize: '0.74rem', fontWeight: 700, borderRadius: '6px',
+                                                border: '1px solid #cbd5e1', background: '#f1f5f9', cursor: 'pointer', color: '#334155'
+                                            }}
+                                        >
+                                            ₹{quickAmt}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            {/* Change Calculator */}
+                            {cashModal.received > cashModal.balance ? (
+                                <div style={{
+                                    background: '#ecfdf5', border: '1px solid #a7f3d0', borderRadius: '10px',
+                                    padding: '10px', marginBottom: '16px', textAlign: 'center'
+                                }}>
+                                    <span style={{ fontSize: '0.8rem', color: '#047857', fontWeight: 700 }}>💵 Change to return to customer:</span>
+                                    <div style={{ fontSize: '1.3rem', fontWeight: 900, color: '#065f46' }}>
+                                        ₹{cashModal.received - cashModal.balance}
+                                    </div>
+                                </div>
+                            ) : cashModal.received === cashModal.balance ? (
+                                <div style={{
+                                    background: '#f0fdf4', border: '1px solid #bbf7d0', borderRadius: '10px',
+                                    padding: '8px', marginBottom: '16px', textAlign: 'center', color: '#16a34a',
+                                    fontSize: '0.8rem', fontWeight: 700
+                                }}>
+                                    ✅ Exact balance received in full
+                                </div>
+                            ) : (
+                                <div style={{
+                                    background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '10px',
+                                    padding: '8px', marginBottom: '16px', textAlign: 'center', color: '#b45309',
+                                    fontSize: '0.8rem', fontWeight: 700
+                                }}>
+                                    ⚠️ Partial payment: ₹{cashModal.balance - cashModal.received} will remain due
+                                </div>
+                            )}
+
+                            <div style={{ display: 'flex', gap: '10px' }}>
+                                <button
+                                    type="button"
+                                    onClick={() => setCashModal({ isOpen: false, booking: null, balance: 0, received: 0 })}
+                                    style={{
+                                        flex: 1, padding: '12px', borderRadius: '10px', border: '1px solid #cbd5e1',
+                                        background: '#ffffff', color: '#64748b', fontWeight: 700, cursor: 'pointer'
+                                    }}
+                                >
+                                    Cancel
+                                </button>
+                                <button
+                                    type="button"
+                                    disabled={settlingCash || cashModal.received <= 0}
+                                    onClick={() => executeCashSettlement(cashModal.booking?.booking_id || cashModal.booking?.id, cashModal.received)}
+                                    style={{
+                                        flex: 1.5, padding: '12px', borderRadius: '10px', border: 'none',
+                                        background: '#059669', color: '#ffffff', fontWeight: 800, fontSize: '0.95rem',
+                                        cursor: (settlingCash || cashModal.received <= 0) ? 'not-allowed' : 'pointer',
+                                        opacity: (settlingCash || cashModal.received <= 0) ? 0.7 : 1,
+                                        boxShadow: '0 4px 12px rgba(5, 150, 105, 0.3)'
+                                    }}
+                                >
+                                    {settlingCash ? 'Recording...' : `Confirm ₹${cashModal.received}`}
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
+
             <SettlementQRModal
                 isOpen={modal.type === 'settlementQR'}
                 onClose={() => { setModal({ type: null }); loadBookings(); }}
