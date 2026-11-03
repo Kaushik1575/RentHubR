@@ -271,32 +271,50 @@ exports.chat = async (req, res) => {
             }
         }
 
-        // Direct fast-path for "Tell me about RentHub" / "About RentHub" / Founder / History queries
-        const isAboutIntent = /^(tell me about renthub|about renthub|about us|who (is|are) (the )?(owner|founder|ceo)|how many years|renthub history|who owns renthub)$/i.test(lowerMsg);
-        if (isAboutIntent) {
+        // Direct fast-path for specific short queries (strictly concise)
+        if (/^(ceo|who (is|are) (the )?ceo|name of ceo)$/i.test(lowerMsg)) {
+            return res.json({
+                reply: "👑 **Founder & CEO**: **Kaushik Das** is the Founder & CEO of RentHub."
+            });
+        }
+
+        if (/^(founder|owner|who (is|are) (the )?(founder|owner)|who founded renthub|who owns renthub)$/i.test(lowerMsg)) {
+            return res.json({
+                reply: "👑 **Founder & CEO**: **Kaushik Das** is the Founder & CEO of RentHub."
+            });
+        }
+
+        if (/^(how many years|how old is renthub|when was renthub (founded|started)|renthub age)$/i.test(lowerMsg)) {
+            return res.json({
+                reply: "📅 **RentHub** was founded in **2024** and has been operating for **2+ years**, successfully completing over **15,000+ verified customer trips** across Odisha."
+            });
+        }
+
+        if (/^(operation(s)? manager|who is (the )?operation(s)? manager)$/i.test(lowerMsg)) {
+            return res.json({
+                reply: "👤 **Operation Manager**: **Jyoti Ranjan Sahoo** oversees fleet logistics and customer operations at RentHub."
+            });
+        }
+
+        if (/^(head of maintenance|maintenance head|who is (the )?head of maintenance)$/i.test(lowerMsg)) {
+            return res.json({
+                reply: "🔧 **Head of Maintenance**: **Jyoti Swarup Parhi** directs vehicle safety inspections and fleet readiness at RentHub."
+            });
+        }
+
+        // Full Overview (only when explicitly asked for full about us / tell me about renthub)
+        const isFullAboutIntent = /^(tell me about renthub|about renthub|about us|renthub overview)$/i.test(lowerMsg);
+        if (isFullAboutIntent) {
             return res.json({
                 reply: `🚗 **About RentHub — Smart Mobility, Delivered**\n\n` +
-                       `**RentHub** is India's next-generation self-drive vehicle rental and fleet management platform, engineered for seamless urban commutes, weekend getaways, and scenic road trips.\n\n` +
+                       `**RentHub** is India's next-generation self-drive vehicle rental platform in Bhubaneswar, Odisha.\n\n` +
                        `👑 **Founder & Leadership:**\n` +
                        `• **Kaushik Das** — Founder & CEO\n` +
                        `• **Jyoti Ranjan Sahoo** — Operation Manager\n` +
                        `• **Jyoti Swarup Parhi** — Head of Maintenance\n\n` +
-                       `📅 **Our Journey & Experience:**\n` +
-                       `• **Founded in 2024** (Over **2+ years of trusted operations**).\n` +
-                       `• Started with just 10 bikes in Bhubaneswar, Odisha.\n` +
-                       `• Today, RentHub has proudly powered **15,000+ verified customer trips** across a diverse fleet of motorcycles, scooters, and cars!\n\n` +
-                       `📍 **Primary Hubs in Bhubaneswar, Odisha:**\n` +
-                       `• Biju Patnaik International Airport (BBI)\n` +
-                       `• Bhubaneswar Railway Station (Master Canteen)\n` +
-                       `• KIIT University / Patia / Infocity Tech Corridor\n` +
-                       `• Central Corridor: Plot 42, Aerocity Expressway\n\n` +
-                       `🛡️ **Why Choose RentHub?**\n` +
-                       `• **24/7 Operations** & Instant QR Code Vehicle Handshake\n` +
-                       `• **Zero or Minimal Deposit** for KYC-verified riders\n` +
-                       `• **Complimentary ISI Helmets** with every two-wheeler\n` +
-                       `• **24/7 Voice AI Emergency SOS** with live GPS dispatch\n` +
-                       `• **Fair & Transparent Tariffs** with 30% advance & remaining settled at pickup\n\n` +
-                       `📞 **Need help?** Call our 24/7 desk at **+91 70777 33320** or WhatsApp us anytime!`
+                       `📅 **Experience:** Founded in **2024** (**2+ years** of operations with **15,000+ completed rides**).\n\n` +
+                       `📍 **Hubs:** Airport, Railway Station, KIIT/Patia, and Aerocity Expressway Corridor.\n\n` +
+                       `🛡️ **Features:** 24/7 Operations, zero/minimal deposit, complimentary ISI helmets, and 24/7 Voice AI Emergency SOS.`
             });
         }
 
@@ -487,9 +505,13 @@ When the user's intent clearly matches an action, append the exact action token 
 ===================================================================
 9. CONVERSATIONAL STYLE & ETIQUETTE
 ===================================================================
-- **Expert & Authoritative**: You know EVERYTHING about RentHub. Answer any question about policies, pricing, vehicles, bookings, refunds, safety, or sponsors thoroughly and accurately.
-- **Professional & Courteous**: Maintain a warm, welcoming, polite, and executive SaaS tone.
-- **Structured Formatting**: Use bold section titles, bullet points, numbered steps, and relevant emojis (🚗, 🛵, 💳, 📜, 🛡️, ⏰) to make your answers easy to scan and pleasant to read.
+- **STRICT CONCISENESS & DIRECT ANSWERS**: Answer ONLY what the user specifically asked.
+  • If asked "who is CEO / owner / founder", answer in 1 sentence: "The Founder & CEO of RentHub is **Kaushik Das**."
+  • If asked "how many years", answer in 1 sentence: "RentHub was founded in 2024 and has been operating for **2+ years**."
+  • Do NOT output extra company overviews, hub addresses, or unrelated policies unless the user explicitly asks for them.
+- **Expert & Authoritative**: Answer questions accurately according to official RentHub policy.
+- **Professional & Courteous**: Maintain a warm, polite, and executive SaaS tone.
+- **Structured Formatting**: Use bold labels and bullet points when listing items.
 - **Booking Flow**: When a user wants to book, guide them systematically:
   Step 1: Confirm desired vehicle model.
   Step 2: Ask for the start date.
