@@ -923,16 +923,16 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                 <td>{b.duration} hrs</td>
                                                 <td>
                                                     <div style={{ fontWeight: 700 }}>₹{b.total_amount}</div>
-                                                    {b.remaining_amount !== undefined && b.remaining_amount > 0 && (
+                                                    {b.status !== 'completed' && b.status !== 'cancelled' && b.remaining_amount !== undefined && b.remaining_amount > 0 && (
                                                         <small style={{ color: '#dc2626', fontWeight: 700, display: 'block', fontSize: '0.72rem' }}>
                                                             Due: ₹{b.remaining_amount}
                                                         </small>
                                                     )}
                                                     {b.transaction_id && b.transaction_id.includes('waived:') && (
-            <span style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', padding: '1px 5px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800, display: 'inline-block', marginRight: '4px', marginTop: '2px' }}>
-                ✂️ Waived ₹{b.transaction_id.match(/waived:(\d+)/)?.[1]}
-            </span>
-        )}
+                                                        <span style={{ background: '#fef3c7', color: '#92400e', border: '1px solid #fde68a', padding: '1px 5px', borderRadius: '4px', fontSize: '0.68rem', fontWeight: 800, display: 'inline-block', marginRight: '4px', marginTop: '2px' }}>
+                                                            ✂️ Waived ₹{b.transaction_id.match(/waived:(\d+)/)?.[1]}
+                                                        </span>
+                                                    )}
                                                     {b.transaction_id && b.transaction_id.includes('settle_cash') && (
                                                         <span style={{
                                                             background: '#ecfdf5', color: '#047857', border: '1px solid #a7f3d0',
@@ -941,12 +941,20 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                             💵 Cash (₹{b.transaction_id.match(/settle_cash:(\d+)/)?.[1] || (b.total_amount - b.advance_payment)})
                                                         </span>
                                                     )}
-                                                    {b.transaction_id && (b.transaction_id.includes('settle_upi') || b.transaction_id.includes('pay_')) && b.status === 'completed' && (
+                                                    {b.transaction_id && b.transaction_id.includes('settle_upi') && (
                                                         <span style={{
                                                             background: '#dbeafe', color: '#1e40af', border: '1px solid #bfdbfe',
                                                             padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, display: 'inline-block', marginTop: '2px'
                                                         }}>
                                                             📱 UPI (₹{b.transaction_id.match(/settle_upi:(\d+)/)?.[1] || (b.total_amount - b.advance_payment)})
+                                                        </span>
+                                                    )}
+                                                    {b.status === 'completed' && !b.transaction_id.includes('settle_cash') && !b.transaction_id.includes('settle_upi') && (
+                                                        <span style={{
+                                                            background: '#dbeafe', color: '#1e40af', border: '1px solid #bfdbfe',
+                                                            padding: '2px 6px', borderRadius: '4px', fontSize: '0.7rem', fontWeight: 800, display: 'inline-block', marginTop: '2px'
+                                                        }}>
+                                                            📱 UPI (₹{Math.max(0, (b.total_amount || 0) - (b.advance_payment || 0))})
                                                         </span>
                                                     )}
                                                 </td>

@@ -67,7 +67,14 @@ const getAllBookings = async (req, res) => {
             const totalAmount = duration * vehiclePrice;
             const advancePayment = parseFloat(booking.advance_payment) || Math.ceil(totalAmount * 0.3);
             const finalTotalAmount = booking.total_amount ? parseFloat(booking.total_amount) : totalAmount;
-            const remainingAmount = finalTotalAmount - advancePayment;
+            let remainingAmount = 0;
+            if (['completed', 'cancelled'].includes(booking.status)) {
+                remainingAmount = 0;
+            } else if (booking.remaining_amount !== undefined && booking.remaining_amount !== null) {
+                remainingAmount = Math.max(0, parseFloat(booking.remaining_amount));
+            } else {
+                remainingAmount = Math.max(0, finalTotalAmount - advancePayment);
+            }
 
             return {
                 id: booking.id,
@@ -158,7 +165,14 @@ const getBookingById = async (req, res) => {
         const calculatedTotal = duration * vehiclePrice;
         const totalAmount = booking.total_amount ? parseFloat(booking.total_amount) : calculatedTotal;
         const advancePayment = parseFloat(booking.advance_payment) || Math.ceil(calculatedTotal * 0.3);
-        const remainingAmount = totalAmount - advancePayment;
+        let remainingAmount = 0;
+        if (['completed', 'cancelled'].includes(booking.status)) {
+            remainingAmount = 0;
+        } else if (booking.remaining_amount !== undefined && booking.remaining_amount !== null) {
+            remainingAmount = Math.max(0, parseFloat(booking.remaining_amount));
+        } else {
+            remainingAmount = Math.max(0, totalAmount - advancePayment);
+        }
 
         const enrichedBooking = {
             id: booking.id,
