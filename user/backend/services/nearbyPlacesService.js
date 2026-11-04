@@ -350,8 +350,8 @@ Search query terms to use:
 - "hospital near ${safeLocality}"
 
 CRITICAL REQUIREMENTS:
-- ALL results must be strictly in the local region of ${safeLocality} (within 15 km of Lat ${lat}, Lng ${lon}).
-- DO NOT return establishments from any other state, country, or far-away city.
+- ALL results must be strictly in the immediate local neighborhood of ${safeLocality} (strictly within 1 to 5 km of Lat ${lat}, Lng ${lon}).
+- DO NOT return establishments farther than 5 km away. Never return places from distant parts of the city or state.
 - Extract actual verified business names, full street addresses, genuine coordinates (latitude and longitude), and official phone numbers if available.
 
 Return a valid JSON object in a markdown code block (\`\`\`json ... \`\`\`) with keys: 'petrolPumps', 'garages', 'policeStations', 'hospitals'.
@@ -417,8 +417,8 @@ Each object has:
                         const validLon = !isNaN(pLon) ? pLon : lon;
                         const dist = calculateDistance(lat, lon, validLat, validLon);
                         
-                        // Strict filter: Discard any result farther than 25 km from user coordinates
-                        if (dist > 25) {
+                        // Strict filter: Discard any result farther than 6.5 km from user coordinates
+                        if (dist > 6.5) {
                             console.warn(`⚠️ Discarding faraway place "${name}" (${dist.toFixed(1)} km)`);
                             return null;
                         }
@@ -655,8 +655,14 @@ function processCategoryResults(results, maxResults = 3) {
     // Sort ascending by distance (nearest first)
     unique.sort((a, b) => a.distanceKm - b.distanceKm);
 
-    // Return at most maxResults places (never more than 3)
-    return unique.slice(0, maxResults);
+    // Strictly enforce hyper-local proximity:
+    // Prefer genuine close places <= 5.0 km. Only if fewer than 3 exist (e.g. rural highway), allow up to 6.5 km max.
+    const hyperLocal = unique.filter(p => p.distanceKm <= 5.0);
+    if (hyperLocal.length >= maxResults) {
+        return hyperLocal.slice(0, maxResults);
+    }
+    const reasonableLocal = unique.filter(p => p.distanceKm <= 6.5);
+    return reasonableLocal.slice(0, maxResults);
 }
 
 /**
@@ -700,17 +706,17 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
         garages: {
             label: 'Vehicle Repair Garages',
             google: { type: 'car_repair', keyword: 'bike motorcycle vehicle repair garage mechanic puncture' },
-            nominatim: ['car repair', 'motorcycle repair', 'garage mechanic']
+            nominatim: ['bike', 'garage', 'workshop', 'motorcycle', 'car repair']
         },
         policeStations: {
             label: 'Police Stations',
             google: { type: 'police', keyword: 'police station thana outpost' },
-            nominatim: ['police station', 'police outpost']
+            nominatim: ['police station', 'police outpost', 'police']
         },
         hospitals: {
             label: 'Hospitals',
             google: { type: 'hospital', keyword: 'hospital emergency clinic' },
-            nominatim: ['hospital', 'community health centre', 'clinic']
+            nominatim: ['hospital', 'clinic', 'health centre', 'medical']
         }
     };
 
@@ -743,10 +749,19 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
         }
     }
 
-    // 2. Query Gemini Grounded Engine if Google Places is missing or sparse
+    // 1. First fetch high-precision physical POIs from OpenStreetMap Nominatim (~3.5km tight box)
+    const nominatimResults = {};
+    for (const [key, config] of Object.entries(categoryDefinitions)) {
+        try {
+            nominatimResults[key] = await fetchNominatimCategory(latitude, longitude, config.nominatim, 0.045);
+        } catch (nErr) {
+            nominatimResults[key] = [];
+        }
+    }
+
+    // 2. Query Gemini Grounded Engine for hyper-local places (especially repair garages & close facilities)
     let geminiResults = null;
-    const needsGemini = !googleKey || Object.values(googleResults).some(arr => !arr || arr.length < 3);
-    if (needsGemini && process.env.GEMINI_API_KEY) {
+    if (process.env.GEMINI_API_KEY) {
         try {
             geminiResults = await fetchGeminiNearbyPlaces(latitude, longitude, localityText);
         } catch (gemErr) {
@@ -754,48 +769,28 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
         }
     }
 
-    // 3. Query OpenStreetMap Overpass Real POIs if any category still has fewer than 3
-    let overpassResults = null;
-    const needsOverpass = Object.keys(categoryDefinitions).some(
-        key => ((googleResults[key]?.length || 0) + (geminiResults?.[key]?.length || 0)) < 3
-    );
-    if (needsOverpass) {
-        try {
-            overpassResults = await fetchOverpassCategoryPlaces(latitude, longitude, 7000);
-        } catch (opErr) {
-            console.warn('⚠️ Overpass POI error:', opErr.message);
-        }
-    }
-
-    // 4. Assemble and process each category
+    // 3. Assemble and process each category
     for (const [key, config] of Object.entries(categoryDefinitions)) {
         let combined = [];
 
+        // Add tight Nominatim POIs first (genuine surveyed coordinates closest to user)
+        if (nominatimResults[key] && nominatimResults[key].length > 0) {
+            combined.push(...nominatimResults[key]);
+        }
+
+        // Add Google Places if present
         if (googleResults[key] && googleResults[key].length > 0) {
             combined.push(...googleResults[key]);
         }
 
+        // Add Gemini Grounded POIs
         if (geminiResults && Array.isArray(geminiResults[key])) {
             combined.push(...geminiResults[key]);
         }
 
-        if (overpassResults && Array.isArray(overpassResults[key])) {
-            combined.push(...overpassResults[key]);
-        }
-
-        // 5. Final fallback to Nominatim tight-radius search if still fewer than 3
-        if (combined.length < 3) {
-            try {
-                const osmTight = await fetchNominatimCategory(latitude, longitude, config.nominatim, 0.04);
-                combined.push(...osmTight);
-            } catch (nErr) {
-                console.warn(`Nominatim search error for ${key}:`, nErr.message);
-            }
-        }
-
-        // Deduplicate, sort ascending by distance, and take top 3
+        // Deduplicate, sort ascending by distance, and enforce strictly <= 5.0km (max 6.5km)
         finalResults[key] = processCategoryResults(combined, 3);
-        console.log(`✅ [${config.label}] Found ${finalResults[key].length} verified places (Max 3).`);
+        console.log(`✅ [${config.label}] Found ${finalResults[key].length} verified hyper-local places (Max 3, nearest first).`);
     }
 
     // Store in cache
