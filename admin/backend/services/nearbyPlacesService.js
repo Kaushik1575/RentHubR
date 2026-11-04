@@ -329,9 +329,9 @@ async function fetchGeminiNearbyPlaces(lat, lon, localityText = '') {
     if (!apiKey) return null;
 
     const modelsToTry = [
-        'gemini-2.5-flash-lite',
         'gemini-2.5-flash',
-        'gemini-flash-latest'
+        'gemini-2.0-flash',
+        'gemini-1.5-flash'
     ];
 
     const safeLocality = localityText || 'Bhubaneswar, Odisha, India';
