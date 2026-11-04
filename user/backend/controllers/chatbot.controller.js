@@ -222,7 +222,8 @@ function formatBookingResponse(booking) {
     if (booking.remaining_amount && booking.remaining_amount > 0) {
         reply += `• **Remaining Due**: ₹${booking.remaining_amount}\n`;
     }
-    reply += `\n🔗 [Track Full Booking Details & Timeline](/track-booking?id=${booking.booking_id || booking.id})`;
+    const bId = booking.booking_id || booking.id;
+    reply += `\n🔗 [Track Full Booking Details & Timeline](/track-booking?bookingId=${bId}&id=${bId})`;
     return reply;
 }
 

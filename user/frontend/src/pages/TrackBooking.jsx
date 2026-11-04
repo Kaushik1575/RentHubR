@@ -25,7 +25,7 @@ const TrackBooking = () => {
 
     // Auto-load from URL
     useEffect(() => {
-        const idFromUrl = searchParams.get('bookingId');
+        const idFromUrl = searchParams.get('bookingId') || searchParams.get('id') || searchParams.get('booking_id');
         if (idFromUrl) {
             setBookingId(idFromUrl);
             setTimeout(() => handleCheck(idFromUrl), 100);
