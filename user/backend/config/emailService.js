@@ -435,6 +435,7 @@ function generateSOSEmergencyEmailHtml(data = {}) {
                             <span style="display: inline-block; background: #f8fafc; color: #0f172a; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid #cbd5e1;">
                                 📍 ${distance}
                             </span>
+                            <div style="font-size: 10px; color: #059669; font-weight: 700; margin-top: 3px;">Shortest Path (Dijkstra)</div>
                         </td>
                     </tr>
                 </table>

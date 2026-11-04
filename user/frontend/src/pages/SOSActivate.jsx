@@ -704,6 +704,9 @@ const SOSActivate = () => {
 
                                 {nearbyPlacesData && (
                                     <div className="nearby-cards-container">
+                                        <div style={{ padding: '8px 12px', background: 'rgba(16, 185, 129, 0.1)', border: '1px solid rgba(16, 185, 129, 0.3)', borderRadius: '8px', marginBottom: '12px', fontSize: '0.82rem', color: '#34d399', fontWeight: '700', textAlign: 'center' }}>
+                                            ⚡ Nearest Facilities Computed via Dijkstra's Shortest Path Algorithm
+                                        </div>
                                         {/* 1. Petrol Pumps (Max 3) */}
                                         {nearbyPlacesData.petrolPumps && nearbyPlacesData.petrolPumps.length > 0 && (
                                             <div className="nearby-category-group">

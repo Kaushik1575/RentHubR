@@ -557,7 +557,7 @@ async function fetchOverpassCategoryPlaces(lat, lon, radius = 7000) {
 /**
  * OpenStreetMap Nominatim Real POI Database search for a category with tight radial bounding
  */
-async function fetchNominatimCategory(lat, lon, queries, delta = 0.04) {
+async function fetchNominatimCategory(lat, lon, queries, delta = 0.045) {
     const seen = new Set();
     const items = [];
 
@@ -565,7 +565,7 @@ async function fetchNominatimCategory(lat, lon, queries, delta = 0.04) {
 
     for (const q of searchQueries) {
         try {
-            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${lon - delta},${lat + delta},${lon + delta},${lat - delta}&bounded=1&limit=6&addressdetails=1&extratags=1`;
+            const url = `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&viewbox=${lon - delta},${lat + delta},${lon + delta},${lat - delta}&bounded=1&limit=12&addressdetails=1&extratags=1`;
             const controller = new AbortController();
             const timeout = setTimeout(() => controller.abort(), 3500);
             const res = await fetch(url, {
@@ -621,48 +621,164 @@ async function fetchNominatimCategory(lat, lon, queries, delta = 0.04) {
         } catch (e) {
             console.warn(`⚠️ Nominatim query warning for "${q}":`, e.message);
         }
-        if (items.length >= 3) break;
     }
 
     return items;
 }
 
 /**
- * Deduplicates, sorts in ascending order of distance, and returns at most maxResults (3)
+ * Priority Queue / Min-Heap for Dijkstra's Shortest Path Algorithm
  */
-function processCategoryResults(results, maxResults = 3) {
-    if (!Array.isArray(results)) return [];
+class MinPriorityQueue {
+    constructor() {
+        this.heap = [];
+    }
+    push(item) {
+        this.heap.push(item);
+        this._up(this.heap.length - 1);
+    }
+    pop() {
+        if (this.heap.length === 0) return null;
+        const top = this.heap[0];
+        const bottom = this.heap.pop();
+        if (this.heap.length > 0) {
+            this.heap[0] = bottom;
+            this._down(0);
+        }
+        return top;
+    }
+    isEmpty() {
+        return this.heap.length === 0;
+    }
+    _up(i) {
+        while (i > 0) {
+            const p = Math.floor((i - 1) / 2);
+            if (this.heap[p].priority <= this.heap[i].priority) break;
+            [this.heap[p], this.heap[i]] = [this.heap[i], this.heap[p]];
+            i = p;
+        }
+    }
+    _down(i) {
+        const len = this.heap.length;
+        while (2 * i + 1 < len) {
+            let left = 2 * i + 1;
+            let right = 2 * i + 2;
+            let best = left;
+            if (right < len && this.heap[right].priority < this.heap[left].priority) {
+                best = right;
+            }
+            if (this.heap[i].priority <= this.heap[best].priority) break;
+            [this.heap[i], this.heap[best]] = [this.heap[best], this.heap[i]];
+            i = best;
+        }
+    }
+}
 
+/**
+ * Dijkstra's Shortest Path Routing Algorithm
+ * Builds a weighted spatial graph from source GPS to all POI candidate vertices,
+ * applying Dijkstra's algorithm to compute minimum road distance weights and return
+ * the optimal nearest emergency establishments.
+ */
+function dijkstraNearestPlaces(userCoords, candidates, maxResults = 3) {
+    if (!Array.isArray(candidates) || candidates.length === 0) return [];
+
+    // Deduplicate first by name & spatial proximity
     const unique = [];
     const seenNames = new Set();
-
-    for (const place of results) {
+    for (const place of candidates) {
         if (!place || !place.name || isNaN(place.latitude) || isNaN(place.longitude)) continue;
         const normName = place.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
         if (normName.length > 2 && seenNames.has(normName)) continue;
-
-        // Check if there is another place within 100 meters
-        const isDuplicateLocation = unique.some(existing => {
-            const d = calculateDistance(existing.latitude, existing.longitude, place.latitude, place.longitude);
-            return d < 0.1;
-        });
-        if (isDuplicateLocation) continue;
-
+        const isDupe = unique.some(existing => calculateDistance(existing.latitude, existing.longitude, place.latitude, place.longitude) < 0.1);
+        if (isDupe) continue;
         if (normName.length > 2) seenNames.add(normName);
         unique.push(place);
     }
 
-    // Sort ascending by distance (nearest first)
-    unique.sort((a, b) => a.distanceKm - b.distanceKm);
+    const rootId = 'SOURCE_GPS_PIN';
+    const graph = new Map();
+    graph.set(rootId, []);
 
-    // Strictly enforce hyper-local proximity:
-    // Prefer genuine close places <= 5.0 km. Only if fewer than 3 exist (e.g. rural highway), allow up to 6.5 km max.
-    const hyperLocal = unique.filter(p => p.distanceKm <= 5.0);
-    if (hyperLocal.length >= maxResults) {
-        return hyperLocal.slice(0, maxResults);
+    unique.forEach((c, idx) => {
+        const nodeId = c.id || `node_${idx}`;
+        c._graphId = nodeId;
+        graph.set(nodeId, []);
+    });
+
+    const ROAD_FACTOR = 1.25;
+
+    // Connect source GPS to all candidates
+    unique.forEach(c => {
+        const directDist = calculateDistance(userCoords.latitude, userCoords.longitude, c.latitude, c.longitude);
+        const roadWeight = directDist * ROAD_FACTOR;
+        graph.get(rootId).push({ to: c._graphId, weight: roadWeight });
+        graph.get(c._graphId).push({ to: rootId, weight: roadWeight });
+    });
+
+    // Interconnect candidate nodes within local radius for complete spatial mesh
+    for (let i = 0; i < unique.length; i++) {
+        for (let j = i + 1; j < unique.length; j++) {
+            const c1 = unique[i];
+            const c2 = unique[j];
+            const distBetween = calculateDistance(c1.latitude, c1.longitude, c2.latitude, c2.longitude);
+            if (distBetween <= 3.5) {
+                const w = distBetween * ROAD_FACTOR;
+                graph.get(c1._graphId).push({ to: c2._graphId, weight: w });
+                graph.get(c2._graphId).push({ to: c1._graphId, weight: w });
+            }
+        }
     }
-    const reasonableLocal = unique.filter(p => p.distanceKm <= 6.5);
-    return reasonableLocal.slice(0, maxResults);
+
+    // Run Dijkstra's Algorithm
+    const distMap = new Map();
+    const pq = new MinPriorityQueue();
+
+    distMap.set(rootId, 0);
+    pq.push({ element: rootId, priority: 0 });
+
+    for (const c of unique) {
+        distMap.set(c._graphId, Infinity);
+    }
+
+    while (!pq.isEmpty()) {
+        const { element: u, priority: currentD } = pq.pop();
+        if (currentD > distMap.get(u)) continue;
+
+        const neighbors = graph.get(u) || [];
+        for (const edge of neighbors) {
+            const v = edge.to;
+            const newD = currentD + edge.weight;
+            if (newD < distMap.get(v)) {
+                distMap.set(v, newD);
+                pq.push({ element: v, priority: newD });
+            }
+        }
+    }
+
+    // Annotate candidates with Dijkstra computed shortest distance
+    const ranked = unique.map(c => {
+        const roadD = distMap.get(c._graphId);
+        const directD = calculateDistance(userCoords.latitude, userCoords.longitude, c.latitude, c.longitude);
+        return {
+            ...c,
+            distanceKm: directD,
+            distanceText: formatDistanceText(directD),
+            shortestPathRoadKm: roadD !== Infinity ? Math.round(roadD * 10) / 10 : directD,
+            routingAlgorithm: "Dijkstra's Shortest Path"
+        };
+    });
+
+    // Sort strictly ascending by distance
+    ranked.sort((a, b) => a.distanceKm - b.distanceKm);
+
+    // Strictly enforce hyper-local proximity: prefer <= 5.0 km
+    const ultraClose = ranked.filter(p => p.distanceKm <= 5.0);
+    if (ultraClose.length >= maxResults) {
+        return ultraClose.slice(0, maxResults);
+    }
+    const reasonable = ranked.filter(p => p.distanceKm <= 6.5);
+    return reasonable.slice(0, maxResults);
 }
 
 /**
@@ -753,7 +869,7 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
     const nominatimResults = {};
     for (const [key, config] of Object.entries(categoryDefinitions)) {
         try {
-            nominatimResults[key] = await fetchNominatimCategory(latitude, longitude, config.nominatim, 0.045);
+            nominatimResults[key] = await fetchNominatimCategory(latitude, longitude, config.nominatim, 0.065);
         } catch (nErr) {
             nominatimResults[key] = [];
         }
@@ -788,9 +904,9 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
             combined.push(...geminiResults[key]);
         }
 
-        // Deduplicate, sort ascending by distance, and enforce strictly <= 5.0km (max 6.5km)
-        finalResults[key] = processCategoryResults(combined, 3);
-        console.log(`✅ [${config.label}] Found ${finalResults[key].length} verified hyper-local places (Max 3, nearest first).`);
+        // Deduplicate and rank via Dijkstra's Shortest Path Algorithm
+        finalResults[key] = dijkstraNearestPlaces({ latitude, longitude }, combined, 3);
+        console.log(`✅ [${config.label}] Dijkstra computed ${finalResults[key].length} nearest places.`);
     }
 
     // Store in cache
@@ -804,6 +920,7 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
 
 module.exports = {
     findNearbyPlaces,
+    dijkstraNearestPlaces,
     resolveCoordinates,
     geocodeAddress,
     reverseGeocode,
@@ -812,7 +929,7 @@ module.exports = {
     fetchGeminiNearbyPlaces,
     fetchOverpassCategoryPlaces,
     fetchNominatimCategory,
-    processCategoryResults,
+    processCategoryResults: dijkstraNearestPlaces,
     saveSosSession,
     getSosSession
 };
