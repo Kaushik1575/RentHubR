@@ -1,7 +1,7 @@
 const supabase = require('../config/supabase');
 const { sendSOSAlertEmail, sendNearestLocationsEmail, sendEmail } = require('../config/emailService');
 const { makeSOSOutboundCall } = require('../config/retellCallService');
-const { findNearbyPlaces } = require('../services/nearbyPlacesService');
+const { findNearbyPlaces, saveSosSession } = require('../services/nearbyPlacesService');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com'];
 
 const activateSOS = async (req, res) => {
@@ -168,6 +168,13 @@ const activateSOS = async (req, res) => {
         let nearbyData = null;
         try {
             nearbyData = await findNearbyPlaces(gpsLocation, booking?.pickup_location, clientIp);
+            if (nearbyData) {
+                saveSosSession(sosData.bookingId, sosData.phoneNumber, {
+                    gpsLocation,
+                    nearbyData,
+                    pickupLocation: booking?.pickup_location || 'RentHub Corridor, Bhubaneswar'
+                });
+            }
         } catch (locErr) {
             console.error('Failed to discover nearby places during SOS activation:', locErr.message);
         }

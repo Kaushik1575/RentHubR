@@ -1,7 +1,7 @@
 // RentHub - Real-Time Nearby Places Service
 // Discovers closest Petrol Pumps, Vehicle Repair Garages, Police Stations, and Hospitals
-// using Google Places API (if key present), Google Gemini Geolocation Intelligence (via GEMINI_API_KEY),
-// or OpenStreetMap Nominatim Hyper-Local Radial POI database.
+// using Google Places API (if key present), Google Gemini Geolocation Grounding (via GEMINI_API_KEY),
+// or OpenStreetMap Overpass & Nominatim Real POI database.
 
 const path = require('path');
 const fs = require('fs');
@@ -30,6 +30,43 @@ try {
 }
 
 const fetch = globalThis.fetch;
+
+// In-memory caching to prevent duplicate searches, avoid 429 rate limits, and provide instant responses
+const placesCache = new Map();
+const CACHE_TTL_MS = 15 * 60 * 1000; // 15 minutes
+
+// In-memory active SOS session store (maps bookingId / phoneNumber -> sessionData)
+const sosSessionStore = new Map();
+const SOS_SESSION_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function saveSosSession(bookingId, phoneNumber, sessionData) {
+    const entry = {
+        timestamp: Date.now(),
+        data: sessionData
+    };
+    if (bookingId) {
+        sosSessionStore.set(String(bookingId), entry);
+    }
+    if (phoneNumber) {
+        const cleanPhone = String(phoneNumber).replace(/\D/g, '').slice(-10);
+        if (cleanPhone) sosSessionStore.set(cleanPhone, entry);
+    }
+}
+
+function getSosSession(bookingId, phoneNumber) {
+    let entry = null;
+    if (bookingId) {
+        entry = sosSessionStore.get(String(bookingId));
+    }
+    if (!entry && phoneNumber) {
+        const cleanPhone = String(phoneNumber).replace(/\D/g, '').slice(-10);
+        if (cleanPhone) entry = sosSessionStore.get(cleanPhone);
+    }
+    if (entry && (Date.now() - entry.timestamp) < SOS_SESSION_TTL_MS) {
+        return entry.data;
+    }
+    return null;
+}
 
 /**
  * Calculates straight-line distance in kilometers using the Haversine formula
@@ -156,13 +193,7 @@ async function resolveCoordinates(input, fallbackAddress = null, userIp = null) 
         }
     }
 
-    if (fallbackAddress && typeof fallbackAddress === 'string') {
-        const geocodedFallback = await geocodeAddress(fallbackAddress);
-        if (geocodedFallback) {
-            return { latitude: geocodedFallback.latitude, longitude: geocodedFallback.longitude, source: 'geocoded_fallback', displayName: geocodedFallback.displayName };
-        }
-    }
-
+    // Check user's live network IP before falling back to old static address
     if (userIp && userIp !== '127.0.0.1' && userIp !== '::1') {
         try {
             const ipRes = await fetch(`http://ip-api.com/json/${userIp}?fields=status,lat,lon,city`);
@@ -175,6 +206,13 @@ async function resolveCoordinates(input, fallbackAddress = null, userIp = null) 
         } catch (e) {}
     }
 
+    if (fallbackAddress && typeof fallbackAddress === 'string') {
+        const geocodedFallback = await geocodeAddress(fallbackAddress);
+        if (geocodedFallback) {
+            return { latitude: geocodedFallback.latitude, longitude: geocodedFallback.longitude, source: 'geocoded_fallback', displayName: geocodedFallback.displayName };
+        }
+    }
+
     return { latitude: 20.2961, longitude: 85.8245, source: 'default_location' };
 }
 
@@ -185,12 +223,12 @@ async function fetchGooglePlacesCategory(lat, lon, categoryConfig, apiKey) {
     if (!apiKey) return [];
     try {
         const { type, keyword } = categoryConfig;
-        let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lon}&radius=5000&key=${apiKey}`;
+        let url = `https://maps.googleapis.com/maps/api/place/nearbysearch/json?location=${lat},${lon}&radius=6000&key=${apiKey}`;
         if (type) url += `&type=${encodeURIComponent(type)}`;
         if (keyword) url += `&keyword=${encodeURIComponent(keyword)}`;
 
         const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 4000);
+        const timeout = setTimeout(() => controller.abort(), 4500);
         const res = await fetch(url, { signal: controller.signal });
         clearTimeout(timeout);
 
@@ -224,14 +262,12 @@ async function fetchGooglePlacesCategory(lat, lon, categoryConfig, apiKey) {
                                 }
                             }
                         }
-                    } catch (e) {
-                        // Ignore place details fetch error
-                    }
+                    } catch (e) {}
                 }
 
                 const dist = calculateDistance(lat, lon, pLat, pLon);
-                const placeIdParam = p.place_id ? `&destination_place_id=${p.place_id}` : '';
-                const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lon}&destination=${pLat},${pLon}${placeIdParam}`;
+                const destQuery = encodeURIComponent(`${p.name}, ${fullAddress}`);
+                const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lon}&destination=${destQuery}`;
 
                 return {
                     id: p.place_id || `gplace-${idx}`,
@@ -256,112 +292,276 @@ async function fetchGooglePlacesCategory(lat, lon, categoryConfig, apiKey) {
     }
 }
 
+function extractJsonObject(rawText) {
+    if (!rawText) return null;
+    let text = rawText.trim();
+
+    // 1. Check for markdown code blocks (```json ... ``` or ``` ...)
+    const codeBlockMatch = text.match(/```(?:json)?\s*([\s\S]*?)\s*```/i);
+    if (codeBlockMatch && codeBlockMatch[1]) {
+        text = codeBlockMatch[1].trim();
+    }
+
+    // 2. Extract outermost curly braces { ... }
+    const firstBrace = text.indexOf('{');
+    const lastBrace = text.lastIndexOf('}');
+    if (firstBrace !== -1 && lastBrace !== -1 && lastBrace > firstBrace) {
+        text = text.substring(firstBrace, lastBrace + 1);
+    }
+
+    try {
+        return JSON.parse(text);
+    } catch (err) {
+        try {
+            const cleaned = text.replace(/,\s*([\]}])/g, '$1');
+            return JSON.parse(cleaned);
+        } catch (e2) {
+            return null;
+        }
+    }
+}
+
 /**
- * Discover hyper-local verified places via Google Gemini API
- * Returns authentic businesses and emergency outposts closest to GPS coordinates.
+ * Discover verified live establishments via Google Gemini with Live Google Search Grounding
  */
 async function fetchGeminiNearbyPlaces(lat, lon, localityText = '') {
     const apiKey = process.env.GEMINI_API_KEY;
     if (!apiKey) return null;
 
-    try {
-        const url = `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`;
-        const prompt = `You are an emergency geospatial location assistant. A stranded customer triggered an SOS at GPS coordinates: Latitude ${lat}, Longitude ${lon} (${localityText || 'India'}).
-Find the NEAREST, GENUINE, and REAL establishments closest to these exact GPS coordinates across four categories:
-1. petrolPumps: EXACTLY 3 nearest genuine petrol pumps / fuel stations.
-2. garages: EXACTLY 3 nearest vehicle repair garages / automobile mechanics / puncture repair shops.
-3. policeStations: EXACTLY 3 nearest police stations / outposts / thanas.
-4. hospitals: EXACTLY 3 nearest hospitals / community health centers (CHC) / 24x7 emergency medical clinics.
+    const modelsToTry = [
+        'gemini-2.5-flash-lite',
+        'gemini-2.5-flash',
+        'gemini-flash-latest'
+    ];
 
-Rules:
-- The customer is in immediate emergency. Prioritize genuine establishments closest to coordinates (within 0.1 km to 5 km). Do NOT skip close local establishments to return famous city centers 15 km away.
-- Use official genuine business/establishment names only. No generic placeholders like 'Garage 1' or 'Hospital 1'.
-- Coordinates MUST be accurate real-world latitude and longitude for the place.
-- Include verified phone number if known, otherwise set to null.
-- Provide the complete real street address / landmark.
+    const safeLocality = localityText || 'Bhubaneswar, Odisha, India';
 
-Return ONLY a valid JSON object with keys 'petrolPumps', 'garages', 'policeStations', 'hospitals'. Each is an array of objects with:
+    const prompt = `You are a real-time hyper-local emergency navigation assistant for RentHub.
+Using Google Search, find real, currently operating businesses in ${safeLocality} near GPS Latitude ${lat}, Longitude ${lon}:
+1. 3 real petrol pumps / fuel stations near ${safeLocality}
+2. 3 real motorcycle / two-wheeler / car repair garages or mechanics near ${safeLocality}
+3. 3 real police stations / outposts near ${safeLocality}
+4. 3 real hospitals / emergency clinics near ${safeLocality}
+
+Search query terms to use:
+- "petrol pump near ${safeLocality}"
+- "bike vehicle repair garage mechanic near ${safeLocality}"
+- "police station near ${safeLocality}"
+- "hospital near ${safeLocality}"
+
+CRITICAL REQUIREMENTS:
+- ALL results must be strictly in the local region of ${safeLocality} (within 15 km of Lat ${lat}, Lng ${lon}).
+- DO NOT return establishments from any other state, country, or far-away city.
+- Extract actual verified business names, full street addresses, genuine coordinates (latitude and longitude), and official phone numbers if available.
+
+Return a valid JSON object in a markdown code block (\`\`\`json ... \`\`\`) with keys: 'petrolPumps', 'garages', 'policeStations', 'hospitals'.
+Each object has:
 - name (string)
 - address (string)
 - latitude (number)
 - longitude (number)
 - phone (string or null)`;
 
-        const payload = {
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { responseMimeType: 'application/json', temperature: 0.1 }
-        };
+    const payload = {
+        contents: [{ parts: [{ text: prompt }] }],
+        tools: [{ googleSearch: {} }]
+    };
 
-        const controller = new AbortController();
-        const timeout = setTimeout(() => controller.abort(), 25000);
-        const res = await fetch(url, {
-            method: 'POST',
-            signal: controller.signal,
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(payload)
-        });
-        clearTimeout(timeout);
+    for (const model of modelsToTry) {
+        try {
+            const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 22000);
+            const res = await fetch(url, {
+                method: 'POST',
+                signal: controller.signal,
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+            clearTimeout(timeout);
 
-        if (!res.ok) {
-            console.warn(`⚠️ Gemini places API returned status ${res.status}`);
-            return null;
+            if (!res.ok) {
+                console.warn(`⚠️ Gemini model [${model}] status ${res.status}, checking next model...`);
+                continue;
+            }
+
+            const data = await res.json();
+            const rawJsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
+            if (!rawJsonText) continue;
+
+            const parsed = extractJsonObject(rawJsonText);
+            if (!parsed) {
+                console.warn(`⚠️ Failed to parse JSON from Gemini [${model}], checking next model...`);
+                continue;
+            }
+
+            const formatted = {
+                petrolPumps: [],
+                garages: [],
+                policeStations: [],
+                hospitals: []
+            };
+
+            for (const cat of ['petrolPumps', 'garages', 'policeStations', 'hospitals']) {
+                if (Array.isArray(parsed[cat])) {
+                    formatted[cat] = parsed[cat].map((p, idx) => {
+                        const pLat = parseFloat(p.latitude || p.approximateCoordinates?.split(',')[0]);
+                        const pLon = parseFloat(p.longitude || p.approximateCoordinates?.split(',')[1]);
+                        const name = p.officialBusinessName || p.name;
+                        const address = p.streetAddress || p.address || 'Address on Google Maps';
+                        const phone = p.verifiedPhoneNumber || p.phone;
+
+                        if (!name) return null;
+
+                        const validLat = !isNaN(pLat) ? pLat : lat;
+                        const validLon = !isNaN(pLon) ? pLon : lon;
+                        const dist = calculateDistance(lat, lon, validLat, validLon);
+                        
+                        // Strict filter: Discard any result farther than 25 km from user coordinates
+                        if (dist > 25) {
+                            console.warn(`⚠️ Discarding faraway place "${name}" (${dist.toFixed(1)} km)`);
+                            return null;
+                        }
+
+                        const destQuery = encodeURIComponent(`${name}, ${address}`);
+                        const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lon}&destination=${destQuery}`;
+
+                        return {
+                            id: `gemini-${cat}-${idx}`,
+                            name: name,
+                            address: address,
+                            latitude: validLat,
+                            longitude: validLon,
+                            distanceKm: dist,
+                            distanceText: formatDistanceText(dist),
+                            phone: phone && phone !== 'N/A' && !phone.toLowerCase().includes('not') && phone.trim().length > 4 ? phone.trim() : null,
+                            directionsUrl: directionsUrl,
+                            mapUrl: directionsUrl,
+                            placeId: null
+                        };
+                    }).filter(Boolean);
+                }
+            }
+
+            console.log(`✅ [Gemini Grounding] Successfully fetched live verified places using model ${model}`);
+            return formatted;
+        } catch (e) {
+            console.warn(`⚠️ Gemini model [${model}] error:`, e.message);
         }
+    }
 
-        const data = await res.json();
-        const rawJsonText = data.candidates?.[0]?.content?.parts?.[0]?.text;
-        if (!rawJsonText) return null;
+    return null;
+}
 
-        const parsed = JSON.parse(rawJsonText);
-        const formatted = {
-            petrolPumps: [],
-            garages: [],
-            policeStations: [],
-            hospitals: []
-        };
+/**
+ * Discovers verified physical places from OpenStreetMap Overpass API
+ */
+async function fetchOverpassCategoryPlaces(lat, lon, radius = 7000) {
+    const query = `
+        [out:json][timeout:15];
+        (
+            node["amenity"="fuel"](around:${radius},${lat},${lon});
+            way["amenity"="fuel"](around:${radius},${lat},${lon});
+            node["amenity"="police"](around:${radius},${lat},${lon});
+            way["amenity"="police"](around:${radius},${lat},${lon});
+            node["amenity"~"hospital|clinic"](around:${radius},${lat},${lon});
+            way["amenity"~"hospital|clinic"](around:${radius},${lat},${lon});
+            node["shop"~"car_repair|motorcycle_repair|tyres|bicycle"](around:${radius},${lat},${lon});
+            way["shop"~"car_repair|motorcycle_repair|tyres|bicycle"](around:${radius},${lat},${lon});
+        );
+        out center;
+    `;
 
-        for (const cat of ['petrolPumps', 'garages', 'policeStations', 'hospitals']) {
-            if (Array.isArray(parsed[cat])) {
-                formatted[cat] = parsed[cat].map((p, idx) => {
-                    const pLat = parseFloat(p.latitude);
-                    const pLon = parseFloat(p.longitude);
-                    if (isNaN(pLat) || isNaN(pLon)) return null;
+    const endpoints = [
+        'https://maps.mail.ru/osm/tools/overpass/api/interpreter',
+        'https://overpass.kumi.systems/api/interpreter',
+        'https://overpass-api.de/api/interpreter'
+    ];
+
+    for (const ep of endpoints) {
+        try {
+            const controller = new AbortController();
+            const timeout = setTimeout(() => controller.abort(), 7000);
+            const res = await fetch(ep, {
+                method: 'POST',
+                signal: controller.signal,
+                headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                body: 'data=' + encodeURIComponent(query)
+            });
+            clearTimeout(timeout);
+
+            if (res.ok) {
+                const data = await res.json();
+                const results = {
+                    petrolPumps: [],
+                    garages: [],
+                    policeStations: [],
+                    hospitals: []
+                };
+
+                for (const el of (data.elements || [])) {
+                    const tags = el.tags || {};
+                    const pLat = el.lat || el.center?.lat;
+                    const pLon = el.lon || el.center?.lon;
+                    if (!pLat || !pLon) continue;
+
+                    let rawName = tags.name || tags['name:en'] || tags.operator || tags.brand;
+                    const amenity = tags.amenity || '';
+                    const shop = tags.shop || '';
+
+                    if (!rawName) {
+                        if (amenity === 'fuel') rawName = tags.brand || 'Fuel Station';
+                        else if (amenity === 'police') rawName = 'Police Outpost';
+                        else if (amenity === 'hospital' || amenity === 'clinic') rawName = 'Community Health Centre';
+                        else if (shop) rawName = 'Vehicle Repair Garage';
+                        else continue;
+                    }
 
                     const dist = calculateDistance(lat, lon, pLat, pLon);
-                    const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lon}&destination=${pLat},${pLon}`;
+                    const addrParts = [tags['addr:street'], tags['addr:suburb'], tags['addr:city']].filter(Boolean);
+                    const fullAddress = addrParts.join(', ') || 'Address available via map navigation';
+                    const phone = tags.phone || tags['contact:phone'] || null;
+                    const destQuery = encodeURIComponent(`${rawName}, ${fullAddress}`);
+                    const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lon}&destination=${destQuery}`;
 
-                    return {
-                        id: `gemini-${cat}-${idx}`,
-                        name: p.name,
-                        address: p.address || 'Address provided on Google Maps',
+                    const item = {
+                        id: `osm-${el.id}`,
+                        name: rawName,
+                        address: fullAddress,
                         latitude: pLat,
                         longitude: pLon,
                         distanceKm: dist,
                         distanceText: formatDistanceText(dist),
-                        phone: p.phone && p.phone !== 'N/A' && p.phone.trim().length > 4 ? p.phone.trim() : null,
+                        phone: phone,
                         directionsUrl: directionsUrl,
                         mapUrl: directionsUrl,
                         placeId: null
                     };
-                }).filter(Boolean);
-            }
-        }
 
-        return formatted;
-    } catch (e) {
-        console.warn('⚠️ Gemini nearby places discovery warning:', e.message);
-        return null;
+                    if (amenity === 'fuel') results.petrolPumps.push(item);
+                    else if (amenity === 'police') results.policeStations.push(item);
+                    else if (amenity === 'hospital' || amenity === 'clinic') results.hospitals.push(item);
+                    else if (shop.includes('repair') || shop.includes('tyre') || shop.includes('bicycle')) results.garages.push(item);
+                }
+
+                return results;
+            }
+        } catch (e) {
+            // Try next Overpass mirror
+        }
     }
+
+    return null;
 }
 
 /**
  * OpenStreetMap Nominatim Real POI Database search for a category with tight radial bounding
  */
-async function fetchNominatimCategory(lat, lon, queries, delta = 0.03) {
+async function fetchNominatimCategory(lat, lon, queries, delta = 0.04) {
     const seen = new Set();
     const items = [];
 
-    // Limit to top 2 queries with strict abort timeout
-    const searchQueries = queries.slice(0, 2);
+    const searchQueries = queries.slice(0, 3);
 
     for (const q of searchQueries) {
         try {
@@ -395,11 +595,12 @@ async function fetchNominatimCategory(lat, lon, queries, delta = 0.03) {
                         seen.add(key);
 
                         const dist = calculateDistance(lat, lon, pLat, pLon);
-                        const addrParts = (it.display_name || '').split(',').slice(1, 5).map(s => s.trim()).filter(Boolean);
+                        const addrParts = (it.display_name || '').split(',').slice(1, 4).map(s => s.trim()).filter(Boolean);
                         const address = addrParts.join(', ') || it.display_name || 'Address available via map directions';
 
                         const phone = it.extratags?.phone || it.extratags?.['contact:phone'] || null;
-                        const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lon}&destination=${pLat},${pLon}`;
+                        const destQuery = encodeURIComponent(`${rawName}, ${address}`);
+                        const directionsUrl = `https://www.google.com/maps/dir/?api=1&origin=${lat},${lon}&destination=${destQuery}`;
 
                         items.push({
                             id: `osm-${it.osm_id || items.length + 1}`,
@@ -440,10 +641,10 @@ function processCategoryResults(results, maxResults = 3) {
         const normName = place.name.toLowerCase().trim().replace(/[^a-z0-9]/g, '');
         if (normName.length > 2 && seenNames.has(normName)) continue;
 
-        // Check if there is another place within 50 meters
+        // Check if there is another place within 100 meters
         const isDuplicateLocation = unique.some(existing => {
             const d = calculateDistance(existing.latitude, existing.longitude, place.latitude, place.longitude);
-            return d < 0.05;
+            return d < 0.1;
         });
         if (isDuplicateLocation) continue;
 
@@ -459,30 +660,34 @@ function processCategoryResults(results, maxResults = 3) {
 }
 
 /**
- * Discovers closest places for the 4 categories:
+ * Discovers genuine closest places across 4 categories:
  * 1. Petrol Pumps (max 3)
  * 2. Vehicle Repair Garages (max 3)
  * 3. Police Stations (max 3)
  * 4. Hospitals (max 3)
- * 
- * Uses Google Places API (if key present), Google Gemini Geolocation Intelligence,
- * or OpenStreetMap Nominatim with strict tight-bounding.
- * Strictly no fake/mock results.
  */
 async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp = null) {
     const coordsInfo = await resolveCoordinates(userLocation, fallbackAddress, clientIp);
     const { latitude, longitude } = coordsInfo;
 
-    console.log(`📍 Discovering real-time places near: Lat ${latitude}, Lng ${longitude} (Source: ${coordsInfo.source || 'resolved'})`);
+    // Check memory cache first
+    const cacheKey = `${latitude.toFixed(3)}_${longitude.toFixed(3)}`;
+    const cachedEntry = placesCache.get(cacheKey);
+    if (cachedEntry && (Date.now() - cachedEntry.timestamp) < CACHE_TTL_MS) {
+        console.log(`⚡ [Cache Hit] Returning verified places for coordinates: Lat ${latitude}, Lng ${longitude}`);
+        return cachedEntry.data;
+    }
+
+    console.log(`📍 Discovering verified real-time places near: Lat ${latitude}, Lng ${longitude} (Source: ${coordsInfo.source || 'resolved'})`);
 
     const googleKey = process.env.GOOGLE_PLACES_API_KEY || process.env.GOOGLE_MAPS_API_KEY || null;
 
     // Get locality name for emergency search context
-    let localityText = '';
+    let localityText = 'Bhubaneswar, Odisha, India';
     try {
         const rev = await reverseGeocode(latitude, longitude);
-        if (rev && rev.displayName) {
-            localityText = rev.displayName;
+        if (rev) {
+            localityText = [rev.area, rev.road, rev.city, 'Odisha, India'].filter(Boolean).join(', ');
         }
     } catch (e) {}
 
@@ -490,12 +695,12 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
         petrolPumps: {
             label: 'Petrol Pumps',
             google: { type: 'gas_station', keyword: 'petrol pump fuel station' },
-            nominatim: ['petrol pump', 'fuel station']
+            nominatim: ['petrol pump', 'fuel station', 'fuel']
         },
         garages: {
             label: 'Vehicle Repair Garages',
             google: { type: 'car_repair', keyword: 'bike motorcycle vehicle repair garage mechanic puncture' },
-            nominatim: ['car repair', 'motorcycle repair']
+            nominatim: ['car repair', 'motorcycle repair', 'garage mechanic']
         },
         policeStations: {
             label: 'Police Stations',
@@ -505,7 +710,7 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
         hospitals: {
             label: 'Hospitals',
             google: { type: 'hospital', keyword: 'hospital emergency clinic' },
-            nominatim: ['hospital', 'community health centre']
+            nominatim: ['hospital', 'community health centre', 'clinic']
         }
     };
 
@@ -538,7 +743,7 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
         }
     }
 
-    // 2. Query Gemini Geolocation Engine if Google Places is missing or has sparse results
+    // 2. Query Gemini Grounded Engine if Google Places is missing or sparse
     let geminiResults = null;
     const needsGemini = !googleKey || Object.values(googleResults).some(arr => !arr || arr.length < 3);
     if (needsGemini && process.env.GEMINI_API_KEY) {
@@ -549,7 +754,20 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
         }
     }
 
-    // 3. Assemble and process each category
+    // 3. Query OpenStreetMap Overpass Real POIs if any category still has fewer than 3
+    let overpassResults = null;
+    const needsOverpass = Object.keys(categoryDefinitions).some(
+        key => ((googleResults[key]?.length || 0) + (geminiResults?.[key]?.length || 0)) < 3
+    );
+    if (needsOverpass) {
+        try {
+            overpassResults = await fetchOverpassCategoryPlaces(latitude, longitude, 7000);
+        } catch (opErr) {
+            console.warn('⚠️ Overpass POI error:', opErr.message);
+        }
+    }
+
+    // 4. Assemble and process each category
     for (const [key, config] of Object.entries(categoryDefinitions)) {
         let combined = [];
 
@@ -561,10 +779,14 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
             combined.push(...geminiResults[key]);
         }
 
-        // 4. Fallback to tight-radius OSM Nominatim only if still fewer than 3
+        if (overpassResults && Array.isArray(overpassResults[key])) {
+            combined.push(...overpassResults[key]);
+        }
+
+        // 5. Final fallback to Nominatim tight-radius search if still fewer than 3
         if (combined.length < 3) {
             try {
-                const osmTight = await fetchNominatimCategory(latitude, longitude, config.nominatim, 0.03);
+                const osmTight = await fetchNominatimCategory(latitude, longitude, config.nominatim, 0.04);
                 combined.push(...osmTight);
             } catch (nErr) {
                 console.warn(`Nominatim search error for ${key}:`, nErr.message);
@@ -575,6 +797,12 @@ async function findNearbyPlaces(userLocation, fallbackAddress = null, clientIp =
         finalResults[key] = processCategoryResults(combined, 3);
         console.log(`✅ [${config.label}] Found ${finalResults[key].length} verified places (Max 3).`);
     }
+
+    // Store in cache
+    placesCache.set(cacheKey, {
+        timestamp: Date.now(),
+        data: finalResults
+    });
 
     return finalResults;
 }
@@ -587,6 +815,9 @@ module.exports = {
     calculateDistance,
     fetchGooglePlacesCategory,
     fetchGeminiNearbyPlaces,
+    fetchOverpassCategoryPlaces,
     fetchNominatimCategory,
-    processCategoryResults
+    processCategoryResults,
+    saveSosSession,
+    getSosSession
 };

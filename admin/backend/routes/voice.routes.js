@@ -3,7 +3,7 @@ const router = express.Router();
 const twilio = require('twilio');
 const supabase = require('../config/supabase');
 const { sendBookingConfirmationEmail, sendBookingCancelledEmail, sendNearestLocationsEmail, sendEmail } = require('../config/emailService');
-const { findNearbyPlaces } = require('../services/nearbyPlacesService');
+const { findNearbyPlaces, getSosSession } = require('../services/nearbyPlacesService');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com'];
 
 // Helper to safely resolve vehicle name from DB if missing or generic
@@ -71,23 +71,32 @@ router.all('/welcome', async (req, res) => {
         timeout: 10
     });
 
-    const userEmail = req.query.userEmail || req.body.userEmail || '';
+    const promptText = `Namaste ${userName} ji! Mai RentHub se bol rahi hu aapki ${vehicleName} ki booking ID ${bookingId} ki verification ke liye. Booking confirm karne ke liye 1 dabaye, ya cancel karne ke liye 2 dabaye.`;
 
-    const promptText = `Hello ${userName}! This is RentHub calling regarding your booking request for ${vehicleName}. ` +
-        `Booking ID is ${bookingId}, scheduled for ${startDate} at ${startTime} for ${duration} hours. ` +
-        (userEmail ? `We have sent your booking summary to ${userEmail}. ` : `We have sent your booking summary to your email. `) +
-        `Please state if you would like to confirm your booking or cancel your booking. ` +
-        `You can also press 1 to confirm or press 2 to cancel. ` +
-        `Thank you for choosing RentHub!`;
-
-    gather.say({ voice: 'Polly.Aditi', language: 'en-IN' }, promptText);
+    gather.say({ voice: 'Polly.Aditi', language: 'hi-IN' }, promptText);
 
     // If user doesn't press anything within timeout
-    twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, "We didn't receive any keypress input. Thank you for choosing RentHub! Goodbye!");
+    twiml.say({ voice: 'Polly.Aditi', language: 'hi-IN' }, "Aapka koi response nahi mila. RentHub par aane ke liye dhanyavaad! Alvida!");
 
     res.type('text/xml');
     res.send(twiml.toString());
 });
+
+// Helper function to safely update booking by either numeric ID or string booking_id
+async function updateBookingByAnyId(bookingId, updates) {
+    if (!bookingId) return { data: null, error: 'No booking ID' };
+    const cleanId = String(bookingId).trim();
+    let query = supabase.from('bookings').update(updates);
+    const numId = Number(cleanId);
+
+    if (!isNaN(numId) && String(numId) === cleanId) {
+        query = query.or(`id.eq.${numId},booking_id.eq.${cleanId}`);
+    } else {
+        query = query.eq('booking_id', cleanId);
+    }
+
+    return await query.select('*, users:user_id(full_name, email)');
+}
 
 // POST /api/voice/process-keypress
 // Processes DTMF keypad press (1 = Confirm, 2 = Cancel)
@@ -99,34 +108,31 @@ router.post('/process-keypress', async (req, res) => {
     const bookingId = req.query.bookingId || req.body.bookingId;
     const userNameParam = req.query.userName || 'Customer';
     const vehicleNameParam = req.query.vehicleName || 'Vehicle';
+    const userEmailParam = req.query.userEmail || req.body.userEmail || '';
 
     console.log(`🎙️ [Twilio Voice] Keypress received: Digits='${digit}' for Booking ID: ${bookingId}`);
 
     if (digit === '1') {
         twiml.say(
-            { voice: 'Polly.Aditi', language: 'en-IN' },
-            "Thank you for confirming! Please remember to bring a valid government ID at pickup. Thank you for choosing RentHub!"
+            { voice: 'Polly.Aditi', language: 'hi-IN' },
+            "Booking confirm karne ke liye dhanyavaad! Kripya pickup ke samay ek valid government ID card saath laana na bhulein. RentHub ke saath aapka safar shubh ho! Alvida."
         );
 
         // Update DB status to confirmed
         try {
             if (bookingId) {
-                const { data, error } = await supabase
-                    .from('bookings')
-                    .update({
-                        status: 'confirmed',
-                        confirmation_timestamp: new Date().toISOString()
-                    })
-                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`)
-                    .select('*, users(full_name, email)');
+                const { data, error } = await updateBookingByAnyId(bookingId, {
+                    status: 'confirmed',
+                    confirmation_timestamp: new Date().toISOString()
+                });
 
                 if (error) {
-                    console.error('❌ DB Update Error (Voice Confirm):', error.message);
+                    console.error('❌ DB Update Error (Voice Confirm):', error);
                 } else if (data && data.length > 0) {
                     console.log('✅ Booking updated to CONFIRMED via Voice Call:', bookingId);
                     const booking = data[0];
-                    const userEmail = booking.users?.email || booking.user_email;
-                    const userName = booking.users?.full_name || userNameParam;
+                    const userEmail = (booking.users && booking.users.email) || booking.user_email || userEmailParam;
+                    const userName = (booking.users && booking.users.full_name) || userNameParam;
                     const resolvedVehicle = await resolveBookingVehicleName(bookingId, booking.vehicle_id, booking.vehicle_type, vehicleNameParam);
                     booking.vehicle_name = resolvedVehicle;
                     booking.vehicleName = resolvedVehicle;
@@ -141,74 +147,75 @@ router.post('/process-keypress', async (req, res) => {
 
     } else if (digit === '2') {
         twiml.say(
-            { voice: 'Polly.Aditi', language: 'en-IN' },
-            "Your booking request has been cancelled. An email has been sent to submit your refund details if applicable. Thank you for visiting RentHub!"
+            { voice: 'Polly.Aditi', language: 'hi-IN' },
+            `Aapki booking request cancel kar di gayi hai. Refund details ki jankari aapke email par bhej di gayi hai. RentHub par aane ke liye dhanyavaad! Alvida.`
         );
 
         try {
             if (bookingId) {
                 const localCancelTimestamp = new Date().toISOString();
-                const { data, error } = await supabase
-                    .from('bookings')
-                    .update({ 
-                        status: 'cancelled',
-                        cancelled_timestamp: localCancelTimestamp
-                    })
-                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`)
-                    .select('*, users(full_name, email)');
+                const { data, error } = await updateBookingByAnyId(bookingId, {
+                    status: 'cancelled',
+                    cancelled_timestamp: localCancelTimestamp
+                });
 
                 if (error) {
-                    console.error('❌ DB Cancel Error (Voice Cancel):', error.message);
+                    console.error('❌ DB Cancel Error (Voice Cancel):', error);
                 } else {
                     console.log('🚫 Booking CANCELLED via Voice Call:', bookingId);
                     const booking = (data && data[0]) || {};
-                    const userEmail = booking.users?.email || booking.user_email;
-                    const userName = booking.users?.full_name || userNameParam;
+                    const userEmail = (booking.users && booking.users.email) || booking.user_email || userEmailParam;
+                    const userName = (booking.users && booking.users.full_name) || userNameParam;
                     const vehicleName = await resolveBookingVehicleName(bookingId, booking.vehicle_id, booking.vehicle_type, vehicleNameParam);
 
                     if (userEmail) {
                         await sendBookingCancelledEmail(userEmail, userName, bookingId, vehicleName);
                         console.log(`✉️ Cancellation email with refund link sent to ${userEmail}`);
+                    } else {
+                        console.error('⚠️ No recipient email found for cancellation notification.');
                     }
                 }
             }
         } catch (dbErr) {
             console.error('❌ Exception in Voice DB Cancel:', dbErr);
         }
+
     } else if (digit === '3') {
         twiml.say(
-            { voice: 'Polly.Aditi', language: 'en-IN' },
-            "We have dispatched the nearest bike garages and petrol pump locations directly to your email address. Please check your inbox. Safe riding with RentHub!"
+            { voice: 'Polly.Aditi', language: 'hi-IN' },
+            "Maine aapke registered email par nearest bike garage aur petrol pump ki Google Maps location bhej di hai. Kripya apna email check karein. RentHub ke saath safe ride karein! Alvida."
         );
 
         try {
             if (bookingId) {
-                const { data } = await supabase
-                    .from('bookings')
-                    .select('*, users(full_name, email)')
-                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`);
+                let query = supabase.from('bookings').select('*, users:user_id(full_name, email)');
+                if (String(bookingId).startsWith('RH')) {
+                    query = query.eq('booking_id', bookingId);
+                } else {
+                    query = query.eq('id', bookingId);
+                }
+                const { data: dbBooking } = await query.single();
+                const recipientEmail = (dbBooking && (dbBooking.users?.email || dbBooking.user_email)) || userEmailParam;
+                const recipientName = (dbBooking && (dbBooking.users?.full_name || dbBooking.user_name)) || userNameParam;
+                const vehicle = await resolveBookingVehicleName(bookingId, dbBooking?.vehicle_id, dbBooking?.vehicle_type, vehicleNameParam);
 
-                const booking = (data && data[0]) || {};
-                const userEmail = booking.users?.email || booking.user_email;
-                const userName = booking.users?.full_name || userNameParam;
-                const vehicleName = await resolveBookingVehicleName(bookingId, booking.vehicle_id, booking.vehicle_type, vehicleNameParam);
-
-                const nearbyData = await findNearbyPlaces(booking?.pickup_location);
-                if (userEmail) {
+                const activeSosSession = getSosSession(bookingId, userPhoneParam);
+                const nearbyData = activeSosSession?.nearbyData || await findNearbyPlaces(activeSosSession?.gpsLocation, dbBooking?.pickup_location);
+                if (recipientEmail) {
                     await sendNearestLocationsEmail(
-                        userEmail,
-                        userName,
-                        { bookingId: bookingId, vehicleName: vehicleName },
+                        recipientEmail,
+                        recipientName,
+                        { bookingId: bookingId, vehicleName: vehicle },
                         nearbyData
                     );
-                    console.log(`✉️ [Admin IVR] Dispatched nearest locations email to ${userEmail}`);
+                    console.log(`✉️ [IVR] Dispatched nearest locations email to ${recipientEmail}`);
                 }
             }
-        } catch (dbErr) {
-            console.error('❌ Exception in Admin Voice Keypress 3:', dbErr);
+        } catch (err) {
+            console.error('❌ Exception in IVR Keypress 3:', err);
         }
     } else {
-        twiml.say({ voice: 'Polly.Aditi', language: 'en-IN' }, "Invalid option selected. Thank you for choosing RentHub! Goodbye!");
+        twiml.say({ voice: 'Polly.Aditi', language: 'hi-IN' }, "Hame koi sahi option nahi mila. RentHub se judne ke liye dhanyavaad! Alvida.");
     }
 
     res.type('text/xml');
@@ -239,50 +246,50 @@ const handleRetellWebhook = async (req, res) => {
 
         const action = body.name || body.func_name || body.function_name || body.tool_name || (callData.custom_analysis_data && callData.custom_analysis_data.user_intent) || (body.args && body.args.action) || (body.arguments && body.arguments.action) || '';
 
+        // 1. Booking Confirmation Action
         if (action === 'confirm' || action === 'confirm_booking' || event === 'booking_confirmed') {
             console.log(`✅ [Retell AI] Booking confirmed for ID: ${bookingId}`);
             if (bookingId) {
-                const { data } = await supabase
-                    .from('bookings')
-                    .update({ status: 'confirmed', confirmation_timestamp: new Date().toISOString() })
-                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`)
-                    .select('*, users(full_name, email)');
+                const { data } = await updateBookingByAnyId(bookingId, {
+                    status: 'confirmed',
+                    confirmation_timestamp: new Date().toISOString()
+                });
 
                 const booking = (data && data[0]) || {};
-                const email = userEmail || booking.users?.email || booking.user_email;
+                const email = userEmail || (booking.users && booking.users.email) || booking.user_email;
                 if (email) {
                     await sendBookingConfirmationEmail(email, userName, booking);
                 }
             }
             return res.json({ success: true, message: 'Booking confirmed via Retell AI' });
 
+        // 2. Booking Cancellation Action
         } else if (action === 'cancel' || action === 'cancel_booking' || event === 'booking_cancelled') {
             console.log(`🚫 [Retell AI] Booking cancelled for ID: ${bookingId}`);
             if (bookingId) {
-                const { data } = await supabase
-                    .from('bookings')
-                    .update({ status: 'cancelled', cancelled_timestamp: new Date().toISOString() })
-                    .or(`id.eq.${bookingId},booking_id.eq.${bookingId}`)
-                    .select('*, users(full_name, email)');
+                const { data } = await updateBookingByAnyId(bookingId, {
+                    status: 'cancelled',
+                    cancelled_timestamp: new Date().toISOString()
+                });
 
                 const booking = (data && data[0]) || {};
-                const email = userEmail || booking.users?.email || booking.user_email;
+                const email = userEmail || (booking.users && booking.users.email) || booking.user_email;
                 if (email) {
                     await sendBookingCancelledEmail(email, userName, bookingId, vehicleName);
                 }
             }
             return res.json({ success: true, message: 'Booking cancelled via Retell AI' });
 
-        // 3. SOS Solved Action
+        // 3. SOS Solved Action (User solved problem with AI advice)
         } else if (action === 'resolve_sos' || action === 'sos_resolved' || event === 'sos_resolved') {
-            console.log(`✅ [Retell AI] SOS resolved for booking ${bookingId}`);
+            console.log(`✅ [Retell AI] SOS marked as resolved by user for Booking: ${bookingId}`);
             return res.json({
                 success: true,
-                message: 'Issue marked as resolved',
-                response: 'Bohat accha! Aapka issue solve ho gaya hai. Safe riding!'
+                message: 'Thank you! We have logged that your issue has been resolved. Safe riding with RentHub!',
+                response: 'Bohat accha! Aapka issue solve ho gaya hai. RentHub ke saath safe ride karein!'
             });
 
-        // 4. Send Nearest Locations to Email (Option 3 / Nearby Assistance)
+        // 4. Send Nearest Bike Garage / Petrol Pump Locations to Email (Option 3 / Customer Requests Location)
         } else if (
             action === 'send_nearest_locations' ||
             action === 'send_location' ||
@@ -295,8 +302,8 @@ const handleRetellWebhook = async (req, res) => {
             action === 'email_location' ||
             event === 'location_email_requested'
         ) {
-            console.log(`📍 [Admin Retell AI] Dispathing Nearest Locations Email for Booking: ${bookingId}, Email: ${userEmail}`);
-
+            console.log(`📍 [Retell AI] Dispathing Nearest Locations Email for Booking: ${bookingId}, Email: ${userEmail}`);
+            
             const successVoiceMessage = "Maine aapke registered email par nearest bike garage aur petrol pump ki Google Maps location bhej di hai. Aap apna inbox check kar sakte hain.";
 
             // Respond instantly to Retell so voice call NEVER times out or says 'technical glitch'
@@ -331,40 +338,68 @@ const handleRetellWebhook = async (req, res) => {
                         }
                     }
 
-                    const nearbyData = await findNearbyPlaces(gpsLocation, dbBooking?.pickup_location);
+                    const activeSosSession = getSosSession(bookingId, userPhone);
+                    const effectiveGps = gpsLocation || activeSosSession?.gpsLocation;
+                    const nearbyData = activeSosSession?.nearbyData || await findNearbyPlaces(effectiveGps, dbBooking?.pickup_location);
 
                     if (resolvedEmail) {
-                        await sendNearestLocationsEmail(
+                        const emailResult = await sendNearestLocationsEmail(
                             resolvedEmail,
                             resolvedName,
                             {
                                 bookingId: bookingId || 'Active Ride',
-                                vehicleName: resolvedVehicle
+                                vehicleName: resolvedVehicle,
+                                phoneNumber: userPhone || dbBooking?.users?.phone_number || 'N/A',
+                                gpsLocation: gpsLocation,
+                                pickupLocation: dbBooking?.pickup_location || 'Registered Station',
+                                retellCallStatus: 'Emergency AI Call Active / Dispatched',
+                                emergencySummary: (body.args && (body.args.issue || body.args.notes || body.args.reason)) || 'Requested nearest help locations via Retell AI Voice Call'
                             },
                             nearbyData
                         );
-                        console.log(`✉️ [Admin Retell AI Background] Successfully sent nearest locations email to ${resolvedEmail}`);
+                        if (emailResult.success) {
+                            console.log(`✉️ [Retell AI Background] Successfully delivered nearest locations email to ${resolvedEmail}`);
+                        } else {
+                            console.warn(`⚠️ [Retell AI Background] Failed to deliver nearest locations email to ${resolvedEmail}: ${emailResult.error}`);
+                        }
                     } else {
-                        console.warn('⚠️ [Admin Retell AI Background] No recipient email found for nearest locations.');
+                        console.warn('⚠️ [Retell AI Background] No recipient email found for nearest locations.');
                     }
                 } catch (bgErr) {
-                    console.error('⚠️ [Admin Retell AI Background] Error sending locations email:', bgErr.message);
+                    console.error('⚠️ [Retell AI Background] Error sending locations email:', bgErr.message);
                 }
             })();
 
             return;
 
 
-        // 5. Escalate to Roadside Mechanic
+        // 5. SOS Escalate / Roadside Mechanic Dispatch Action
         } else if (action === 'escalate_sos_mechanic' || action === 'sos_unresolved' || action === 'request_mechanic' || event === 'mechanic_requested') {
-            console.log(`🚨 [Admin Retell AI] Roadside Mechanic Dispatch requested for Booking: ${bookingId}`);
-            const issueDetail = (body.args && (body.args.issue || body.args.notes || body.args.reason)) || 'Customer requested mechanic';
+            console.log(`🚨 [Retell AI] Roadside Mechanic Dispatch requested by user for Booking: ${bookingId}`);
+            const issueDetail = (body.args && (body.args.issue || body.args.notes || body.args.reason)) || 'Customer requested mechanic via AI Voice Call';
+
+            const alertHtml = `
+                <div style="font-family: Arial, sans-serif; padding: 20px; background: #fff5f5; border: 2px solid #e53e3e; border-radius: 8px;">
+                    <h2 style="color: #c53030; margin-top: 0;">🚨 URGENT: Roadside Mechanic Dispatch (Via Retell AI Call)</h2>
+                    <p>The customer indicated during the AI Emergency Call that their issue is <strong>UNSOLVED</strong> and requested roadside mechanic assistance.</p>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 15px;">
+                        <tr><td style="padding: 8px; font-weight: bold;">Booking ID:</td><td style="padding: 8px;">${bookingId || 'N/A'}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Customer Name:</td><td style="padding: 8px;">${userName}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Phone Number:</td><td style="padding: 8px;"><a href="tel:${userPhone}">${userPhone}</a></td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Vehicle:</td><td style="padding: 8px;">${vehicleName}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">AI Diagnostic Note:</td><td style="padding: 8px; color: #c53030;"><strong>${issueDetail}</strong></td></tr>
+                    </table>
+                    <div style="margin-top: 20px; text-align: center;">
+                        <a href="tel:${userPhone}" style="display: inline-block; padding: 12px 24px; background: #e53e3e; color: white; text-decoration: none; font-weight: bold; border-radius: 5px;">Call Customer Now</a>
+                    </div>
+                </div>
+            `;
 
             try {
                 await sendEmail({
                     to: ADMIN_EMAILS,
                     subject: `🚨 [URGENT DISPATCH - RETELL CALL] Roadside Mechanic for Booking ${bookingId || 'N/A'}`,
-                    html: `<h3>Roadside Mechanic Alert</h3><p>Customer: ${userName} (${userPhone})<br>Vehicle: ${vehicleName}<br>Issue: ${issueDetail}</p>`
+                    html: alertHtml
                 });
             } catch (mailErr) {
                 console.error('Error sending Retell mechanic dispatch email:', mailErr.message);
@@ -372,8 +407,27 @@ const handleRetellWebhook = async (req, res) => {
 
             return res.json({
                 success: true,
-                message: 'Roadside mechanic alert sent to emergency operations team.',
+                message: 'Roadside mechanic alert sent to emergency operations team. A representative will contact you immediately.',
                 response: 'Emergency roadside mechanic alert register ho gaya hai. Hamari team aapse turant contact karegi.'
+            });
+
+        // 6. Fuel Leakage / High-Hazard Fire Alert
+        } else if (action === 'fuel_leakage_alert' || action === 'fire_hazard') {
+            console.log(`🔥 [Retell AI] FUEL LEAKAGE ALERT received for Booking: ${bookingId}`);
+            try {
+                await sendEmail({
+                    to: ADMIN_EMAILS,
+                    subject: `🔥 [HIGH HAZARD] Fuel Leakage Reported for Booking ${bookingId}`,
+                    html: `<h3>URGENT FIRE HAZARD</h3><p>User ${userName} (${userPhone}) reported fuel leakage on vehicle ${vehicleName}. Immediate roadside emergency dispatch required.</p>`
+                });
+            } catch (err) {
+                console.error('Error sending fuel leak alert email:', err.message);
+            }
+
+            return res.json({
+                success: true,
+                message: 'High priority hazard logged. Safety advice delivered to user.',
+                response: 'Safety alert register ho gaya hai. Kripya vehicle se 10 meter door rahein.'
             });
         }
 

@@ -79,7 +79,7 @@ async function sendPickupReminderEmail(userEmail, userName, bookingDetails) {
             </div>
 
             <div style="text-align: center; margin: 25px 0;">
-                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickupLocation || 'GITA Autonomous College BBSR')}" 
+                <a href="https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(pickupLocation || 'RentHub Main Hub, Bhubaneswar')}" 
                    style="display: inline-block; background-color: #2563eb; color: white; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; font-size: 16px;">
                    📍 View Pickup Location
                 </a>
@@ -262,7 +262,7 @@ async function checkAndSendReminders() {
                         startDate: booking.start_date,
                         startTime: booking.start_time,
                         duration: booking.duration,
-                        pickupLocation: booking.pickup_location || 'GITA Autonomous College BBSR',
+                        pickupLocation: booking.pickup_location || 'RentHub Main Hub, Bhubaneswar',
                         hoursUntilPickup: hoursUntilPickup
                     };
 

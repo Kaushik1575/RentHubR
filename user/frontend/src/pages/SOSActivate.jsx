@@ -213,28 +213,8 @@ const SOSActivate = () => {
             return gps;
         }
 
-        // Try Network IP Location if browser GPS timed out or was denied
-        try {
-            const ipRes = await fetch('https://ipapi.co/json/');
-            if (ipRes.ok) {
-                const ipData = await ipRes.json();
-                if (ipData.latitude && ipData.longitude) {
-                    const ipGps = {
-                        latitude: Number(ipData.latitude.toFixed(6)),
-                        longitude: Number(ipData.longitude.toFixed(6)),
-                        accuracy: 500,
-                        source: 'ip_network'
-                    };
-                    setGpsData(ipGps);
-                    setLocationStats(`🌐 Network Location: ${ipData.city || 'Nearby Area'} (${ipGps.latitude}, ${ipGps.longitude})`);
-                    return ipGps;
-                }
-            }
-        } catch (ipErr) {
-            console.warn("IP location fallback failed:", ipErr.message);
-        }
-
-        setLocationStats("⚠️ GPS unavailable. Using booking pickup location fallback.");
+        setGpsData(null);
+        setLocationStats("⚠️ Device GPS is turned OFF. Please turn ON location for emergency assistance.");
         return null;
     };
 
@@ -277,7 +257,7 @@ const SOSActivate = () => {
 
     const sendSOS = async (gpsLocation, targetBooking, targetPhone) => {
         setStatus('activating');
-        setMessage('Triggering Retell AI Emergency Outbound Voice Call & Alerting Dispatch...');
+        setMessage('🛰️ Live GPS Locked. Discovering verified nearby petrol pumps, garages, hospitals & police stations... Please hold on, emergency AI calling & directions are being prepared.');
 
         const bId = targetBooking || activeBookingId || undefined;
         const pNum = targetPhone || activePhone || undefined;
@@ -483,7 +463,10 @@ const SOSActivate = () => {
                         <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
                             <button
                                 className="sos-button"
-                                onClick={activateSOS}
+                                onClick={() => {
+                                    setGpsData(null);
+                                    activateSOS();
+                                }}
                                 style={{
                                     padding: '14px',
                                     fontSize: '1rem',
@@ -496,22 +479,6 @@ const SOSActivate = () => {
                             >
                                 <i className="fas fa-location-arrow" style={{ marginRight: '8px' }}></i>
                                 Turn ON Location & Retry GPS
-                            </button>
-
-                            <button
-                                type="button"
-                                onClick={() => sendSOS(null, activeBookingId, activePhone)}
-                                style={{
-                                    background: 'transparent',
-                                    border: 'none',
-                                    color: '#94a3b8',
-                                    textDecoration: 'underline',
-                                    fontSize: '0.85rem',
-                                    cursor: 'pointer',
-                                    padding: '8px'
-                                }}
-                            >
-                                Proceed without GPS (use booking pickup location fallback) &rarr;
                             </button>
                         </div>
                     </div>

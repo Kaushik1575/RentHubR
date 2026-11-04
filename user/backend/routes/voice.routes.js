@@ -3,7 +3,7 @@ const router = express.Router();
 const twilio = require('twilio');
 const supabase = require('../config/supabase');
 const { sendBookingConfirmationEmail, sendBookingCancelledEmail, sendNearestLocationsEmail, sendEmail } = require('../config/emailService');
-const { findNearbyPlaces } = require('../services/nearbyPlacesService');
+const { findNearbyPlaces, getSosSession } = require('../services/nearbyPlacesService');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com'];
 
 // Helper to safely resolve vehicle name from DB if missing or generic
@@ -199,7 +199,8 @@ router.post('/process-keypress', async (req, res) => {
                 const recipientName = (dbBooking && (dbBooking.users?.full_name || dbBooking.user_name)) || userNameParam;
                 const vehicle = await resolveBookingVehicleName(bookingId, dbBooking?.vehicle_id, dbBooking?.vehicle_type, vehicleNameParam);
 
-                const nearbyData = await findNearbyPlaces(dbBooking?.pickup_location);
+                const activeSosSession = getSosSession(bookingId, userPhoneParam);
+                const nearbyData = activeSosSession?.nearbyData || await findNearbyPlaces(activeSosSession?.gpsLocation, dbBooking?.pickup_location);
                 if (recipientEmail) {
                     await sendNearestLocationsEmail(
                         recipientEmail,
@@ -337,7 +338,9 @@ const handleRetellWebhook = async (req, res) => {
                         }
                     }
 
-                    const nearbyData = await findNearbyPlaces(gpsLocation, dbBooking?.pickup_location);
+                    const activeSosSession = getSosSession(bookingId, userPhone);
+                    const effectiveGps = gpsLocation || activeSosSession?.gpsLocation;
+                    const nearbyData = activeSosSession?.nearbyData || await findNearbyPlaces(effectiveGps, dbBooking?.pickup_location);
 
                     if (resolvedEmail) {
                         const emailResult = await sendNearestLocationsEmail(

@@ -1,7 +1,7 @@
 const supabase = require('../config/supabase');
 const { sendSOSAlertEmail, sendNearestLocationsEmail, sendEmail } = require('../config/emailService');
 const { makeSOSOutboundCall } = require('../config/retellCallService');
-const { findNearbyPlaces } = require('../services/nearbyPlacesService');
+const { findNearbyPlaces, saveSosSession } = require('../services/nearbyPlacesService');
 const ADMIN_EMAILS = ['jyoti2006@gmail.com'];
 
 const activateSOS = async (req, res) => {
@@ -168,6 +168,13 @@ const activateSOS = async (req, res) => {
         let nearbyData = null;
         try {
             nearbyData = await findNearbyPlaces(gpsLocation, booking?.pickup_location, clientIp);
+            if (nearbyData) {
+                saveSosSession(sosData.bookingId, sosData.phoneNumber, {
+                    gpsLocation,
+                    nearbyData,
+                    pickupLocation: booking?.pickup_location || 'RentHub Corridor, Bhubaneswar'
+                });
+            }
         } catch (locErr) {
             console.error('Failed to discover nearby places during SOS activation:', locErr.message);
         }
@@ -236,7 +243,7 @@ const handleSOSFeedback = async (req, res) => {
             return res.status(400).json({ error: 'Booking ID is required' });
         }
 
-        console.log(`🚨 Admin SOS Feedback - Booking: ${bookingId}, Status: ${status}`);
+        console.log(`🚨 SOS Feedback Received - Booking: ${bookingId}, Status: ${status}, Issue: ${issueType}`);
 
         let query = supabase.from('bookings').select('*, users:user_id(full_name, email, phone_number)');
         if (bookingId.toString().startsWith('RH')) {
@@ -270,7 +277,7 @@ const handleSOSFeedback = async (req, res) => {
                     },
                     nearbyData
                 );
-                console.log(`✉️ [Admin SOS] Dispatched nearest emergency help locations email to ${userEmail} for booking ${bookingId}`);
+                console.log(`✉️ Dispatched nearest help locations email to ${userEmail} for booking ${bookingId}`);
             }
 
             if (emailResult.success || !userEmail) {
@@ -305,8 +312,11 @@ const handleSOSFeedback = async (req, res) => {
                         <tr><td style="padding: 8px; font-weight: bold;">Phone Number:</td><td style="padding: 8px;"><a href="tel:${userPhone}">${userPhone}</a></td></tr>
                         <tr><td style="padding: 8px; font-weight: bold;">Vehicle:</td><td style="padding: 8px;">${vehicleName}</td></tr>
                         <tr><td style="padding: 8px; font-weight: bold;">Reported Issue:</td><td style="padding: 8px; color: #c53030;"><strong>${issueType || 'General Breakdown'}</strong></td></tr>
-                        <tr><td style="padding: 8px; font-weight: bold;">Details / Notes:</td><td style="padding: 8px;">${details || 'Customer requested mechanic'}</td></tr>
+                        <tr><td style="padding: 8px; font-weight: bold;">Details / Notes:</td><td style="padding: 8px;">${details || 'Customer requested mechanic via AI SOS Voice flow'}</td></tr>
                     </table>
+                    <div style="margin-top: 20px; text-align: center;">
+                        <a href="tel:${userPhone}" style="display: inline-block; padding: 12px 24px; background: #e53e3e; color: white; text-decoration: none; font-weight: bold; border-radius: 5px;">Call Customer Immediately</a>
+                    </div>
                 </div>
             `;
 
@@ -316,6 +326,7 @@ const handleSOSFeedback = async (req, res) => {
                     subject: `🚨 [URGENT DISPATCH] Roadside Mechanic Needed - Booking ${bookingId}`,
                     html: alertHtml
                 });
+                console.log(`✉️ Emergency Mechanic Dispatch alert sent to admins for booking ${bookingId}`);
             } catch (emailErr) {
                 console.error('Error sending mechanic alert email:', emailErr.message);
             }
@@ -327,9 +338,10 @@ const handleSOSFeedback = async (req, res) => {
             });
         }
 
+        console.log(`✅ SOS Marked as Resolved for booking ${bookingId}`);
         return res.json({
             success: true,
-            message: 'SOS issue marked as resolved.',
+            message: 'SOS issue marked as resolved. Safe travels!',
             status: 'resolved'
         });
 
@@ -347,7 +359,7 @@ const sendNearestLocations = async (req, res) => {
             return res.status(400).json({ error: 'Booking ID or User Email is required' });
         }
 
-        console.log(`📍 [Admin SOS Controller] Finding nearest locations for Booking: ${bookingId}, Email: ${userEmail}`);
+        console.log(`📍 [SOS Controller] Finding nearest locations for Booking: ${bookingId}, Email: ${userEmail}`);
 
         let booking = null;
         let recipientEmail = userEmail;

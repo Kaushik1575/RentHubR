@@ -153,7 +153,7 @@ async function makeOutboundCall(toNumber, callMetadata = {}) {
                 remaining_amount: String(callMetadata.remaining_amount || callMetadata.remainingAmount || ''),
                 call_reason: String(callMetadata.call_reason || 'booking_confirmation'),
                 gps_location: String(callMetadata.gps_location || callMetadata.gpsLocation || 'Live GPS Active'),
-                pickup_location: String(callMetadata.pickup_location || callMetadata.pickupLocation || 'GITA Autonomous College BBSR'),
+                pickup_location: String(callMetadata.pickup_location || callMetadata.pickupLocation || 'RentHub Main Hub, Bhubaneswar'),
                 emergency_phone: String(callMetadata.emergency_phone || '9040757683')
             };
         }
@@ -291,7 +291,7 @@ async function makeSOSOutboundCall(userPhoneNumber, sosDetails = {}) {
             user_name: sosDetails.userName || 'Customer',
             user_email: sosDetails.userEmail || null,
             gps_location: sosDetails.gpsLocation || 'Location Provided',
-            pickup_location: sosDetails.pickupLocation || 'GITA Autonomous College BBSR',
+            pickup_location: sosDetails.pickupLocation || 'RentHub Main Hub, Bhubaneswar',
             emergency_phone: '9040757683'
         };
 
