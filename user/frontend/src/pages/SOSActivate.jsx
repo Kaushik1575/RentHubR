@@ -2,6 +2,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
 import getApiUrl from '../config/api';
 import './SOSActivate.css';
+import StatusPopup from '../components/StatusPopup';
 
 const SOSActivate = () => {
     const [searchParams] = useSearchParams();
@@ -13,7 +14,8 @@ const SOSActivate = () => {
     const [inputVal, setInputVal] = useState(bookingIdFromUrl || '');
     const [callInitiated, setCallInitiated] = useState(false);
 
-    const [status, setStatus] = useState('loading'); // loading, ready, activating, active_sos, resolved, escalated, error
+    const [status, setStatus] = useState('loading');
+    const [popup, setPopup] = useState({ isOpen: false, type: 'warning', title: '', message: '' }); // loading, ready, activating, active_sos, resolved, escalated, error
     const [message, setMessage] = useState('');
     const [locationStats, setLocationStats] = useState('');
     const [gpsData, setGpsData] = useState(null);
@@ -138,7 +140,7 @@ const SOSActivate = () => {
                 .then(res => res.json())
                 .then(data => {
                     const list = Array.isArray(data) ? data : (data?.bookings || []);
-                    const activeRide = list.find(b => b.status === 'ride_started' || b.status === 'confirmed');
+                    const activeRide = list.find(b => b.status === 'ride_started');
                     if (activeRide) {
                         const detectedId = activeRide.booking_id || activeRide.id;
                         setActiveBookingId(detectedId);
@@ -283,6 +285,16 @@ const SOSActivate = () => {
                 }
                 setStatus('active_sos');
             } else {
+                if (data.isRideNotStarted) {
+                    setPopup({
+                        isOpen: true,
+                        type: 'warning',
+                        title: 'SOS Unavailable: Ride Not Started',
+                        message: data.error || 'Emergency Roadside SOS can only be initiated during an active trip that has been started by the hub admin (status: Ride Started).'
+                    });
+                    setStatus('ready');
+                    return;
+                }
                 throw new Error(data.error || 'Failed to activate SOS');
             }
         } catch (err) {
@@ -880,6 +892,13 @@ const SOSActivate = () => {
                     </div>
                 )}
 
+                <StatusPopup
+                    isOpen={popup.isOpen}
+                    onClose={() => setPopup({ ...popup, isOpen: false })}
+                    type={popup.type}
+                    title={popup.title}
+                    message={popup.message}
+                />
             </div>
         </div>
     );

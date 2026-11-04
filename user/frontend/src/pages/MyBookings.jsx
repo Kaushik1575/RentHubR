@@ -512,7 +512,7 @@ const MyBookings = () => {
 
                             {(booking.status === 'confirmed' || booking.status === 'ride_started' || booking.status === 'pending' || booking.status === 'completed') && (
                                 <div style={{ display: 'flex', gap: '10px', marginTop: '1rem', flexWrap: 'wrap' }}>
-                                    {(booking.status === 'confirmed' || booking.status === 'ride_started') && (
+                                    {booking.status === 'ride_started' ? (
                                         <a
                                             href={`/sos-activate?bookingId=${booking.booking_id || booking.id}&token=web_direct`}
                                             style={{ textDecoration: 'none' }}
@@ -523,6 +523,21 @@ const MyBookings = () => {
                                                 <span>🚨</span> Emergency SOS
                                             </button>
                                         </a>
+                                    ) : (booking.status === 'confirmed' || booking.status === 'pending') && (
+                                        <button
+                                            onClick={() => setPopup({
+                                                isOpen: true,
+                                                type: 'warning',
+                                                title: 'SOS Unavailable: Ride Not Started',
+                                                message: 'Emergency Roadside SOS can only be initiated during an active trip (status: Ride Started). Once the hub admin hands over the vehicle keys and marks your ride as \'Ride Started\', Emergency SOS will become active.'
+                                            })}
+                                            style={{
+                                                backgroundColor: '#475569', color: '#cbd5e1', border: '1px solid #64748b', padding: '0.8rem 1.2rem', borderRadius: '5px', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 'bold'
+                                            }}
+                                            title="SOS is only active when your ride has started"
+                                        >
+                                            <span>🔒</span> Emergency SOS (Ride Not Started)
+                                        </button>
                                     )}
 
                                     {booking.status === 'ride_completed' && (booking.remainingDisplayAmount > 0 || booking.remaining_amount > 0 || booking.remainingDisplayAmount === undefined) && (

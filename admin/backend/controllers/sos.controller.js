@@ -70,8 +70,31 @@ const activateSOS = async (req, res) => {
             }
         }
 
-        if (!booking && !phoneNumber) {
-            return res.status(404).json({ error: 'Booking not found' });
+        if (!booking) {
+            return res.status(404).json({
+                success: false,
+                error: 'No active booking found. Emergency SOS is only available for registered RentHub rides.'
+            });
+        }
+
+        // Strict Enforcement: Emergency SOS can ONLY be initiated when the booking is in 'ride_started' status by admin
+        if (booking.status !== 'ride_started') {
+            const statusLabels = {
+                'pending': 'Pending Admin Approval',
+                'confirmed': 'Booking Confirmed (Ride Not Started Yet)',
+                'completed': 'Completed Ride',
+                'cancelled': 'Cancelled Booking',
+                'ride_completed': 'Ride Completed (Settlement Pending)'
+            };
+            const currentStatusLabel = statusLabels[booking.status] || booking.status || 'Not Started';
+
+            return res.status(400).json({
+                success: false,
+                isRideNotStarted: true,
+                currentStatus: booking.status,
+                bookingId: booking.booking_id || booking.id,
+                error: `Emergency Roadside SOS can only be initiated when your ride has been started by the hub admin (status: Ride Started). Your booking #${booking.booking_id || booking.id} is currently "${currentStatusLabel}".`
+            });
         }
 
         // Get vehicle details
