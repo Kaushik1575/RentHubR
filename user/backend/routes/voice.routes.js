@@ -340,16 +340,25 @@ const handleRetellWebhook = async (req, res) => {
                     const nearbyData = await findNearbyPlaces(gpsLocation, dbBooking?.pickup_location);
 
                     if (resolvedEmail) {
-                        await sendNearestLocationsEmail(
+                        const emailResult = await sendNearestLocationsEmail(
                             resolvedEmail,
                             resolvedName,
                             {
                                 bookingId: bookingId || 'Active Ride',
-                                vehicleName: resolvedVehicle
+                                vehicleName: resolvedVehicle,
+                                phoneNumber: userPhone || dbBooking?.users?.phone_number || 'N/A',
+                                gpsLocation: gpsLocation,
+                                pickupLocation: dbBooking?.pickup_location || 'Registered Station',
+                                retellCallStatus: 'Emergency AI Call Active / Dispatched',
+                                emergencySummary: (body.args && (body.args.issue || body.args.notes || body.args.reason)) || 'Requested nearest help locations via Retell AI Voice Call'
                             },
                             nearbyData
                         );
-                        console.log(`✉️ [Retell AI Background] Successfully sent nearest locations email to ${resolvedEmail}`);
+                        if (emailResult.success) {
+                            console.log(`✉️ [Retell AI Background] Successfully delivered nearest locations email to ${resolvedEmail}`);
+                        } else {
+                            console.warn(`⚠️ [Retell AI Background] Failed to deliver nearest locations email to ${resolvedEmail}: ${emailResult.error}`);
+                        }
                     } else {
                         console.warn('⚠️ [Retell AI Background] No recipient email found for nearest locations.');
                     }

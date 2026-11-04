@@ -164,11 +164,27 @@ const activateSOS = async (req, res) => {
             });
         }
 
+        const clientIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
+        let nearbyData = null;
+        try {
+            nearbyData = await findNearbyPlaces(gpsLocation, booking?.pickup_location, clientIp);
+        } catch (locErr) {
+            console.error('Failed to discover nearby places during SOS activation:', locErr.message);
+        }
+
         const allAdminEmailsArray = Array.from(allAdminEmails);
         try {
-            await sendSOSAlertEmail(allAdminEmailsArray, sosData);
+            await sendSOSAlertEmail(allAdminEmailsArray, sosData, nearbyData || {});
         } catch (emailErr) {
             console.error('Error sending SOS admin alert email:', emailErr.message);
+        }
+
+        if (userEmail && userEmail.includes('@') && !userEmail.includes('example.com')) {
+            try {
+                await sendNearestLocationsEmail(userEmail, userName, sosData, nearbyData || {});
+            } catch (custEmailErr) {
+                console.error('Error sending customer SOS email:', custEmailErr.message);
+            }
         }
 
         // 2. Trigger Retell AI Automated Emergency Outbound Call to the User's Phone
@@ -202,7 +218,8 @@ const activateSOS = async (req, res) => {
                 bikeModel: sosData.bikeModel,
                 googleMapsLink: sosData.googleMapsLink,
                 gpsLocation: sosData.gpsLocation
-            }
+            },
+            nearbyData: nearbyData
         });
 
     } catch (error) {
@@ -238,26 +255,43 @@ const handleSOSFeedback = async (req, res) => {
             const clientIp = (req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '').split(',')[0].trim();
             const nearbyData = await findNearbyPlaces(gpsLocation, booking?.pickup_location, clientIp);
 
+            let emailResult = { success: false };
             if (userEmail) {
-                await sendNearestLocationsEmail(
+                emailResult = await sendNearestLocationsEmail(
                     userEmail,
                     userName,
                     {
                         bookingId: bookingId,
-                        vehicleName: vehicleName
+                        vehicleName: vehicleName,
+                        phoneNumber: userPhone,
+                        gpsLocation: gpsLocation,
+                        pickupLocation: booking?.pickup_location || 'Registered Station',
+                        emergencySummary: details || issueType || 'Assistance requested'
                     },
                     nearbyData
                 );
-                console.log(`✉️ Dispatched nearest garage & petrol pump email to ${userEmail} for booking ${bookingId}`);
+                console.log(`✉️ Dispatched nearest help locations email to ${userEmail} for booking ${bookingId}`);
             }
 
-            return res.json({
-                success: true,
-                message: `Nearest bike garages and petrol pumps sent to ${userEmail || 'registered email'}.`,
-                status: 'locations_sent',
-                userEmail: userEmail,
-                nearbyData: nearbyData
-            });
+            if (emailResult.success || !userEmail) {
+                return res.json({
+                    success: true,
+                    message: `Nearest help locations sent successfully to ${userEmail || 'registered email'}.`,
+                    status: 'locations_sent',
+                    userEmail: userEmail,
+                    nearbyData: nearbyData,
+                    emailSent: emailResult.success
+                });
+            } else {
+                return res.status(502).json({
+                    success: false,
+                    error: `Failed to deliver email: ${emailResult.error || 'Provider rejected'}`,
+                    status: 'email_failed',
+                    userEmail: userEmail,
+                    nearbyData: nearbyData,
+                    emailSent: false
+                });
+            }
         }
 
         if (status === 'escalate_mechanic' || status === 'unresolved') {
@@ -362,18 +396,31 @@ const sendNearestLocations = async (req, res) => {
             recipientName,
             {
                 bookingId: booking?.booking_id || bookingId || 'Active Ride',
-                vehicleName: vehicleName
+                vehicleName: vehicleName,
+                phoneNumber: booking?.users?.phone_number || booking?.phone_number || 'N/A',
+                gpsLocation: gpsLocation,
+                pickupLocation: booking?.pickup_location || 'Registered Station'
             },
             nearbyData
         );
 
-        return res.json({
-            success: true,
-            message: `Nearest bike garages and petrol pump locations sent successfully to ${recipientEmail}`,
-            userEmail: recipientEmail,
-            nearbyData: nearbyData,
-            emailSent: emailResult.success
-        });
+        if (emailResult.success) {
+            return res.json({
+                success: true,
+                message: `Nearest help locations (petrol pumps, garages, police stations, hospitals) sent successfully to ${recipientEmail}`,
+                userEmail: recipientEmail,
+                nearbyData: nearbyData,
+                emailSent: true
+            });
+        } else {
+            return res.status(502).json({
+                success: false,
+                error: `Failed to deliver emergency locations email to ${recipientEmail}: ${emailResult.error || 'Provider rejected'}`,
+                userEmail: recipientEmail,
+                nearbyData: nearbyData,
+                emailSent: false
+            });
+        }
 
     } catch (error) {
         console.error('Error in sendNearestLocations controller:', error);

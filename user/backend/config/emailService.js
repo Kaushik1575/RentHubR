@@ -342,115 +342,326 @@ async function sendSOSLinkEmail(userEmail, userName, sosLink) {
     });
 }
 
-// Send SOS alert email to admin
-async function sendSOSAlertEmail(adminEmail, sosData) {
-    const html = `
+// In-memory deduplication set: prevents duplicate emails within 45 seconds for same recipient & event
+const recentSOSEmails = new Map();
+
+function isDuplicateSOSEmail(recipient, bookingId, windowMs = 45000) {
+    if (!recipient) return false;
+    const cleanEmail = String(recipient).toLowerCase().trim();
+    const cleanId = String(bookingId || 'sos').trim();
+    const key = `${cleanEmail}_${cleanId}`;
+    const now = Date.now();
+    const lastSent = recentSOSEmails.get(key);
+    if (lastSent && (now - lastSent) < windowMs) {
+        return true;
+    }
+    return false;
+}
+
+function recordSOSEmailSent(recipient, bookingId) {
+    if (!recipient) return;
+    const cleanEmail = String(recipient).toLowerCase().trim();
+    const cleanId = String(bookingId || 'sos').trim();
+    const key = `${cleanEmail}_${cleanId}`;
+    recentSOSEmails.set(key, Date.now());
+
+    if (recentSOSEmails.size > 200) {
+        const threshold = Date.now() - 600000;
+        for (const [k, ts] of recentSOSEmails.entries()) {
+            if (ts < threshold) recentSOSEmails.delete(k);
+        }
+    }
+}
+
+/**
+ * Builds professional, responsive HTML email for RentHub SOS Emergency Alert
+ * Features:
+ * - RentHub SOS Emergency Alert header
+ * - Booking ID and customer details
+ * - Vehicle details
+ * - SOS activation date and time
+ * - Customer's exact GPS location with a Google Maps link
+ * - Retell AI call status and emergency summary (if available)
+ * - Four categories: Petrol Pumps, Vehicle Repair Garages, Police Stations, Hospitals (Max 3 each)
+ * - Prominent 112 & 108 Emergency numbers (India)
+ */
+function generateSOSEmergencyEmailHtml(data = {}) {
+    const {
+        recipientRole = 'customer',
+        userName = 'RentHub Customer',
+        userPhone = 'Not Provided',
+        userEmail = 'Not Provided',
+        bookingId = 'Active Booking',
+        vehicleName = 'Rented Vehicle',
+        pickupLocation = 'Registered Station',
+        alertTimestamp = new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+        gpsLocation = 'Location Provided',
+        googleMapsLink = null,
+        retellCallStatus = null,
+        emergencySummary = null,
+        nearbyData = {}
+    } = data;
+
+    const {
+        petrolPumps = [],
+        garages = [],
+        policeStations = [],
+        hospitals = [],
+        userCoordinates = {}
+    } = nearbyData;
+
+    const coordsLat = userCoordinates.latitude || (googleMapsLink ? (googleMapsLink.match(/q=([-+]?\d+\.?\d*)/)?.[1]) : null);
+    const coordsLng = userCoordinates.longitude || (googleMapsLink ? (googleMapsLink.match(/,([-+]?\d+\.?\d*)/)?.[1]) : null);
+    const liveMapUrl = googleMapsLink || (coordsLat && coordsLng ? `https://www.google.com/maps?q=${coordsLat},${coordsLng}` : null);
+
+    const renderPlaceItem = (p, idx, accentColor) => {
+        const distance = p.distanceText || (p.distanceKm !== undefined ? `${p.distanceKm} km` : 'Nearby');
+        const phoneHtml = p.phone && String(p.phone).trim() && String(p.phone).toLowerCase() !== 'not available'
+            ? `<a href="tel:${p.phone}" style="color: #2563eb; text-decoration: none; font-weight: 600;">${p.phone}</a>`
+            : `<span style="color: #64748b; font-style: italic;">Not available (Use directions)</span>`;
+
+        return `
+            <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 14px 16px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.04);">
+                <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                    <tr>
+                        <td style="vertical-align: top;">
+                            <div style="font-weight: 800; font-size: 15px; color: #0f172a; margin-bottom: 4px;">
+                                <a href="${p.directionsUrl}" target="_blank" style="color: #0f172a; text-decoration: none;">
+                                    ${idx + 1}. ${p.name}
+                                </a>
+                            </div>
+                        </td>
+                        <td align="right" style="vertical-align: top; white-space: nowrap; padding-left: 10px;">
+                            <span style="display: inline-block; background: #f8fafc; color: #0f172a; font-weight: 800; font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid #cbd5e1;">
+                                📍 ${distance}
+                            </span>
+                        </td>
+                    </tr>
+                </table>
+                <div style="font-size: 13px; color: #475569; line-height: 1.5; margin: 6px 0 10px 0;">
+                    <div><strong>Address:</strong> ${p.address || 'Available via Google Maps link'}</div>
+                    <div style="margin-top: 3px;"><strong>Phone:</strong> ${phoneHtml}</div>
+                </div>
+                <div style="text-align: right;">
+                    <a href="${p.directionsUrl}" target="_blank" style="display: inline-block; background: ${accentColor}; color: #ffffff; padding: 7px 14px; text-decoration: none; border-radius: 6px; font-weight: 700; font-size: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.12);">
+                        🗺️ View on Google Maps / Directions &rarr;
+                    </a>
+                </div>
+            </div>
+        `;
+    };
+
+    const renderCategory = (title, icon, accentColor, items = [], emptyText = 'No verified places found within the immediate radius.') => {
+        const list = Array.isArray(items) ? items.slice(0, 3) : [];
+        let content = '';
+        if (list.length === 0) {
+            content = `
+                <div style="background: #f8fafc; border: 1px dashed #cbd5e1; border-radius: 8px; padding: 12px; text-align: center; color: #64748b; font-size: 13px;">
+                    ${emptyText}
+                </div>
+            `;
+        } else {
+            content = list.map((p, idx) => renderPlaceItem(p, idx, accentColor)).join('');
+        }
+
+        return `
+            <div style="margin-bottom: 24px;">
+                <div style="display: flex; align-items: center; margin-bottom: 12px; border-bottom: 2px solid ${accentColor}; padding-bottom: 6px;">
+                    <h3 style="margin: 0; font-size: 15px; color: #0f172a; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px;">
+                        ${icon} ${title}
+                    </h3>
+                </div>
+                ${content}
+            </div>
+        `;
+    };
+
+    const retellBlock = (retellCallStatus || emergencySummary) ? `
+        <div style="background: #f8fafc; border: 1px solid #cbd5e1; border-radius: 10px; padding: 16px; margin-bottom: 25px;">
+            <div style="color: #1e293b; font-size: 13px; font-weight: 800; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 8px;">
+                🎙️ Retell AI Emergency Call Status
+            </div>
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 13.5px;">
+                ${retellCallStatus ? `
+                <tr>
+                    <td style="padding: 4px 0; color: #64748b; width: 35%;">Call Status:</td>
+                    <td style="padding: 4px 0; color: #0f172a; font-weight: 700;">${retellCallStatus}</td>
+                </tr>
+                ` : ''}
+                ${emergencySummary ? `
+                <tr>
+                    <td style="padding: 4px 0; color: #64748b; vertical-align: top;">Emergency Summary:</td>
+                    <td style="padding: 4px 0; color: #b91c1c; font-weight: 600;">${emergencySummary}</td>
+                </tr>
+                ` : ''}
+            </table>
+        </div>
+    ` : '';
+
+    return `
         <!DOCTYPE html>
         <html>
         <head>
             <meta charset="utf-8">
             <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>SOS Alert</title>
+            <title>RentHub SOS Emergency Alert</title>
+            <style>
+                @media only screen and (max-width: 600px) {
+                    .container-table { width: 100% !important; border-radius: 0 !important; }
+                    .content-cell { padding: 20px 15px !important; }
+                    .header-cell { padding: 25px 15px !important; }
+                }
+            </style>
         </head>
-        <body style="margin: 0; padding: 0; background-color: #f4f4f4; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;">
-            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+        <body style="margin: 0; padding: 0; background-color: #0f172a; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
+            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="background-color: #0f172a;">
                 <tr>
-                    <td style="padding: 20px 0;">
-                        <table align="center" border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 8px; overflow: hidden; box-shadow: 0 4px 6px rgba(0,0,0,0.1);">
-                            <!-- Header -->
+                    <td align="center" style="padding: 25px 10px;">
+                        <table class="container-table" border="0" cellpadding="0" cellspacing="0" width="620" style="max-width: 620px; background-color: #ffffff; border-radius: 14px; overflow: hidden; box-shadow: 0 10px 30px rgba(0,0,0,0.3); border: 1px solid #334155;">
+                            
+                            <!-- Header Banner -->
                             <tr>
-                                <td align="center" style="background-color: #dc143c; padding: 30px 20px;">
-                                    <h1 style="color: #ffffff; margin: 0; font-size: 28px; text-transform: uppercase; letter-spacing: 2px;">
-                                        ⚠️ SOS ALERT
+                                <td class="header-cell" align="center" style="background: linear-gradient(135deg, #b91c1c 0%, #991b1b 100%); padding: 32px 20px; color: #ffffff;">
+                                    <div style="display: inline-block; background: rgba(255, 255, 255, 0.2); border: 1px solid rgba(255, 255, 255, 0.4); color: #ffffff; padding: 5px 14px; border-radius: 50px; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1.5px; margin-bottom: 10px;">
+                                        ⚠️ PRIORITY EMERGENCY ALERT
+                                    </div>
+                                    <h1 style="margin: 0 0 6px 0; font-size: 26px; font-weight: 900; letter-spacing: -0.5px;">
+                                        RentHub SOS Emergency Alert
                                     </h1>
-                                    <p style="color: #ffcccc; margin: 10px 0 0 0; font-size: 16px;">
-                                        IMMEDIATE ACTION REQUIRED
+                                    <p style="margin: 0; font-size: 14px; opacity: 0.95; font-weight: 500;">
+                                        Automated Live Roadside Assistance & Emergency Coordinates
                                     </p>
                                 </td>
                             </tr>
-                            
-                            <!-- Main Content -->
+
+                            <!-- Main Content Area -->
                             <tr>
-                                <td style="padding: 40px 30px;">
-                                    <div style="background-color: #fff5f5; border-left: 5px solid #dc143c; padding: 15px; margin-bottom: 25px;">
-                                        <p style="margin: 0; color: #8a0c24; font-size: 16px;">
-                                            <strong>Admin Notice:</strong> A user has triggered an emergency SOS alert. Please verify the situation and contact them immediately.
+                                <td class="content-cell" style="padding: 30px 25px; background: #ffffff;">
+                                    
+                                    <!-- Booking & Customer Details Card -->
+                                    <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 10px; padding: 18px; margin-bottom: 22px;">
+                                        <div style="color: #475569; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">
+                                            📋 Booking & Customer Details
+                                        </div>
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%" style="font-size: 14px;">
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #64748b; width: 38%;"><strong>Booking ID:</strong></td>
+                                                <td style="padding: 5px 0; color: #0f172a; font-family: monospace; font-size: 15px; font-weight: 700;">${bookingId}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #64748b;"><strong>Customer Name:</strong></td>
+                                                <td style="padding: 5px 0; color: #0f172a; font-weight: 700;">${userName}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #64748b;"><strong>Contact Number:</strong></td>
+                                                <td style="padding: 5px 0;">
+                                                    <a href="tel:${userPhone}" style="color: #dc2626; font-weight: 800; text-decoration: none;">${userPhone}</a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #64748b;"><strong>Registered Email:</strong></td>
+                                                <td style="padding: 5px 0; color: #0f172a;">${userEmail}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #64748b;"><strong>Vehicle Details:</strong></td>
+                                                <td style="padding: 5px 0; color: #0f172a; font-weight: 700;">${vehicleName}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #64748b;"><strong>Pickup Location:</strong></td>
+                                                <td style="padding: 5px 0; color: #0f172a;">${pickupLocation}</td>
+                                            </tr>
+                                            <tr>
+                                                <td style="padding: 5px 0; color: #64748b;"><strong>SOS Alert Time:</strong></td>
+                                                <td style="padding: 5px 0; color: #0f172a; font-weight: 600;">${alertTimestamp}</td>
+                                            </tr>
+                                        </table>
+                                    </div>
+
+                                    <!-- Customer Exact GPS Location Card -->
+                                    <div style="background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%); border: 2px solid #3b82f6; border-radius: 10px; padding: 18px; margin-bottom: 22px; text-align: center;">
+                                        <div style="color: #1d4ed8; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
+                                            📍 Customer's Exact GPS Location
+                                        </div>
+                                        <p style="margin: 0 0 12px 0; color: #1e3a8a; font-size: 14px; font-weight: 600;">
+                                            ${gpsLocation}
+                                        </p>
+                                        ${liveMapUrl ? `
+                                        <a href="${liveMapUrl}" target="_blank" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 10px 22px; text-decoration: none; border-radius: 6px; font-weight: 800; font-size: 14px; box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3);">
+                                            🗺️ Open Exact Customer Location in Google Maps &rarr;
+                                        </a>
+                                        ` : ''}
+                                    </div>
+
+                                    <!-- Retell AI Status (if present) -->
+                                    ${retellBlock}
+
+                                    <!-- Section 1: Petrol Pumps -->
+                                    ${renderCategory('PETROL PUMPS – Maximum 3', '⛽', '#ea580c', petrolPumps, 'No petrol pumps found in the immediate radius.')}
+
+                                    <!-- Section 2: Vehicle Repair Garages -->
+                                    ${renderCategory('VEHICLE GARAGES – Maximum 3', '🔧', '#2563eb', garages, 'No vehicle repair garages found in the immediate radius.')}
+
+                                    <!-- Section 3: Police Stations -->
+                                    ${renderCategory('NEAREST POLICE STATIONS – Maximum 3', '👮', '#4f46e5', policeStations, 'No police stations found in the immediate radius.')}
+
+                                    <!-- Section 4: Hospitals -->
+                                    ${renderCategory('NEAREST HOSPITALS – Maximum 3', '🏥', '#dc2626', hospitals, 'No hospitals found in the immediate radius.')}
+
+                                    <!-- Emergency Numbers Section (Prominent) -->
+                                    <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 2px solid #ef4444; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
+                                        <div style="color: #b91c1c; font-size: 13px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; margin-bottom: 6px;">
+                                            🚨 National Emergency Numbers (India)
+                                        </div>
+                                        <p style="margin: 0 0 14px 0; color: #991b1b; font-size: 14px; font-weight: 600;">
+                                            In case of immediate threat to safety or severe medical emergency, dial directly:
+                                        </p>
+                                        <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
+                                            <tr>
+                                                <td align="center" style="padding: 6px;">
+                                                    <a href="tel:112" style="display: inline-block; background: #dc2626; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 15px; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);">
+                                                        📞 112 – Emergency Assistance in India (Police / Fire / Unified)
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                            <tr>
+                                                <td align="center" style="padding: 6px;">
+                                                    <a href="tel:108" style="display: inline-block; background: #ea580c; color: #ffffff; padding: 12px 24px; border-radius: 8px; text-decoration: none; font-weight: 800; font-size: 15px; box-shadow: 0 4px 10px rgba(234, 88, 12, 0.3);">
+                                                        🚑 108 – Ambulance Emergency Service in India
+                                                    </a>
+                                                </td>
+                                            </tr>
+                                        </table>
+                                        <p style="margin: 14px 0 0 0; color: #7f1d1d; font-size: 11.5px; line-height: 1.4;">
+                                            <em>Notice: These helplines are provided for direct calling from your device. RentHub does not claim that emergency services have been contacted automatically unless an actual contact has been made by phone.</em>
                                         </p>
                                     </div>
 
-                                    <!-- User Details -->
-                                    <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px; margin-top: 0;">User Information</h3>
-                                    <table width="100%" style="margin-bottom: 20px;">
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #666; width: 40%;"><strong>Full Name:</strong></td>
-                                            <td style="padding: 8px 0; color: #333;">${sosData.userName}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #666;"><strong>Phone Number:</strong></td>
-                                            <td style="padding: 8px 0; color: #333; font-size: 18px; font-weight: bold;">
-                                                <a href="tel:${sosData.phoneNumber}" style="color: #dc143c; text-decoration: none;">${sosData.phoneNumber}</a>
-                                            </td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #666;"><strong>Email:</strong></td>
-                                            <td style="padding: 8px 0; color: #333;">${sosData.userEmail}</td>
-                                        </tr>
-                                    </table>
-
-                                    <!-- URGENT: Call User Button -->
-                                    <div style="text-align: center; margin: 30px 0; padding: 20px; background-color: #fff5f5; border-radius: 8px; border: 2px solid #dc143c;">
-                                        <p style="margin: 0 0 15px 0; color: #dc143c; font-weight: bold; font-size: 16px;">⚠️ IMMEDIATE ACTION REQUIRED</p>
-                                        <a href="tel:${sosData.phoneNumber}" style="background-color: #dc143c; color: #ffffff; padding: 16px 32px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 18px; display: inline-block; box-shadow: 0 4px 12px rgba(220, 20, 60, 0.4);">
-                                            📞 CALL USER NOW
-                                        </a>
-                                        <p style="margin: 15px 0 0 0; color: #666; font-size: 14px;">Click to dial ${sosData.phoneNumber}</p>
-                                    </div>
-
-                                    <!-- Booking Details -->
-                                    <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Ride Details</h3>
-                                    <table width="100%" style="margin-bottom: 20px;">
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #666; width: 40%;"><strong>Booking ID:</strong></td>
-                                            <td style="padding: 8px 0; color: #333; font-family: monospace; font-size: 16px; background: #eee; padding: 4px 8px; border-radius: 4px; display: inline-block;">${sosData.bookingId}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #666;"><strong>Vehicle:</strong></td>
-                                            <td style="padding: 8px 0; color: #333;">${sosData.bikeModel}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #666;"><strong>Pickup Point:</strong></td>
-                                            <td style="padding: 8px 0; color: #333;">${sosData.pickupLocation}</td>
-                                        </tr>
-                                        <tr>
-                                            <td style="padding: 8px 0; color: #666;"><strong>Alert Time:</strong></td>
-                                            <td style="padding: 8px 0; color: #333;">${sosData.timestamp}</td>
-                                        </tr>
-                                    </table>
-
-                                    <!-- Location -->
-                                    <h3 style="color: #333; border-bottom: 2px solid #eee; padding-bottom: 10px;">Location Details</h3>
-                                    <p style="color: #555; margin-bottom: 20px;">
-                                        <strong>Reported GPS:</strong><br>
-                                        ${sosData.gpsLocation}
-                                    </p>
-
-                                    ${sosData.googleMapsLink ? `
-                                    <div style="text-align: center; margin: 30px 0;">
-                                        <a href="${sosData.googleMapsLink}" target="_blank" style="background-color: #0b5cff; color: #ffffff; padding: 14px 28px; text-decoration: none; border-radius: 50px; font-weight: bold; font-size: 16px; display: inline-block; box-shadow: 0 4px 6px rgba(11, 92, 255, 0.3);">
-                                            📍 View Live Location on Maps
+                                    <!-- Roadside Dispatch Control Room -->
+                                    <div style="background: #f1f5f9; border-radius: 10px; padding: 16px; text-align: center; margin-top: 20px;">
+                                        <div style="color: #334155; font-size: 13px; font-weight: 700; margin-bottom: 6px;">
+                                            RentHub 24x7 Roadside Dispatch Control Room
+                                        </div>
+                                        <a href="tel:+919040757683" style="display: inline-block; background: #0f172a; color: #ffffff; padding: 10px 22px; text-decoration: none; border-radius: 50px; font-weight: 700; font-size: 14px;">
+                                            📞 Call Control Room (+91 9040757683)
                                         </a>
                                     </div>
-                                    ` : '<p style="color: #dc143c; text-align: center; font-style: italic;">No specific map link available</p>'}
+
                                 </td>
                             </tr>
-                            
+
                             <!-- Footer -->
                             <tr>
-                                <td style="background-color: #333; color: #fff; padding: 20px; text-align: center; font-size: 14px;">
-                                    <p style="margin: 0;">RentHub Emergency Response System</p>
-                                    <p style="margin: 10px 0 0 0; color: #999; font-size: 12px;">This is an automated priority alert.</p>
+                                <td align="center" style="background-color: #0f172a; padding: 22px 20px; color: #94a3b8; font-size: 12px;">
+                                    <div style="color: #ffffff; font-size: 16px; font-weight: 800; margin-bottom: 4px;">
+                                        RentHub Emergency Response System
+                                    </div>
+                                    <p style="margin: 0 0 4px 0;">Automated AI GPS Roadside Dispatch</p>
+                                    <p style="margin: 0; color: #64748b; font-size: 11px;">
+                                        © 2026 RentHub Inc. Ride safe and wear your helmet at all times.
+                                    </p>
                                 </td>
                             </tr>
+
                         </table>
                     </td>
                 </tr>
@@ -458,12 +669,50 @@ async function sendSOSAlertEmail(adminEmail, sosData) {
         </body>
         </html>
     `;
+}
 
-    return sendEmail({
-        to: adminEmail,
-        subject: `🚨 SOS ALERT: Booking #${sosData.bookingId} - User Requesting Help`,
-        html: html
-    });
+// Send SOS alert email to admin
+async function sendSOSAlertEmail(adminEmail, sosData, nearbyData = {}) {
+    try {
+        const recipients = Array.isArray(adminEmail) ? adminEmail : [adminEmail];
+        const primaryRecipient = recipients[0] || 'admin@renthub.app';
+
+        if (isDuplicateSOSEmail(primaryRecipient, sosData.bookingId)) {
+            console.log(`⚠️ [Admin SOS Alert] Prevented duplicate email to ${primaryRecipient} for booking ${sosData.bookingId}`);
+            return { success: true, duplicatePrevented: true };
+        }
+
+        const html = generateSOSEmergencyEmailHtml({
+            recipientRole: 'admin',
+            userName: sosData.userName,
+            userPhone: sosData.phoneNumber,
+            userEmail: sosData.userEmail,
+            bookingId: sosData.bookingId,
+            vehicleName: sosData.bikeModel || sosData.vehicleName || 'Vehicle',
+            pickupLocation: sosData.pickupLocation || 'Registered Station',
+            alertTimestamp: sosData.timestamp,
+            gpsLocation: sosData.gpsLocation,
+            googleMapsLink: sosData.googleMapsLink,
+            retellCallStatus: sosData.retellCallStatus,
+            emergencySummary: sosData.emergencySummary,
+            nearbyData: nearbyData
+        });
+
+        const result = await sendEmail({
+            to: adminEmail,
+            subject: `🚨 [SOS ALERT] Immediate Action Required - Booking #${sosData.bookingId}`,
+            html: html
+        });
+
+        if (result.success) {
+            recordSOSEmailSent(primaryRecipient, sosData.bookingId);
+        }
+
+        return result;
+    } catch (err) {
+        console.error('Error in sendSOSAlertEmail:', err.message);
+        return { success: false, error: err.message };
+    }
 }
 
 // Send Vehicle Approval Email to Sponsor
@@ -859,163 +1108,57 @@ async function sendBookingCancelledEmail(userEmail, userName, bookingId, vehicle
 }
 
 /**
- * Send email to customer with nearest bike garages and petrol pumps with Google Maps navigation links
+ * Send email to customer with nearest petrol pumps, vehicle repair garages, police stations, and hospitals
  */
 async function sendNearestLocationsEmail(userEmail, userName, bookingDetails = {}, nearbyData = {}) {
-    const { garages = [], petrolPumps = [], userCoordinates = {}, mapSearchLinks = {} } = nearbyData;
-    const vehicleName = bookingDetails.vehicleName || bookingDetails.bikeModel || 'Vehicle';
-    const bookingId = bookingDetails.bookingId || bookingDetails.id || 'Active Ride';
+    try {
+        if (!userEmail) {
+            console.error('❌ Cannot send nearest locations email: recipient email missing');
+            return { success: false, error: 'Recipient email is required' };
+        }
 
-    const renderGaragesHtml = garages.map((g, idx) => `
-        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                <div style="font-weight: 700; font-size: 16px; color: #1e293b;">
-                    ${idx + 1}. ${g.name}
-                </div>
-                <span style="display: inline-block; background: #ecfdf5; color: #059669; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid #a7f3d0;">
-                    📍 ${g.distanceText}
-                </span>
-            </div>
-            <p style="margin: 4px 0 10px 0; color: #64748b; font-size: 13px; line-height: 1.4;">
-                ${g.address}
-                ${g.phone ? `<br><strong style="color: #334155;">📞 Phone:</strong> <a href="tel:${g.phone}" style="color: #2563eb; text-decoration: none;">${g.phone}</a>` : ''}
-            </p>
-            <div style="text-align: right;">
-                <a href="${g.mapUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13px;">
-                    🗺️ Open Navigation in Maps &rarr;
-                </a>
-            </div>
-        </div>
-    `).join('');
+        const bookingId = bookingDetails.bookingId || bookingDetails.id || 'Active Ride';
 
-    const renderPetrolPumpsHtml = petrolPumps.map((p, idx) => `
-        <div style="background: #ffffff; border: 1px solid #e2e8f0; border-radius: 10px; padding: 16px; margin-bottom: 12px; box-shadow: 0 2px 4px rgba(0,0,0,0.04);">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 8px;">
-                <div style="font-weight: 700; font-size: 16px; color: #1e293b;">
-                    ${idx + 1}. ${p.name}
-                </div>
-                <span style="display: inline-block; background: #fffbeb; color: #d97706; font-weight: 700; font-size: 12px; padding: 4px 10px; border-radius: 20px; border: 1px solid #fde68a;">
-                    ⛽ ${p.distanceText}
-                </span>
-            </div>
-            <p style="margin: 4px 0 10px 0; color: #64748b; font-size: 13px; line-height: 1.4;">
-                ${p.address}
-                ${p.phone ? `<br><strong style="color: #334155;">📞 Phone:</strong> <a href="tel:${p.phone}" style="color: #2563eb; text-decoration: none;">${p.phone}</a>` : ''}
-            </p>
-            <div style="text-align: right;">
-                <a href="${p.mapUrl}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #ea580c 0%, #c2410c 100%); color: #ffffff; padding: 8px 16px; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 13px;">
-                    🧭 Navigate to Fuel Station &rarr;
-                </a>
-            </div>
-        </div>
-    `).join('');
+        // Prevent duplicate emails for the same SOS event within 45 seconds
+        if (isDuplicateSOSEmail(userEmail, bookingId)) {
+            console.log(`⚠️ Prevented duplicate SOS email dispatch to ${userEmail} for booking ${bookingId}`);
+            return { success: true, duplicatePrevented: true };
+        }
 
-    const html = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-            <meta charset="utf-8">
-            <meta name="viewport" content="width=device-width, initial-scale=1.0">
-            <title>Nearest Bike Garages & Petrol Pumps - RentHub Emergency</title>
-        </head>
-        <body style="margin: 0; padding: 0; background-color: #f1f5f9; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #1e293b;">
-            <table role="presentation" border="0" cellpadding="0" cellspacing="0" width="100%">
-                <tr>
-                    <td align="center" style="padding: 30px 10px;">
-                        <table border="0" cellpadding="0" cellspacing="0" width="600" style="background-color: #ffffff; border-radius: 16px; overflow: hidden; box-shadow: 0 10px 25px rgba(0,0,0,0.08); border: 1px solid #e2e8f0;">
-                            
-                            <!-- Header Banner -->
-                            <tr>
-                                <td align="center" style="background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%); padding: 35px 20px; color: #ffffff;">
-                                    <div style="display: inline-block; background: rgba(239, 68, 68, 0.2); border: 1px solid #ef4444; color: #fca5a5; padding: 6px 16px; border-radius: 50px; font-size: 12px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">
-                                        🚨 Live Emergency Assistance
-                                    </div>
-                                    <h1 style="margin: 0 0 8px 0; font-size: 26px; font-weight: 800; letter-spacing: -0.5px;">
-                                        Nearest Garages & Petrol Pumps
-                                    </h1>
-                                    <p style="margin: 0; font-size: 14px; opacity: 0.85; max-width: 450px;">
-                                        Locations detected around your live GPS coordinates for <strong>${vehicleName}</strong> (Booking #${bookingId})
-                                    </p>
-                                </td>
-                            </tr>
+        const html = generateSOSEmergencyEmailHtml({
+            recipientRole: 'customer',
+            userName: userName || bookingDetails.userName || 'Customer',
+            userPhone: bookingDetails.phoneNumber || bookingDetails.userPhone || 'Registered Phone',
+            userEmail: userEmail,
+            bookingId: bookingId,
+            vehicleName: bookingDetails.vehicleName || bookingDetails.bikeModel || 'Vehicle',
+            pickupLocation: bookingDetails.pickupLocation || 'Registered Station',
+            alertTimestamp: bookingDetails.timestamp || new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
+            gpsLocation: bookingDetails.gpsLocation || (nearbyData.userCoordinates ? `Lat: ${nearbyData.userCoordinates.latitude}, Lng: ${nearbyData.userCoordinates.longitude}` : 'Location detected via GPS'),
+            googleMapsLink: bookingDetails.googleMapsLink || (nearbyData.mapSearchLinks?.userLocationMap || null),
+            retellCallStatus: bookingDetails.retellCallStatus,
+            emergencySummary: bookingDetails.emergencySummary,
+            nearbyData: nearbyData
+        });
 
-                            <!-- Main Body -->
-                            <tr>
-                                <td style="padding: 30px 25px; background: #f8fafc;">
-                                    <p style="font-size: 15px; margin: 0 0 20px 0; color: #334155; line-height: 1.5;">
-                                    <!-- Top Live Radar Quick Launchers -->
-                                    <div style="background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%); border-radius: 12px; padding: 18px; margin-bottom: 25px; text-align: center; border: 1px solid #334155; box-shadow: 0 4px 12px rgba(0,0,0,0.15);">
-                                        <div style="color: #38bdf8; font-size: 11px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px;">
-                                            🎯 100% Real-Time Radar Map (Instant 1-Tap View)
-                                        </div>
-                                        <h3 style="color: #ffffff; margin: 0 0 14px 0; font-size: 17px; font-weight: 800;">
-                                            Open All Nearby Help Directly in Google Maps
-                                        </h3>
-                                        <div style="display: flex; flex-wrap: wrap; justify-content: center; gap: 8px;">
-                                            <a href="${mapSearchLinks.allPetrolPumps || `https://www.google.com/maps/search/petrol+pump+fuel+station/@${userCoordinates.latitude || 20.2185},${userCoordinates.longitude || 85.7358},16z`}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #f97316 0%, #ea580c 100%); color: #ffffff; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px; margin: 4px; box-shadow: 0 2px 6px rgba(234, 88, 12, 0.4);">
-                                                ⛽ All Live Petrol Pumps Near Me &rarr;
-                                            </a>
-                                            <a href="${mapSearchLinks.allGarages || `https://www.google.com/maps/search/bike+garage+two+wheeler+mechanic+puncture+repair/@${userCoordinates.latitude || 20.2185},${userCoordinates.longitude || 85.7358},16z`}" target="_blank" style="display: inline-block; background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%); color: #ffffff; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px; margin: 4px; box-shadow: 0 2px 6px rgba(37, 99, 235, 0.4);">
-                                                🏍️ All Bike Garages & Mechanics Near Me &rarr;
-                                            </a>
-                                            <a href="https://www.google.com/maps/search/puncture+tyre+repair/@${userCoordinates.latitude || 20.2185},${userCoordinates.longitude || 85.7358},16z" target="_blank" style="display: inline-block; background: #334155; color: #f1f5f9; padding: 10px 18px; border-radius: 8px; font-weight: 700; text-decoration: none; font-size: 13px; margin: 4px; border: 1px solid #475569;">
-                                                🛞 Puncture & Air Stations &rarr;
-                                            </a>
-                                        </div>
-                                    </div>
+        const result = await sendEmail({
+            to: userEmail,
+            subject: `🚨 [RentHub SOS Alert] Nearest Help Locations - Booking #${bookingId}`,
+            html: html
+        });
 
-                                    <!-- Section 1: Bike Garages -->
-                                    <div style="margin-bottom: 25px;">
-                                        <div style="display: flex; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #3b82f6; padding-bottom: 6px;">
-                                            <h2 style="margin: 0; font-size: 18px; color: #1e3a8a; font-weight: 800;">
-                                                🏍️ Nearest Bike Garages & Mechanics
-                                            </h2>
-                                        </div>
-                                        ${renderGaragesHtml || '<p style="color: #64748b; font-size: 14px;">No garage found in immediate 1km. Please use the Google Maps search button above.</p>'}
-                                    </div>
+        if (result.success) {
+            recordSOSEmailSent(userEmail, bookingId);
+            console.log(`✉️ SOS Emergency Locations email successfully delivered to ${userEmail} for booking ${bookingId}`);
+        } else {
+            console.error(`❌ Failed to deliver SOS email to ${userEmail}: ${result.error}`);
+        }
 
-                                    <!-- Section 2: Petrol Pumps -->
-                                    <div style="margin-bottom: 25px;">
-                                        <div style="display: flex; align-items: center; margin-bottom: 12px; border-bottom: 2px solid #f97316; padding-bottom: 6px;">
-                                            <h2 style="margin: 0; font-size: 18px; color: #9a3412; font-weight: 800;">
-                                                ⛽ Nearest Petrol Pumps & Fuel Stations
-                                            </h2>
-                                        </div>
-                                        ${renderPetrolPumpsHtml || '<p style="color: #64748b; font-size: 14px;">No petrol pump found in immediate 1km. Please use the Google Maps search button above.</p>'}
-                                    </div>
-
-                                    <!-- Human Helpline Box -->
-                                    <div style="background: linear-gradient(135deg, #fee2e2 0%, #fecaca 100%); border-left: 5px solid #ef4444; border-radius: 8px; padding: 18px; text-align: center;">
-                                        <h4 style="margin: 0 0 6px 0; color: #991b1b; font-size: 16px; font-weight: 800;">🚨 Still Facing Issues? Speak with Response Control</h4>
-                                        <p style="margin: 0 0 12px 0; color: #7f1d1d; font-size: 13px;">Our 24x7 Roadside Dispatch Team is standing by to help you.</p>
-                                        <a href="tel:+919040757683" style="display: inline-block; background: #dc2626; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 50px; font-weight: 800; font-size: 15px; box-shadow: 0 4px 10px rgba(220, 38, 38, 0.3);">
-                                            📞 Call 24x7 Control Room (+91 9040757683)
-                                        </a>
-                                    </div>
-                                </td>
-                            </tr>
-
-                            <!-- Footer -->
-                            <tr>
-                                <td align="center" style="background-color: #0f172a; padding: 25px 20px; color: #94a3b8; font-size: 12px;">
-                                    <div style="color: #ffffff; font-size: 18px; font-weight: 800; margin-bottom: 6px;">RentHub Emergency Response</div>
-                                    <p style="margin: 0 0 6px 0;">Automated AI GPS Roadside Dispatch System</p>
-                                    <p style="margin: 0; color: #64748b; font-size: 11px;">© 2026 RentHub Inc. Ride safe and wear your helmet at all times.</p>
-                                </td>
-                            </tr>
-                        </table>
-                    </td>
-                </tr>
-            </table>
-        </body>
-        </html>
-    `;
-
-    return sendEmail({
-        to: userEmail,
-        subject: `📍 [Nearest Locations] Bike Garages & Petrol Pumps near you - Booking #${bookingId}`,
-        html: html
-    });
+        return result;
+    } catch (err) {
+        console.error('Error in sendNearestLocationsEmail:', err.message);
+        return { success: false, error: err.message };
+    }
 }
 
 function getStageInfo(stageNumber, requestData = {}) {
@@ -1294,6 +1437,9 @@ module.exports = {
     sendSOSLinkEmail,
     sendSOSAlertEmail,
     sendNearestLocationsEmail,
+    generateSOSEmergencyEmailHtml,
+    isDuplicateSOSEmail,
+    recordSOSEmailSent,
     sendRideCompletedEmail,
     sendVehicleApprovedEmail,
     sendNewOfferEmail,

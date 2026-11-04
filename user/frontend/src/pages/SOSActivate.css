@@ -600,6 +600,115 @@
   border: 1px solid rgba(249, 115, 22, 0.4);
 }
 
+.police-badge {
+  background: rgba(99, 102, 241, 0.2);
+  color: #a5b4fc;
+  border: 1px solid rgba(99, 102, 241, 0.4);
+}
+
+.hospital-badge {
+  background: rgba(239, 68, 68, 0.2);
+  color: #fca5a5;
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.btn-preview-police {
+  background: linear-gradient(135deg, #4f46e5 0%, #3730a3 100%);
+}
+
+.btn-preview-police:hover {
+  background: linear-gradient(135deg, #3730a3 0%, #312e81 100%);
+}
+
+.btn-preview-hospital {
+  background: linear-gradient(135deg, #dc2626 0%, #991b1b 100%);
+}
+
+.btn-preview-hospital:hover {
+  background: linear-gradient(135deg, #991b1b 0%, #7f1d1d 100%);
+}
+
+.nearby-category-group {
+  margin-bottom: 16px;
+}
+
+.nearby-group-title {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: #f1f5f9;
+  margin: 12px 0 8px 0;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.preview-phone {
+  margin: 0 0 8px 0;
+  font-size: 0.8rem;
+  color: #60a5fa;
+}
+
+.preview-phone a {
+  color: #93c5fd;
+  text-decoration: none;
+  font-weight: 700;
+}
+
+.emergency-numbers-card {
+  background: rgba(239, 68, 68, 0.15);
+  border: 1px solid rgba(239, 68, 68, 0.35);
+  border-radius: 10px;
+  padding: 14px;
+  text-align: center;
+  margin: 14px 0;
+}
+
+.emergency-card-title {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #fca5a5;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  margin-bottom: 10px;
+}
+
+.emergency-dial-grid {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.btn-emergency-dial {
+  display: inline-block;
+  padding: 8px 14px;
+  border-radius: 6px;
+  text-decoration: none;
+  font-weight: 800;
+  font-size: 0.85rem;
+  color: #ffffff;
+  transition: transform 0.15s;
+}
+
+.btn-emergency-dial:hover {
+  transform: translateY(-1px);
+}
+
+.btn-dial-112 {
+  background: #dc2626;
+}
+
+.btn-dial-108 {
+  background: #ea580c;
+}
+
+.emergency-disclaimer {
+  display: block;
+  margin-top: 8px;
+  font-size: 0.72rem;
+  color: #fca5a5;
+  opacity: 0.85;
+}
+
 .preview-distance {
   font-size: 0.78rem;
   font-weight: 700;

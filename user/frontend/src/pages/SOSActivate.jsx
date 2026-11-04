@@ -615,43 +615,117 @@ const SOSActivate = () => {
 
                                 {nearbyPlacesData && (
                                     <div className="nearby-cards-container">
-                                        {/* Nearest Garage Preview */}
-                                        {nearbyPlacesData.garages && nearbyPlacesData.garages.length > 0 && (
-                                            <div className="nearby-preview-card">
-                                                <div className="preview-card-header">
-                                                    <span className="preview-type-badge garage-badge">🏍️ Nearest Bike Garage</span>
-                                                    <span className="preview-distance">{nearbyPlacesData.garages[0].distanceText}</span>
-                                                </div>
-                                                <h4 className="preview-name">{nearbyPlacesData.garages[0].name}</h4>
-                                                <p className="preview-addr">{nearbyPlacesData.garages[0].address}</p>
-                                                <a href={nearbyPlacesData.garages[0].mapUrl} target="_blank" rel="noreferrer" className="btn-preview-map">
-                                                    📍 Open Navigation in Maps &rarr;
-                                                </a>
+                                        {/* 1. Petrol Pumps (Max 3) */}
+                                        {nearbyPlacesData.petrolPumps && nearbyPlacesData.petrolPumps.length > 0 && (
+                                            <div className="nearby-category-group">
+                                                <h4 className="nearby-group-title">⛽ Petrol Pumps</h4>
+                                                {nearbyPlacesData.petrolPumps.slice(0, 3).map((p, i) => (
+                                                    <div key={p.id || i} className="nearby-preview-card">
+                                                        <div className="preview-card-header">
+                                                            <span className="preview-type-badge fuel-badge">⛽ Petrol Pump #{i + 1}</span>
+                                                            <span className="preview-distance">{p.distanceText}</span>
+                                                        </div>
+                                                        <h4 className="preview-name">{p.name}</h4>
+                                                        <p className="preview-addr">{p.address}</p>
+                                                        {p.phone && <p className="preview-phone">📞 <a href={`tel:${p.phone}`}>{p.phone}</a></p>}
+                                                        <a href={p.directionsUrl || p.mapUrl} target="_blank" rel="noreferrer" className="btn-preview-map btn-preview-fuel">
+                                                            🧭 Navigate via Google Maps &rarr;
+                                                        </a>
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
 
-                                        {/* Nearest Petrol Pump Preview */}
-                                        {nearbyPlacesData.petrolPumps && nearbyPlacesData.petrolPumps.length > 0 && (
-                                            <div className="nearby-preview-card">
-                                                <div className="preview-card-header">
-                                                    <span className="preview-type-badge fuel-badge">⛽ Nearest Petrol Pump</span>
-                                                    <span className="preview-distance">{nearbyPlacesData.petrolPumps[0].distanceText}</span>
-                                                </div>
-                                                <h4 className="preview-name">{nearbyPlacesData.petrolPumps[0].name}</h4>
-                                                <p className="preview-addr">{nearbyPlacesData.petrolPumps[0].address}</p>
-                                                <a href={nearbyPlacesData.petrolPumps[0].mapUrl} target="_blank" rel="noreferrer" className="btn-preview-map btn-preview-fuel">
-                                                    🧭 Navigate to Fuel Station &rarr;
-                                                </a>
+                                        {/* 2. Vehicle Repair Garages (Max 3) */}
+                                        {nearbyPlacesData.garages && nearbyPlacesData.garages.length > 0 && (
+                                            <div className="nearby-category-group">
+                                                <h4 className="nearby-group-title">🔧 Vehicle Repair Garages</h4>
+                                                {nearbyPlacesData.garages.slice(0, 3).map((g, i) => (
+                                                    <div key={g.id || i} className="nearby-preview-card">
+                                                        <div className="preview-card-header">
+                                                            <span className="preview-type-badge garage-badge">🔧 Garage #{i + 1}</span>
+                                                            <span className="preview-distance">{g.distanceText}</span>
+                                                        </div>
+                                                        <h4 className="preview-name">{g.name}</h4>
+                                                        <p className="preview-addr">{g.address}</p>
+                                                        {g.phone && <p className="preview-phone">📞 <a href={`tel:${g.phone}`}>{g.phone}</a></p>}
+                                                        <a href={g.directionsUrl || g.mapUrl} target="_blank" rel="noreferrer" className="btn-preview-map">
+                                                            📍 Navigate via Google Maps &rarr;
+                                                        </a>
+                                                    </div>
+                                                ))}
                                             </div>
                                         )}
+
+                                        {/* 3. Police Stations (Max 3) */}
+                                        {nearbyPlacesData.policeStations && nearbyPlacesData.policeStations.length > 0 && (
+                                            <div className="nearby-category-group">
+                                                <h4 className="nearby-group-title">👮 Nearest Police Stations</h4>
+                                                {nearbyPlacesData.policeStations.slice(0, 3).map((pol, i) => (
+                                                    <div key={pol.id || i} className="nearby-preview-card">
+                                                        <div className="preview-card-header">
+                                                            <span className="preview-type-badge police-badge">👮 Police #{i + 1}</span>
+                                                            <span className="preview-distance">{pol.distanceText}</span>
+                                                        </div>
+                                                        <h4 className="preview-name">{pol.name}</h4>
+                                                        <p className="preview-addr">{pol.address}</p>
+                                                        {pol.phone && <p className="preview-phone">📞 <a href={`tel:${pol.phone}`}>{pol.phone}</a></p>}
+                                                        <a href={pol.directionsUrl || pol.mapUrl} target="_blank" rel="noreferrer" className="btn-preview-map btn-preview-police">
+                                                            🚔 Navigate via Google Maps &rarr;
+                                                        </a>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* 4. Hospitals (Max 3) */}
+                                        {nearbyPlacesData.hospitals && nearbyPlacesData.hospitals.length > 0 && (
+                                            <div className="nearby-category-group">
+                                                <h4 className="nearby-group-title">🏥 Nearest Hospitals</h4>
+                                                {nearbyPlacesData.hospitals.slice(0, 3).map((h, i) => (
+                                                    <div key={h.id || i} className="nearby-preview-card">
+                                                        <div className="preview-card-header">
+                                                            <span className="preview-type-badge hospital-badge">🏥 Hospital #{i + 1}</span>
+                                                            <span className="preview-distance">{h.distanceText}</span>
+                                                        </div>
+                                                        <h4 className="preview-name">{h.name}</h4>
+                                                        <p className="preview-addr">{h.address}</p>
+                                                        {h.phone && <p className="preview-phone">📞 <a href={`tel:${h.phone}`}>{h.phone}</a></p>}
+                                                        <a href={h.directionsUrl || h.mapUrl} target="_blank" rel="noreferrer" className="btn-preview-map btn-preview-hospital">
+                                                            🚑 Navigate via Google Maps &rarr;
+                                                        </a>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        )}
+
+                                        {/* National Emergency Numbers Card */}
+                                        <div className="emergency-numbers-card">
+                                            <div className="emergency-card-title">🚨 National Emergency Helplines (India)</div>
+                                            <div className="emergency-dial-grid">
+                                                <a href="tel:112" className="btn-emergency-dial btn-dial-112">
+                                                    📞 112 – Emergency Assistance
+                                                </a>
+                                                <a href="tel:108" className="btn-emergency-dial btn-dial-108">
+                                                    🚑 108 – Ambulance Service
+                                                </a>
+                                            </div>
+                                            <small className="emergency-disclaimer">RentHub provides direct helplines for instant calling. Services are dialed directly.</small>
+                                        </div>
 
                                         {/* Google Maps Search Buttons */}
                                         <div className="preview-explore-links">
-                                            <a href={nearbyPlacesData.mapSearchLinks?.allGarages || '#'} target="_blank" rel="noreferrer" className="btn-explore-link">
-                                                🔍 All Garages Near Me
+                                            <a href={nearbyPlacesData.mapSearchLinks?.petrolPumps || nearbyPlacesData.mapSearchLinks?.allPetrolPumps || '#'} target="_blank" rel="noreferrer" className="btn-explore-link">
+                                                ⛽ All Petrol Pumps
                                             </a>
-                                            <a href={nearbyPlacesData.mapSearchLinks?.allPetrolPumps || '#'} target="_blank" rel="noreferrer" className="btn-explore-link">
-                                                🔍 All Petrol Pumps Near Me
+                                            <a href={nearbyPlacesData.mapSearchLinks?.garages || nearbyPlacesData.mapSearchLinks?.allGarages || '#'} target="_blank" rel="noreferrer" className="btn-explore-link">
+                                                🔧 All Garages
+                                            </a>
+                                            <a href={nearbyPlacesData.mapSearchLinks?.policeStations || '#'} target="_blank" rel="noreferrer" className="btn-explore-link">
+                                                👮 Police Stations
+                                            </a>
+                                            <a href={nearbyPlacesData.mapSearchLinks?.hospitals || '#'} target="_blank" rel="noreferrer" className="btn-explore-link">
+                                                🏥 Hospitals
                                             </a>
                                         </div>
                                     </div>
