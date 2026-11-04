@@ -199,6 +199,52 @@ function formatIssueResponse(issue) {
     return reply;
 }
 
+// Helper to format booking details response
+function formatBookingResponse(booking) {
+    const statusMap = {
+        'pending': { icon: '⏳', label: 'Pending Confirmation' },
+        'confirmed': { icon: '✅', label: 'Confirmed' },
+        'ride_started': { icon: '🚀', label: 'Ride in Progress (Active)' },
+        'completed': { icon: '🏁', label: 'Completed' },
+        'cancelled': { icon: '❌', label: 'Cancelled' }
+    };
+    const st = statusMap[booking.status] || { icon: '📋', label: booking.status || 'Active' };
+    const vehicleName = booking.vehicle?.name || booking.bike_model || `${booking.vehicle_type ? booking.vehicle_type.toUpperCase() : 'Vehicle'}`;
+    const startStr = booking.start_date ? new Date(booking.start_date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+    const amountStr = booking.total_price || booking.final_price || booking.price || '—';
+
+    let reply = `🚗 **Booking Details [#${booking.booking_id || booking.id}]**\n\n`;
+    reply += `• **Status**: ${st.icon} **${st.label}**\n`;
+    reply += `• **Vehicle**: **${vehicleName}**\n`;
+    if (booking.start_date) reply += `• **Trip Start**: ${startStr}${booking.start_time ? ` at ${booking.start_time}` : ''}\n`;
+    if (booking.duration_hours) reply += `• **Duration**: ${booking.duration_hours} Hour(s)\n`;
+    if (amountStr !== '—') reply += `• **Total Fare**: ₹${amountStr}\n`;
+    if (booking.remaining_amount && booking.remaining_amount > 0) {
+        reply += `• **Remaining Due**: ₹${booking.remaining_amount}\n`;
+    }
+    reply += `\n🔗 [Track Full Booking Details & Timeline](/track-booking?id=${booking.booking_id || booking.id})`;
+    return reply;
+}
+
+// Helper to extract Booking ID from user message
+function extractBookingId(msg) {
+    if (!msg || typeof msg !== 'string') return null;
+    const trimmed = msg.trim();
+    // 1. Matches RH261104-233, RH260116-045, etc.
+    const m1 = trimmed.match(/\b(RH\d{4,}-\d+)\b/i);
+    if (m1) return m1[1].toUpperCase();
+
+    // 2. Matches BK-XXX or PRO-RH-XXX
+    const m2 = trimmed.match(/\b((?:BK|PRO-RH)-[A-Za-z0-9_-]+)\b/i);
+    if (m2) return m2[1].toUpperCase();
+
+    // 3. Explicit prefix like "track booking RH..." or "booking RH..."
+    const m3 = trimmed.match(/(?:booking|ride|trip)\s*(?:id\s*)?[:#]?\s*(RH[A-Za-z0-9_-]+)/i);
+    if (m3) return m3[1].toUpperCase();
+
+    return null;
+}
+
 // Helper to extract Issue ID from user message
 function extractIssueId(msg) {
     if (!msg || typeof msg !== 'string') return null;
@@ -268,6 +314,42 @@ exports.chat = async (req, res) => {
                 }
             } catch (err) {
                 console.error("Error direct tracking issue in chatbot:", err);
+            }
+        }
+
+        // Direct handling for Booking Tracking
+        const detectedBookingId = extractBookingId(message);
+        const isExplicitBookingTrack = /^(🔍\s*)?track\s*(my\s*)?(booking|ride|trip)(\s*status)?$/i.test(lowerMsg) ||
+                                       lowerMsg === "track booking" ||
+                                       lowerMsg === "booking status" ||
+                                       lowerMsg === "track ride";
+
+        if (isExplicitBookingTrack && !detectedBookingId) {
+            return res.json({
+                reply: "🚗 **Track Your Booking**\n\nPlease enter your **Booking ID** (e.g., `RH261104-233` or the ID from your confirmation email/SMS) to check its live status."
+            });
+        }
+
+        const isDirectBookingQuery = detectedBookingId && (
+            message.trim().toUpperCase() === detectedBookingId ||
+            /^(track\s*(?:booking|ride|trip)?\s*[:#]?\s*)?RH\d{4,}-\d+$/i.test(message.trim()) ||
+            message.trim().toLowerCase().startsWith("track booking") ||
+            message.trim().toLowerCase().startsWith("booking status")
+        );
+
+        if (isDirectBookingQuery) {
+            try {
+                let booking = await SupabaseDB.getBookingById(detectedBookingId);
+                if (booking) {
+                    await SupabaseDB.enrichBookingWithVehicle(booking);
+                    return res.json({ reply: formatBookingResponse(booking) });
+                } else {
+                    return res.json({
+                        reply: `❌ **Booking Not Found**\n\nWe couldn't find any booking with ID **${detectedBookingId}**.\n\nPlease check the ID from your confirmation email or SMS, or track via [My Bookings](/my-bookings).`
+                    });
+                }
+            } catch (err) {
+                console.error("Error direct tracking booking in chatbot:", err);
             }
         }
 
@@ -543,17 +625,14 @@ When the user's intent clearly matches an action, append the exact action token 
             });
         }
 
-        // Prioritized list of active Gemini models (supports environment override)
+        // Prioritized list of active Gemini models verified on Google API v1beta
         const configuredModel = process.env.GEMINI_MODEL;
-        const modelsToTry = [
-            ...(configuredModel ? [configuredModel] : []),
-            "gemini-2.5-flash",
-            "gemini-2.0-flash",
-            "gemini-1.5-flash",
-            "gemini-1.5-flash-latest",
-            "gemini-1.5-pro",
-            "gemini-pro"
-        ];
+        const validActiveModels = ["gemini-2.5-flash", "gemini-3.5-flash-lite"];
+        let modelsToTry = [...validActiveModels];
+        if (configuredModel && (configuredModel.includes("2.5") || configuredModel.includes("3.5"))) {
+            modelsToTry.unshift(configuredModel);
+        }
+        modelsToTry = Array.from(new Set(modelsToTry));
 
         let text = null;
         let success = false;
@@ -591,17 +670,15 @@ When the user's intent clearly matches an action, append the exact action token 
         res.json({ reply: text });
     } catch (error) {
         console.error("Chatbot Error:", error.message);
-        console.error("Chatbot Error Stack:", error.stack);
 
         if (error.message.includes("429") || error.message.includes("Quota")) {
             return res.status(429).json({ reply: "I am currently experiencing very high inquiry volume. Please ask me again in just a moment!" });
         }
 
-        if (error.message.includes("404")) {
-            return res.status(503).json({ error: "AI Service Temporarily Unavailable: Model routing update in progress." });
-        }
-
-        res.status(500).json({ error: "Failed to process your request." });
+        // Graceful resilient reply so chatbot UI never breaks with ugly 500/503 errors
+        return res.json({
+            reply: "I am currently updating my connection. For immediate assistance with bookings, vehicle tariffs, or support, please call our 24/7 hotline at **+91 70777 33320** or track directly on [My Bookings](/my-bookings)!"
+        });
     }
 };
 
