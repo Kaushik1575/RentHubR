@@ -596,6 +596,7 @@ function generateSOSEmergencyEmailHtml(data = {}) {
                                     <!-- Retell AI Status (if present) -->
                                     ${retellBlock}
 
+                                    ${recipientRole === 'customer' ? `
                                     <!-- Section 1: Petrol Pumps -->
                                     ${renderCategory('PETROL PUMPS – Maximum 3', '⛽', '#ea580c', petrolPumps, 'No petrol pumps found in the immediate radius.')}
 
@@ -607,6 +608,27 @@ function generateSOSEmergencyEmailHtml(data = {}) {
 
                                     <!-- Section 4: Hospitals -->
                                     ${renderCategory('NEAREST HOSPITALS – Maximum 3', '🏥', '#dc2626', hospitals, 'No hospitals found in the immediate radius.')}
+                                    ` : `
+                                    <!-- Admin Immediate Dispatch Card -->
+                                    <div style="background: #f8fafc; border: 2px solid #ef4444; border-radius: 12px; padding: 22px; margin: 25px 0; text-align: center;">
+                                        <div style="color: #b91c1c; font-size: 14px; font-weight: 800; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
+                                            🚨 Admin Immediate Response Notice
+                                        </div>
+                                        <p style="margin: 0 0 16px 0; color: #334155; font-size: 14px; line-height: 1.5;">
+                                            Customer has triggered an active SOS Roadside Emergency alert. Tap below to navigate directly to their breakdown location or call them immediately.
+                                        </p>
+                                        <div style="display: flex; justify-content: center; gap: 10px; flex-wrap: wrap;">
+                                            <a href="tel:${userPhone}" style="display: inline-block; background: #dc2626; color: #ffffff; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: 800; font-size: 14px; box-shadow: 0 3px 8px rgba(220, 38, 38, 0.3); margin: 4px;">
+                                                📞 Call Customer: ${userPhone}
+                                            </a>
+                                            ${liveMapUrl ? `
+                                            <a href="${liveMapUrl}" target="_blank" style="display: inline-block; background: #2563eb; color: #ffffff; padding: 12px 22px; text-decoration: none; border-radius: 8px; font-weight: 800; font-size: 14px; box-shadow: 0 3px 8px rgba(37, 99, 235, 0.3); margin: 4px;">
+                                                🗺️ Navigate to Customer GPS
+                                            </a>
+                                            ` : ''}
+                                        </div>
+                                    </div>
+                                    `}
 
                                     <!-- Emergency Numbers Section (Prominent) -->
                                     <div style="background: linear-gradient(135deg, #fef2f2 0%, #fee2e2 100%); border: 2px solid #ef4444; border-radius: 12px; padding: 20px; margin: 25px 0; text-align: center;">
