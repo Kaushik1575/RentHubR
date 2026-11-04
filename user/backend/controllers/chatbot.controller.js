@@ -461,9 +461,9 @@ ${userContext}
 • **WhatsApp Assistance**: +91 70777 33320 (Direct chat for quick support)
 • **Official Inquiries Email**: support@renthub.in
 • **Central Corridor & Hub**: Plot 42, Aerocity Expressway, Bhubaneswar, Odisha, India
-• **Support Portal**: E-Query ticket desk on the website (`/e-query`) & in-app Support page (`/support`)
-• **Live Issue Tracker**: Easily check support issue status on `/track-issue` or directly in this chat via "Track Support"
-• **24/7 Roadside Voice AI SOS ('Aarohi')**: 1-click emergency dispatch via `/sos-activate`
+• **Support Portal**: E-Query ticket desk on the website (/e-query) & in-app Support page (/support)
+• **Live Issue Tracker**: Easily check support issue status on /track-issue or directly in this chat via "Track Support"
+• **24/7 Roadside Voice AI SOS ('Aarohi')**: 1-click emergency dispatch via /sos-activate
 • **Digital Handshake**: Contactless QR code scanning for vehicle handoff at pickup and return.
 ${issueContext}
 
@@ -591,6 +591,7 @@ When the user's intent clearly matches an action, append the exact action token 
         res.json({ reply: text });
     } catch (error) {
         console.error("Chatbot Error:", error.message);
+        console.error("Chatbot Error Stack:", error.stack);
 
         if (error.message.includes("429") || error.message.includes("Quota")) {
             return res.status(429).json({ reply: "I am currently experiencing very high inquiry volume. Please ask me again in just a moment!" });
