@@ -120,10 +120,10 @@ async function reverseGeocode(lat, lon) {
  */
 async function resolveCoordinates(input, fallbackAddress = null, userIp = null) {
     if (input && typeof input === 'object') {
-        const lat = parseFloat(input.latitude || input.lat);
-        const lng = parseFloat(input.longitude || input.lng || input.lon);
+        const lat = parseFloat(input.latitude || input.lat || input.coords?.latitude);
+        const lng = parseFloat(input.longitude || input.lng || input.lon || input.coords?.longitude);
         if (!isNaN(lat) && !isNaN(lng) && lat !== 0 && lng !== 0) {
-            return { latitude: lat, longitude: lng, accuracy: input.accuracy, source: 'gps_device' };
+            return { latitude: lat, longitude: lng, accuracy: input.accuracy || input.coords?.accuracy, source: 'gps_device' };
         }
     }
 

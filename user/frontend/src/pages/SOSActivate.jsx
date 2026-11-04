@@ -153,12 +153,90 @@ const SOSActivate = () => {
             setStatus('ready');
         }
 
+        // Pre-fetch live GPS location in background immediately on page load
+        acquireLocation(false);
+
         return () => {
             if ('speechSynthesis' in window) {
                 window.speechSynthesis.cancel();
             }
         };
     }, [bookingIdFromUrl]);
+
+    // Resilient Multi-Stage Geolocation
+    const acquireLocation = async (interactive = true) => {
+        if (!navigator.geolocation) {
+            setLocationStats("GPS geolocation not supported by this browser.");
+            return null;
+        }
+
+        if (interactive) {
+            setLocationStats("Locking high-accuracy live GPS coordinates...");
+        }
+
+        const tryHighAccuracy = () => new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+                resolve,
+                reject,
+                { enableHighAccuracy: true, timeout: 8000, maximumAge: 10000 }
+            );
+        });
+
+        const tryStandardAccuracy = () => new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+                resolve,
+                reject,
+                { enableHighAccuracy: false, timeout: 6000, maximumAge: 60000 }
+            );
+        });
+
+        let position = null;
+        try {
+            position = await tryHighAccuracy();
+        } catch (highErr) {
+            console.warn("High-accuracy GPS attempt failed/timed out, attempting standard accuracy:", highErr.message);
+            try {
+                position = await tryStandardAccuracy();
+            } catch (stdErr) {
+                console.warn("Standard accuracy GPS attempt failed:", stdErr.message);
+            }
+        }
+
+        if (position && position.coords) {
+            const gps = {
+                latitude: Number(position.coords.latitude.toFixed(6)),
+                longitude: Number(position.coords.longitude.toFixed(6)),
+                accuracy: Math.round(position.coords.accuracy || 10)
+            };
+            setGpsData(gps);
+            setLocationStats(`📍 Live GPS Locked: Lat ${gps.latitude}, Lng ${gps.longitude} (±${gps.accuracy}m)`);
+            return gps;
+        }
+
+        // Try Network IP Location if browser GPS timed out or was denied
+        try {
+            const ipRes = await fetch('https://ipapi.co/json/');
+            if (ipRes.ok) {
+                const ipData = await ipRes.json();
+                if (ipData.latitude && ipData.longitude) {
+                    const ipGps = {
+                        latitude: Number(ipData.latitude.toFixed(6)),
+                        longitude: Number(ipData.longitude.toFixed(6)),
+                        accuracy: 500,
+                        source: 'ip_network'
+                    };
+                    setGpsData(ipGps);
+                    setLocationStats(`🌐 Network Location: ${ipData.city || 'Nearby Area'} (${ipGps.latitude}, ${ipGps.longitude})`);
+                    return ipGps;
+                }
+            }
+        } catch (ipErr) {
+            console.warn("IP location fallback failed:", ipErr.message);
+        }
+
+        setLocationStats("⚠️ GPS unavailable. Using booking pickup location fallback.");
+        return null;
+    };
 
     const activateSOS = async () => {
         const trimmedInput = (inputVal || '').trim();
@@ -179,48 +257,27 @@ const SOSActivate = () => {
         }
 
         setStatus('activating');
-        setMessage('Acquiring high-accuracy GPS coordinates for roadside dispatch...');
+        setMessage('Verifying live GPS coordinates for emergency roadside dispatch...');
 
-        try {
-            if (navigator.geolocation) {
-                const getPosition = new Promise((resolve, reject) => {
-                    navigator.geolocation.getCurrentPosition(
-                        (position) => resolve(position),
-                        (error) => reject(error),
-                        { enableHighAccuracy: true, timeout: 4000, maximumAge: 0 }
-                    );
-                });
-
-                const safetyTimeout = new Promise((_, reject) =>
-                    setTimeout(() => reject(new Error("Location request timed out")), 4500)
-                );
-
-                const position = await Promise.race([getPosition, safetyTimeout]);
-                const gpsLocation = {
-                    latitude: position.coords.latitude,
-                    longitude: position.coords.longitude,
-                    accuracy: position.coords.accuracy
-                };
-                setGpsData(gpsLocation);
-                setLocationStats(`Live GPS acquired (Accuracy: ${Math.round(position.coords.accuracy)}m)`);
-                sendSOS(gpsLocation, targetBooking, targetPhone);
-
-            } else {
-                throw new Error("Geolocation not supported by this browser.");
-            }
-        } catch (e) {
-            console.warn("GPS acquisition failed or skipped:", e.message);
-            setLocationStats("Proceeding with pickup location fallback.");
-            sendSOS(null, targetBooking, targetPhone);
+        // If GPS is already locked from background pre-fetch, use immediately
+        let activeGps = gpsData;
+        if (!activeGps || !activeGps.latitude || !activeGps.longitude) {
+            activeGps = await acquireLocation(true);
         }
+
+        // If GPS is still missing because device location is OFF or blocked:
+        if (!activeGps || !activeGps.latitude || !activeGps.longitude) {
+            setMessage('Your device location / GPS is turned OFF or permission was not granted. Please turn ON location on your phone and tap "Turn ON Location & Retry GPS" so our emergency unit and nearest facilities can reach your exact spot.');
+            setStatus('location_error');
+            return; // STOP! Do NOT silently take the fallback!
+        }
+
+        sendSOS(activeGps, targetBooking, targetPhone);
     };
 
     const sendSOS = async (gpsLocation, targetBooking, targetPhone) => {
         setStatus('activating');
         setMessage('Triggering Retell AI Emergency Outbound Voice Call & Alerting Dispatch...');
-        if (!gpsLocation) {
-            setLocationStats("GPS skipped. Using pickup location fallback.");
-        }
 
         const bId = targetBooking || activeBookingId || undefined;
         const pNum = targetPhone || activePhone || undefined;
@@ -241,6 +298,9 @@ const SOSActivate = () => {
             if (res.ok && data.success) {
                 setSosDataInfo(data.sosData || null);
                 setCallInitiated(!!data.callInitiated);
+                if (data.nearbyPlaces || data.nearbyData) {
+                    setNearbyPlacesData(data.nearbyPlaces || data.nearbyData);
+                }
                 setStatus('active_sos');
             } else {
                 throw new Error(data.error || 'Failed to activate SOS');
@@ -413,17 +473,45 @@ const SOSActivate = () => {
 
                 {/* State: Location Permission Error */}
                 {status === 'location_error' && (
-                    <div className="status-box status-warning">
-                        <span className="status-title">📍 Location Notice</span>
-                        <p>{message}</p>
-                        <p style={{ marginTop: '8px', opacity: 0.8 }}>Proceed without GPS or retry permission.</p>
+                    <div className="status-box status-warning" style={{ background: 'rgba(239, 68, 68, 0.1)', border: '2px solid #ef4444', borderRadius: '12px', padding: '24px 18px', textAlign: 'center' }}>
+                        <div style={{ fontSize: '42px', marginBottom: '10px' }}>📍</div>
+                        <h2 style={{ color: '#ffffff', fontSize: '1.25rem', fontWeight: '800', margin: '0 0 8px 0' }}>Device Location / GPS is OFF</h2>
+                        <p style={{ color: '#cbd5e1', fontSize: '0.92rem', lineHeight: '1.5', margin: '0 0 18px 0' }}>
+                            {message || 'Your device location is turned off or permission was denied. We need your live GPS coordinates to show the genuine nearest petrol pumps, repair garages, and police stations.'}
+                        </p>
 
-                        <div className="secondary-actions" style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '15px' }}>
-                            <button className="btn-secondary" onClick={activateSOS} style={{ padding: '12px', background: 'rgba(255,255,255,0.2)', border: '1px solid rgba(255,255,255,0.5)', color: 'white', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' }}>
-                                ⟳ Retry GPS
+                        <div style={{ display: 'flex', flexDirection: 'column', gap: '12px', marginTop: '10px' }}>
+                            <button
+                                className="sos-button"
+                                onClick={activateSOS}
+                                style={{
+                                    padding: '14px',
+                                    fontSize: '1rem',
+                                    fontWeight: '800',
+                                    background: 'linear-gradient(135deg, #22c55e 0%, #16a34a 100%)',
+                                    boxShadow: '0 4px 15px rgba(34, 197, 94, 0.4)',
+                                    border: 'none',
+                                    cursor: 'pointer'
+                                }}
+                            >
+                                <i className="fas fa-location-arrow" style={{ marginRight: '8px' }}></i>
+                                Turn ON Location & Retry GPS
                             </button>
-                            <button className="btn-secondary" onClick={() => sendSOS(null, activeBookingId, activePhone)} style={{ padding: '12px', background: 'rgba(255,0,0,0.4)', border: '1px solid rgba(255,0,0,0.8)', color: 'white', borderRadius: '8px', cursor: 'pointer' }}>
-                                Send Alert Without GPS &rarr;
+
+                            <button
+                                type="button"
+                                onClick={() => sendSOS(null, activeBookingId, activePhone)}
+                                style={{
+                                    background: 'transparent',
+                                    border: 'none',
+                                    color: '#94a3b8',
+                                    textDecoration: 'underline',
+                                    fontSize: '0.85rem',
+                                    cursor: 'pointer',
+                                    padding: '8px'
+                                }}
+                            >
+                                Proceed without GPS (use booking pickup location fallback) &rarr;
                             </button>
                         </div>
                     </div>
@@ -466,6 +554,40 @@ const SOSActivate = () => {
                             <small style={{ color: '#94a3b8', fontSize: '0.8rem', display: 'block', marginTop: '6px' }}>
                                 Enter your active RentHub booking reference or 10-digit mobile number to receive the AI call.
                             </small>
+                        </div>
+
+                        {/* Live GPS Lock Indicator */}
+                        <div style={{
+                            background: gpsData ? 'rgba(34, 197, 94, 0.12)' : 'rgba(234, 179, 8, 0.1)',
+                            border: `1px solid ${gpsData ? '#22c55e' : 'rgba(234, 179, 8, 0.4)'}`,
+                            borderRadius: '10px',
+                            padding: '12px 14px',
+                            marginBottom: '16px',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            gap: '10px'
+                        }}>
+                            <div style={{ fontSize: '0.85rem', color: '#f8fafc', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <i className={`fas ${gpsData ? 'fa-location-dot' : 'fa-location-crosshairs fa-spin'}`} style={{ color: gpsData ? '#4ade80' : '#facc15' }}></i>
+                                <span>{locationStats || 'Detecting live GPS location...'}</span>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => acquireLocation(true)}
+                                style={{
+                                    background: 'rgba(255, 255, 255, 0.1)',
+                                    border: '1px solid rgba(255, 255, 255, 0.25)',
+                                    borderRadius: '6px',
+                                    color: '#ffffff',
+                                    padding: '5px 10px',
+                                    fontSize: '0.75rem',
+                                    cursor: 'pointer',
+                                    whiteSpace: 'nowrap'
+                                }}
+                            >
+                                🔄 Refresh GPS
+                            </button>
                         </div>
 
                         <div className="status-box status-warning">
@@ -606,7 +728,7 @@ const SOSActivate = () => {
                         </div>
 
                         {/* On-Screen Live Nearby Locations Results */}
-                        {nearbySuccessMessage && (
+                        {(nearbyPlacesData || nearbySuccessMessage) && (
                             <div className="nearby-results-panel">
                                 <div className="status-box status-success" style={{ marginBottom: '14px' }}>
                                     <span className="status-title">✉️ Locations Dispatched</span>

@@ -143,7 +143,7 @@ const activateSOS = async (req, res) => {
             userEmail: userEmail,
             phoneNumber: userPhone || 'Unknown Phone',
             bikeModel: vehicleName,
-            pickupLocation: booking?.pickup_location || 'GITA Autonomous College BBSR',
+            pickupLocation: booking?.pickup_location || 'RentHub Corridor, Bhubaneswar',
             timestamp: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }),
             gpsLocation: gpsString,
             googleMapsLink: googleMapsLink
