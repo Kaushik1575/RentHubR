@@ -196,6 +196,17 @@ const registerUser = async (req, res) => {
             return res.status(400).json({ error: 'Invalid or expired Mobile OTP' });
         }
 
+        // Check if phone number already exists
+        const { data: existingPhoneUser } = await supabase
+            .from('users')
+            .select('id')
+            .eq('phone_number', cleanPhone)
+            .maybeSingle();
+
+        if (existingPhoneUser) {
+            return res.status(400).json({ error: 'Phone number already registered. Please login instead.' });
+        }
+
         // Validate passwords
         if (!confirmPassword) return res.status(400).json({ error: 'Please confirm your password' });
         if (password !== confirmPassword) return res.status(400).json({ error: 'Passwords do not match' });
@@ -209,16 +220,31 @@ const registerUser = async (req, res) => {
         const { hearAboutUs, otherSource } = req.body;
 
         const newUser = {
-            full_name: fullName,
-            email,
-            phone_number: phoneNumber,
-            password: hashedPassword,
-            is_admin: false,
-            hear_about_us: hearAboutUs || null,
-            other_source: (hearAboutUs === 'Other' ? otherSource : null)
+            full_name: (fullName || '').trim(),
+            email: cleanEmail,
+            phone_number: cleanPhone,
+            password: hashedPassword
         };
 
-        const created = await SupabaseDB.createUser(newUser);
+        let created;
+        try {
+            if (hearAboutUs) {
+                created = await SupabaseDB.createUser({
+                    ...newUser,
+                    hear_about_us: hearAboutUs || null,
+                    other_source: (hearAboutUs === 'Other' ? otherSource : null)
+                });
+            } else {
+                created = await SupabaseDB.createUser(newUser);
+            }
+        } catch (insertError) {
+            if (insertError && (insertError.code === 'PGRST204' || insertError.message?.includes('column') || insertError.message?.includes('schema cache'))) {
+                console.warn('⚠️ Supabase users table missing marketing columns, inserting core fields:', insertError.message);
+                created = await SupabaseDB.createUser(newUser);
+            } else {
+                throw insertError;
+            }
+        }
 
         // Handle Referral if code provided
         const { referralCode } = req.body;
@@ -240,7 +266,7 @@ const registerUser = async (req, res) => {
         res.status(201).json({ message: 'User registered successfully' });
     } catch (error) {
         console.error('Error registering user:', error);
-        res.status(500).json({ error: 'Error registering user' });
+        res.status(500).json({ error: error.message || 'Error registering user' });
     }
 };
 
