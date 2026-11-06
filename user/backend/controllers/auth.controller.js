@@ -401,6 +401,7 @@ const loginUser = async (req, res) => {
 const loginAdmin = async (req, res) => {
     try {
         console.log('🔐 Admin login attempt started');
+        const { email, password, adminId } = req.body;
         const normalizedEmail = String(email || '').trim().toLowerCase();
         const normalizedAdminId = String(adminId || '').trim();
 

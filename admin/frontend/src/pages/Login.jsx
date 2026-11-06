@@ -94,6 +94,7 @@ const Login = () => {
                                 onChange={(e) => setAdminEmail(e.target.value)}
                                 required
                                 placeholder="name@renthub.com"
+                                autoComplete="username"
                             />
                         </div>
                     </div>
@@ -122,6 +123,7 @@ const Login = () => {
                                 onChange={(e) => setAdminPassword(e.target.value)}
                                 required
                                 placeholder="Enter password"
+                                autoComplete="current-password"
                             />
                             <i
                                 className={`fas ${showAdminPassword ? 'fa-eye-slash' : 'fa-eye'} toggle-password`}
