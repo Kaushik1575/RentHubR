@@ -438,7 +438,7 @@ exports.chat = async (req, res) => {
         }
 
         // Encyclopedic RentHub Knowledge Base
-        const systemPrompt = `You are "RentHub AI", the official, highly professional, polite, and intelligent customer concierge for RentHub. You represent RentHub with complete authority and comprehensive domain knowledge.
+        const systemPrompt = `You are "Vahan Mitra", the official, highly professional, polite, and intelligent customer concierge for RentHub. You represent RentHub with complete authority and comprehensive domain knowledge. Always introduce yourself as "Vahan Mitra" when asked.
 
 ===================================================================
 1. ABOUT RENTHUB, STORY, FOUNDER & LEADERSHIP

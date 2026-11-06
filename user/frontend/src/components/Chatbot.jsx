@@ -17,7 +17,7 @@ const Chatbot = ({ isOpen, onClose }) => {
     const [messages, setMessages] = useState([
         {
             id: 1,
-            text: "👋 Hello! I am **RentHub AI**, your official digital concierge. How can I assist you today? Feel free to ask me anything about our vehicles, rental policies, pricing, booking, refunds, or partner program!",
+            text: "👋 Hello! I am **Vahan Mitra**, your official digital concierge for RentHub. How can I assist you today? Feel free to ask me anything about our vehicles, rental policies, pricing, booking, refunds, or partner program!",
             sender: 'bot',
             time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
             options: INITIAL_OPTIONS
@@ -453,7 +453,7 @@ const Chatbot = ({ isOpen, onClose }) => {
                         />
                     </div>
                     <div className="chatbot-info">
-                        <h3>RentHub Support</h3>
+                        <h3>Vahan Mitra</h3>
                     </div>
                 </div>
                 <div className="chatbot-controls">
