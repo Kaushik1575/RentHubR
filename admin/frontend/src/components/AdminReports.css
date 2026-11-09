@@ -689,13 +689,105 @@
 .reports-modal-overlay {
   position: fixed;
   inset: 0;
-  background: rgba(15, 23, 42, 0.6);
-  backdrop-filter: blur(6px);
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(8px);
   z-index: 9999;
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
+}
+
+.reports-modal-box {
+  background: #ffffff !important;
+  color: #0f172a;
+  border-radius: 20px;
+  width: 100%;
+  max-width: 860px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 25px 60px -15px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(226, 232, 240, 0.8);
+  border: 1px solid #e2e8f0;
+  position: relative;
+  animation: modalSlideUp 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.corporate-report-sheet {
+  background: #ffffff !important;
+  padding: 28px 32px 32px 32px;
+  color: #0f172a;
+  border-radius: 0 0 20px 20px;
+}
+
+.corporate-sheet-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  padding-bottom: 20px;
+  margin-bottom: 20px;
+  border-bottom: 1.5px solid #e2e8f0;
+}
+
+.corporate-sheet-brand {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.corporate-sheet-logo {
+  width: 48px;
+  height: 48px;
+  object-fit: contain;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  padding: 4px;
+  background: #ffffff;
+}
+
+.corporate-sheet-title {
+  font-size: 18px;
+  font-weight: 800;
+  color: #0f172a;
+  letter-spacing: -0.3px;
+}
+
+.corporate-sheet-subtitle {
+  font-size: 12px;
+  color: #64748b;
+  font-weight: 500;
+  margin-top: 2px;
+}
+
+.corporate-sheet-meta {
+  text-align: right;
+  font-size: 12px;
+  color: #64748b;
+  line-height: 1.6;
+}
+
+.corporate-sheet-signoff {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 24px;
+  padding-top: 18px;
+  border-top: 1px dashed #cbd5e1;
+}
+
+.reports-inspection-modal {
+  max-width: 680px;
+  padding: 24px 28px;
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(16px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 /* ==========================================================================
