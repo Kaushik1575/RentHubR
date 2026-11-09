@@ -982,17 +982,46 @@ const AdminReports = ({ token }) => {
         }
     };
 
-    // Export CSV Handler
-    const handleExportCSV = () => {
-        const queryParams = new URLSearchParams({
-            timeframe,
-            startDate,
-            endDate,
-            vehicleCategory: categoryFilter,
-            status: statusFilter
-        });
-        window.open(`/api/admin/reports/export-csv?${queryParams.toString()}&token=${token}`, '_blank');
-        toast.success('Downloading Comprehensive CSV Report...');
+    // Export Excel / CSV Handler (Direct Authenticated Blob Download)
+    const handleExportCSV = async () => {
+        try {
+            toast.loading('Compiling Executive Excel / CSV Ledger...', { id: 'csv-toast' });
+            const queryParams = new URLSearchParams({
+                timeframe,
+                startDate: startDate || '',
+                endDate: endDate || '',
+                vehicleCategory: categoryFilter,
+                status: statusFilter,
+                token: token || ''
+            });
+
+            const res = await fetch(`/api/admin/reports/export-csv?${queryParams.toString()}`, {
+                method: 'GET',
+                headers: {
+                    'Authorization': `Bearer ${token}`
+                }
+            });
+
+            if (!res.ok) {
+                throw new Error(`Server returned HTTP ${res.status}`);
+            }
+
+            const blob = await res.blob();
+            const downloadUrl = window.URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = downloadUrl;
+            const fileTime = new Date().toISOString().slice(0, 10);
+            a.download = `RentHub_Executive_Ledger_${fileTime}.csv`;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            window.URL.revokeObjectURL(downloadUrl);
+
+            toast.success('✅ Excel / CSV Report Downloaded Successfully!', { id: 'csv-toast' });
+        } catch (error) {
+            console.error('CSV export failed:', error);
+            toast.error('Failed to export CSV. Please try again.', { id: 'csv-toast' });
+        }
     };
 
     return (

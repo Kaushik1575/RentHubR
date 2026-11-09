@@ -49,11 +49,18 @@ const verifyToken = async (req, res, next) => {
 const verifyAdminToken = async (req, res, next) => {
     console.log('verifyAdminToken called');
     const authHeader = req.headers.authorization;
-    if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    let token = null;
+
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+        token = authHeader.split(' ')[1];
+    } else if (req.query && req.query.token) {
+        token = req.query.token;
+    }
+
+    if (!token) {
         console.log('No token provided');
         return res.status(401).json({ message: 'No token provided' });
     }
-    const token = authHeader.split(' ')[1];
     try {
         const decoded = jwt.verify(token, JWT_SECRET);
         console.log('Decoded token:', decoded);
