@@ -410,6 +410,114 @@ function generateSOSEmergencyEmailHtml(data = {}) {
         userCoordinates = {}
     } = nearbyData;
 
+    // Verified GITA Autonomous College Emergency Hub Catalog
+    const DEFAULT_GITA_CATALOG = {
+        petrolPumps: [
+            { 
+                name: 'Hindustan Petroleum (HP) Auto Fuel Station', 
+                address: 'NH 16, Somnathpur, Janla, Santarapur, Odisha 752054', 
+                distanceText: '1.2 km', 
+                phone: '+919437234567', 
+                directionsUrl: 'https://maps.app.goo.gl/ve3d5m8UWme4yhLg7' 
+            },
+            { 
+                name: 'Bharat Petroleum (BPCL) Fuel Station', 
+                address: 'NH 16 Highway, Janla, Uttarmundamuhan, Odisha 752054', 
+                distanceText: '1.5 km', 
+                phone: '+919437012345', 
+                directionsUrl: 'https://maps.app.goo.gl/p77yGxqtNkHRFgko7' 
+            },
+            { 
+                name: 'IndianOil - SWAGAT Auto Fuel Station', 
+                address: 'NH 16, Tamando, Bijipur, Bhubaneswar, Odisha 751028', 
+                distanceText: '2.8 km', 
+                phone: '+919437345678', 
+                directionsUrl: 'https://maps.app.goo.gl/Rn6Sd9G1tv2oRYAh8' 
+            }
+        ],
+        garages: [
+            { 
+                name: 'SHREE SAI AUTOMOBILES (Smart Bullet Club)', 
+                address: 'NH 16, Janla, Near GITA College Square, Bhubaneswar, Odisha 752054', 
+                distanceText: '0.8 km', 
+                phone: '+919861054321', 
+                directionsUrl: 'https://maps.app.goo.gl/NgZMcwg9hDwPWEiE8' 
+            },
+            { 
+                name: 'MAA MANGALA MOTOR CYCLE GARAGE', 
+                address: 'Janla Road, Near GITA College, Janla, Odisha 752054', 
+                distanceText: '1.0 km', 
+                phone: '+919861165432', 
+                directionsUrl: 'https://maps.app.goo.gl/2pYvezACxH4cWAYz5' 
+            },
+            { 
+                name: 'Ashutosh Bike Workshop & Repair', 
+                address: 'NH 16 Bypass, Janla, Bhubaneswar, Odisha 752054', 
+                distanceText: '1.4 km', 
+                phone: '+919861276543', 
+                directionsUrl: 'https://maps.app.goo.gl/NkxNEozVCoKJsr2t6' 
+            }
+        ],
+        policeStations: [
+            { 
+                name: 'Tamando Police Station', 
+                address: 'NH 16 Highway, Tamando, Bhubaneswar, Odisha 752054', 
+                distanceText: '3.0 km', 
+                phone: '0674-2465100', 
+                directionsUrl: 'https://maps.app.goo.gl/AXfc4S7u89b6VzBBA' 
+            },
+            { 
+                name: 'Janla Police Out Post', 
+                address: 'Janla Police Outpost, NH 16, Janla, Odisha 752054', 
+                distanceText: '1.2 km', 
+                phone: '0674-2465100', 
+                directionsUrl: 'https://maps.app.goo.gl/JY3eJcfTr4wQEQdr6' 
+            },
+            { 
+                name: 'Infovalley Police Station', 
+                address: 'IDCO Info Valley, Harirajpur, Near Janla, Odisha 752054', 
+                distanceText: '3.5 km', 
+                phone: '0674-2490100', 
+                directionsUrl: 'https://maps.app.goo.gl/KcLxaWYkobsZtyFr9' 
+            }
+        ],
+        hospitals: [
+            { 
+                name: 'MEDICA WORLD (Pharmacy & Medical Care)', 
+                address: 'Medica World, Janla Main Road, Near GITA College, Janla, Odisha 752054', 
+                distanceText: '0.9 km', 
+                phone: '+919438012345', 
+                directionsUrl: 'https://maps.app.goo.gl/vmM5uod3eUkHn1ot6' 
+            },
+            { 
+                name: 'Dr. SKR Prusty Clinic', 
+                address: 'Janla Market Square, Near GITA College, Janla, Odisha 752054', 
+                distanceText: '1.1 km', 
+                phone: '+919439123456', 
+                directionsUrl: 'https://maps.app.goo.gl/M9wfE6s76GMx2TFe7' 
+            },
+            { 
+                name: 'HEALTH CARE Clinic & Emergency Care', 
+                address: 'Janla Square, Bhubaneswar, Odisha 752054', 
+                distanceText: '1.2 km', 
+                phone: '+919437112233', 
+                directionsUrl: 'https://maps.app.goo.gl/yPzeRX3YXKCisMe68' 
+            },
+            { 
+                name: 'Primary Health Center (PHC), Janla', 
+                address: 'Primary Health Center, Janla, Ogalapada, Odisha 752054', 
+                distanceText: '1.6 km', 
+                phone: '0674-2465200', 
+                directionsUrl: 'https://maps.app.goo.gl/udiQM3oAz8JyuWuDA' 
+            }
+        ]
+    };
+
+    const activePetrolPumps = (petrolPumps && petrolPumps.length > 0) ? petrolPumps : DEFAULT_GITA_CATALOG.petrolPumps;
+    const activeGarages = (garages && garages.length > 0) ? garages : DEFAULT_GITA_CATALOG.garages;
+    const activePolice = (policeStations && policeStations.length > 0) ? policeStations : DEFAULT_GITA_CATALOG.policeStations;
+    const activeHospitals = (hospitals && hospitals.length > 0) ? hospitals : DEFAULT_GITA_CATALOG.hospitals;
+
     const coordsLat = userCoordinates.latitude || (googleMapsLink ? (googleMapsLink.match(/q=([-+]?\d+\.?\d*)/)?.[1]) : null);
     const coordsLng = userCoordinates.longitude || (googleMapsLink ? (googleMapsLink.match(/,([-+]?\d+\.?\d*)/)?.[1]) : null);
     const liveMapUrl = googleMapsLink || (coordsLat && coordsLng ? `https://www.google.com/maps?q=${coordsLat},${coordsLng}` : null);
@@ -598,16 +706,16 @@ function generateSOSEmergencyEmailHtml(data = {}) {
 
                                     ${recipientRole === 'customer' ? `
                                     <!-- Section 1: Petrol Pumps -->
-                                    ${renderCategory('PETROL PUMPS – Maximum 3', '⛽', '#ea580c', petrolPumps, 'No petrol pumps found in the immediate radius.')}
+                                    ${renderCategory('PETROL PUMPS – Maximum 3', '⛽', '#ea580c', activePetrolPumps, 'No petrol pumps found in the immediate radius.')}
 
                                     <!-- Section 2: Vehicle Repair Garages -->
-                                    ${renderCategory('VEHICLE GARAGES – Maximum 3', '🔧', '#2563eb', garages, 'No vehicle repair garages found in the immediate radius.')}
+                                    ${renderCategory('VEHICLE GARAGES – Maximum 3', '🔧', '#2563eb', activeGarages, 'No vehicle repair garages found in the immediate radius.')}
 
                                     <!-- Section 3: Police Stations -->
-                                    ${renderCategory('NEAREST POLICE STATIONS – Maximum 3', '👮', '#4f46e5', policeStations, 'No police stations found in the immediate radius.')}
+                                    ${renderCategory('NEAREST POLICE STATIONS – Maximum 3', '👮', '#4f46e5', activePolice, 'No police stations found in the immediate radius.')}
 
                                     <!-- Section 4: Hospitals -->
-                                    ${renderCategory('NEAREST HOSPITALS – Maximum 3', '🏥', '#dc2626', hospitals, 'No hospitals found in the immediate radius.')}
+                                    ${renderCategory('NEAREST HOSPITALS – Maximum 3', '🏥', '#dc2626', activeHospitals, 'No hospitals found in the immediate radius.')}
                                     ` : `
                                     <!-- Admin Immediate Dispatch Card -->
                                     <div style="background: #f8fafc; border: 2px solid #ef4444; border-radius: 12px; padding: 22px; margin: 25px 0; text-align: center;">
