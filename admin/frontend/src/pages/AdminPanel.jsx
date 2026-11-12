@@ -919,8 +919,8 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                         {filteredBookings.map(b => (
                                             <tr key={b.id}>
                                                 <td>
-                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
-                                                        <span style={{ fontWeight: 600 }}>{b.booking_id || `#${b.id}`}</span>
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+                                                        <span style={{ fontWeight: 600, fontFamily: 'monospace', fontSize: '0.82rem' }}>{b.booking_id || `#${b.id}`}</span>
                                                         <button
                                                             type="button"
                                                             onClick={(e) => {
@@ -933,20 +933,29 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                                             title={copiedBookingId === b.id ? "Copied!" : "Copy Booking ID"}
                                                             style={{
                                                                 background: copiedBookingId === b.id ? '#10b981' : '#f1f5f9',
-                                                                color: copiedBookingId === b.id ? '#ffffff' : '#64748b',
+                                                                color: copiedBookingId === b.id ? '#ffffff' : '#334155',
                                                                 border: '1px solid ' + (copiedBookingId === b.id ? '#10b981' : '#cbd5e1'),
-                                                                borderRadius: '4px',
-                                                                padding: '2px 5px',
-                                                                fontSize: '0.72rem',
+                                                                borderRadius: '5px',
+                                                                padding: '3px 6px',
                                                                 cursor: 'pointer',
-                                                                lineHeight: 1,
                                                                 display: 'inline-flex',
                                                                 alignItems: 'center',
-                                                                justifyContent: 'center',
-                                                                transition: 'all 0.2s ease'
+                                                                gap: '3px',
+                                                                transition: 'all 0.2s ease',
+                                                                boxShadow: '0 1px 2px rgba(0,0,0,0.05)'
                                                             }}
                                                         >
-                                                            <i className={`fas ${copiedBookingId === b.id ? 'fa-check' : 'fa-copy'}`}></i>
+                                                            {copiedBookingId === b.id ? (
+                                                                <>
+                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                                                                    <span style={{ fontSize: '0.65rem', fontWeight: 700 }}>Copied</span>
+                                                                </>
+                                                            ) : (
+                                                                <>
+                                                                    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path></svg>
+                                                                    <span style={{ fontSize: '0.65rem', fontWeight: 600 }}>Copy</span>
+                                                                </>
+                                                            )}
                                                         </button>
                                                     </div>
                                                 </td>
