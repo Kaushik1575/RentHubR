@@ -11,6 +11,7 @@ const Bookings = () => {
     const [statusFilter, setStatusFilter] = useState('all');
     const [selectedBooking, setSelectedBooking] = useState(null);
     const [showDetailModal, setShowDetailModal] = useState(false);
+    const [copiedBookingId, setCopiedBookingId] = useState(null);
 
     useEffect(() => {
         fetchBookings();
@@ -293,7 +294,27 @@ const Bookings = () => {
                                 filteredBookings.map((booking) => (
                                     <tr key={booking._id} className="hover:bg-gray-50 transition-colors">
                                         <td className="px-6 py-4 font-mono text-sm text-brand-600 font-medium">
-                                            #{booking.bookingId}
+                                            <div className="inline-flex items-center gap-2">
+                                                <span>#{booking.bookingId}</span>
+                                                <button
+                                                    type="button"
+                                                    onClick={() => {
+                                                        const textToCopy = String(booking.bookingId);
+                                                        navigator.clipboard.writeText(textToCopy);
+                                                        setCopiedBookingId(booking._id || booking.bookingId);
+                                                        setTimeout(() => setCopiedBookingId(null), 1500);
+                                                    }}
+                                                    title={copiedBookingId === (booking._id || booking.bookingId) ? "Copied!" : "Copy Booking ID"}
+                                                    className="p-1 rounded text-xs transition-colors border"
+                                                    style={{
+                                                        background: copiedBookingId === (booking._id || booking.bookingId) ? '#10b981' : '#f3f4f6',
+                                                        color: copiedBookingId === (booking._id || booking.bookingId) ? '#ffffff' : '#6b7280',
+                                                        borderColor: copiedBookingId === (booking._id || booking.bookingId) ? '#10b981' : '#d1d5db'
+                                                    }}
+                                                >
+                                                    <i className={`fas ${copiedBookingId === (booking._id || booking.bookingId) ? 'fa-check' : 'fa-copy'}`}></i>
+                                                </button>
+                                            </div>
                                         </td>
                                         <td className="px-6 py-4">
                                             <div className="flex items-center gap-3">

@@ -35,6 +35,7 @@ const AdminPanel = () => {
     const [bookingsSearch, setBookingsSearch] = useState('');
     const [bookingsStatusFilter, setBookingsStatusFilter] = useState('');
     const [bookingsDateFilter, setBookingsDateFilter] = useState('');
+    const [copiedBookingId, setCopiedBookingId] = useState(null);
 
     // Vehicles
     const [vehicles, setVehicles] = useState([]);
@@ -917,7 +918,38 @@ ${isRefund ? `Refund: ₹${Math.abs(balance)}` : `Balance: ₹${balance}`}
                                     <tbody>
                                         {filteredBookings.map(b => (
                                             <tr key={b.id}>
-                                                <td>{b.booking_id || `#${b.id}`}</td>
+                                                <td>
+                                                    <div style={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+                                                        <span style={{ fontWeight: 600 }}>{b.booking_id || `#${b.id}`}</span>
+                                                        <button
+                                                            type="button"
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                const textToCopy = String(b.booking_id || b.id);
+                                                                navigator.clipboard.writeText(textToCopy);
+                                                                setCopiedBookingId(b.id);
+                                                                setTimeout(() => setCopiedBookingId(null), 1500);
+                                                            }}
+                                                            title={copiedBookingId === b.id ? "Copied!" : "Copy Booking ID"}
+                                                            style={{
+                                                                background: copiedBookingId === b.id ? '#10b981' : '#f1f5f9',
+                                                                color: copiedBookingId === b.id ? '#ffffff' : '#64748b',
+                                                                border: '1px solid ' + (copiedBookingId === b.id ? '#10b981' : '#cbd5e1'),
+                                                                borderRadius: '4px',
+                                                                padding: '2px 5px',
+                                                                fontSize: '0.72rem',
+                                                                cursor: 'pointer',
+                                                                lineHeight: 1,
+                                                                display: 'inline-flex',
+                                                                alignItems: 'center',
+                                                                justifyContent: 'center',
+                                                                transition: 'all 0.2s ease'
+                                                            }}
+                                                        >
+                                                            <i className={`fas ${copiedBookingId === b.id ? 'fa-check' : 'fa-copy'}`}></i>
+                                                        </button>
+                                                    </div>
+                                                </td>
                                                 <td>{b.customerName}</td>
                                                 <td>{b.vehicleName}</td>
                                                 <td>{b.start_date}</td>

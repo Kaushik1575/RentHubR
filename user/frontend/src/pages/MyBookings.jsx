@@ -24,6 +24,7 @@ const MyBookings = () => {
     // Re-confirmation modal state
     const [showReconfirmModal, setShowReconfirmModal] = useState(false);
     const [isReconfirming, setIsReconfirming] = useState(false);
+    const [copiedBookingId, setCopiedBookingId] = useState(null);
     const [settlementModal, setSettlementModal] = useState({ isOpen: false, bookingId: null, data: null });
     const [reconfirmBookingObj, setReconfirmBookingObj] = useState(null);
 
@@ -469,7 +470,35 @@ const MyBookings = () => {
                 ) : (
                     bookings.map(booking => (
                         <div key={booking.id} className="booking-card" style={{ background: '#fff', padding: '2rem', borderRadius: '10px', boxShadow: '0 2px 15px rgba(0,0,0,0.1)', display: 'flex', flexDirection: 'column', gap: '0.8rem' }}>
-                            <h3 style={{ margin: 0, color: '#2ecc71', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem' }}>Booking ID: {booking.booking_id || `#${booking.id}`}</h3>
+                            <h3 style={{ margin: 0, color: '#2ecc71', fontSize: '1.2rem', borderBottom: '1px solid #eee', paddingBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '8px' }}>
+                                <span>Booking ID: {booking.booking_id || `#${booking.id}`}</span>
+                                <button
+                                    type="button"
+                                    onClick={() => {
+                                        const textToCopy = String(booking.booking_id || booking.id);
+                                        navigator.clipboard.writeText(textToCopy);
+                                        setCopiedBookingId(booking.id);
+                                        setTimeout(() => setCopiedBookingId(null), 1500);
+                                    }}
+                                    title={copiedBookingId === booking.id ? "Copied!" : "Copy Booking ID"}
+                                    style={{
+                                        background: copiedBookingId === booking.id ? '#10b981' : '#f1f5f9',
+                                        color: copiedBookingId === booking.id ? '#ffffff' : '#64748b',
+                                        border: '1px solid ' + (copiedBookingId === booking.id ? '#10b981' : '#cbd5e1'),
+                                        borderRadius: '4px',
+                                        padding: '2px 6px',
+                                        fontSize: '0.75rem',
+                                        cursor: 'pointer',
+                                        lineHeight: 1,
+                                        display: 'inline-flex',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        transition: 'all 0.2s ease'
+                                    }}
+                                >
+                                    <i className={`fas ${copiedBookingId === booking.id ? 'fa-check' : 'fa-copy'}`}></i>
+                                </button>
+                            </h3>
                             <p><strong>Vehicle:</strong> {booking.vehicleName} ({booking.vehicle_type})</p>
                             <p><strong>Start Date:</strong> {booking.displayStartDate}</p>
                             <p><strong>End Date:</strong> {booking.displayEndDate}</p>
